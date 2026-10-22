@@ -2,6 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { videoCommentsTable } from "@workspace/db/schema";
 import type { VideoCommentRecord } from "../types/index.js";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 
 export class VideoCommentRepository {
   async create(comment: VideoCommentRecord): Promise<VideoCommentRecord> {
@@ -26,13 +27,16 @@ export class VideoCommentRepository {
   }
 
   async toggleLike(videoId: string, commentId: string, userId: string): Promise<VideoCommentRecord | undefined> {
-    const [updated] = await db.update(videoCommentsTable).set({
-      likedBy: sql`CASE WHEN ${videoCommentsTable.likedBy} ? ${userId} THEN ${videoCommentsTable.likedBy} - ${userId} ELSE ${videoCommentsTable.likedBy} || jsonb_build_array(${userId}) END`,
-      updatedAt: new Date().toISOString(),
-    }).where(and(
-      eq(videoCommentsTable.id, commentId),
-      eq(videoCommentsTable.videoId, videoId),
-    )).returning();
-    return updated as VideoCommentRecord | undefined;
+    return db.transaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
+      const [updated] = await tx.update(videoCommentsTable).set({
+        likedBy: sql`CASE WHEN ${videoCommentsTable.likedBy} ? ${userId} THEN ${videoCommentsTable.likedBy} - ${userId} ELSE ${videoCommentsTable.likedBy} || jsonb_build_array(${userId}::text) END`,
+        updatedAt: new Date().toISOString(),
+      }).where(and(
+        eq(videoCommentsTable.id, commentId),
+        eq(videoCommentsTable.videoId, videoId),
+      )).returning();
+      return updated as VideoCommentRecord | undefined;
+    });
   }
 }

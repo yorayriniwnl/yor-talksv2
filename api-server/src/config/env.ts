@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 const defaultNodeEnvironment = process.env.NODE_ENV || (process.env.VERCEL ? "production" : "development");
 const booleanFromEnv = (value: unknown, fallback = false): unknown => {
@@ -35,10 +35,13 @@ const envSchema = z.object({
   MEDIA_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
   MEDIA_DELIVERY_ORIGIN: z.string().url().or(z.literal('')).default(''),
   MEDIA_GEMINI_MODEL: z.enum(["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.5-flash", "gemini-3.8-flash"]).default("gemini-2.5-flash"),
-  REDIS_URL: z.string().default(process.env.REDIS_URL || "redis://127.0.0.1:6379"),
+  REDIS_URL: z.string().default(process.env.REDIS_URL || "redis://127.0.0.1:6380"),
   DATABASE_URL: z.string().default(process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/yor_talks"),
+  RECOVERY_REPLAY_GATE: z.preprocess(value => booleanFromEnv(value), z.boolean()),
+  RESTORE_DELETION_JOURNAL_THROUGH: z.string().default(''),
+  RESTORE_DELETION_MANIFEST_SHA256: z.string().default(''),
   // Comma-separated list of allowed browser origins for CORS. Defaults to the
-  // Vite dev server's own origin — in dev, /api is same-origin via Vite's proxy
+  // Vite dev server's own origin â€” in dev, /api is same-origin via Vite's proxy
   // anyway (see social/vite.config.ts), so this default is rarely exercised.
   CORS_ORIGINS: z.string().default(process.env.CORS_ORIGINS || "http://localhost:5173"),
   CLIENT_ORIGIN: z.string().default(process.env.CLIENT_ORIGIN || "http://localhost:5173"),
@@ -73,7 +76,7 @@ const envSchema = z.object({
   TOTP_ENCRYPTION_KEY: z.string().default(process.env.TOTP_ENCRYPTION_KEY || "totp-development-encryption-key-change-me"),
   METRICS_BEARER_TOKEN_FILE: z.string().default(process.env.METRICS_BEARER_TOKEN_FILE || "/run/secrets/metrics_bearer_token"),
   TERMS_VERSION: z.string().trim().default(process.env.TERMS_VERSION || "development"),
-  MINIMUM_AGE: z.coerce.number().int().min(13).default(Number(process.env.MINIMUM_AGE || 18)),
+  LEGAL_CONTENT_REVIEWED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   PUBLIC_BETA: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   PAYMENTS_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
   SELLER_ENABLED: z.preprocess((value) => booleanFromEnv(value), z.boolean()),
@@ -92,10 +95,21 @@ const envSchema = z.object({
   SUPPORT_EMAIL: z.string().default(process.env.SUPPORT_EMAIL || ""),
   GRIEVANCE_OFFICER_NAME: z.string().default(process.env.GRIEVANCE_OFFICER_NAME || ""),
   GRIEVANCE_CONTACT_EMAIL: z.string().default(process.env.GRIEVANCE_CONTACT_EMAIL || ""),
+  PROMOTIONAL_EMAIL_ENABLED: z.preprocess((value) => booleanFromEnv(value, false), z.boolean()).default(false),
 });
 
 const parsedEnv = envSchema.parse(process.env);
 
+if (parsedEnv.RECOVERY_REPLAY_GATE && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(parsedEnv.RESTORE_DELETION_JOURNAL_THROUGH)
+  || !Number.isFinite(Date.parse(parsedEnv.RESTORE_DELETION_JOURNAL_THROUGH))
+  || new Date(parsedEnv.RESTORE_DELETION_JOURNAL_THROUGH).toISOString().replace('.000Z','Z') !== parsedEnv.RESTORE_DELETION_JOURNAL_THROUGH
+  || !/^[a-f0-9]{64}$/.test(parsedEnv.RESTORE_DELETION_MANIFEST_SHA256))) {
+  throw new Error('[Config Error] Recovery requires an independent UTC checkpoint and SHA-256 manifest digest');
+}
+
+if ((parsedEnv.SELLER_ENABLED || parsedEnv.MEMBERSHIPS_ENABLED) && !parsedEnv.PAYMENTS_ENABLED) {
+  throw new Error('[Config Error] SELLER_ENABLED and MEMBERSHIPS_ENABLED require PAYMENTS_ENABLED=true');
+}
 if (parsedEnv.MARKETING_EMAIL_ENABLED) {
   throw new Error("[Config Error] Marketing email is not implemented and must remain disabled");
 }
@@ -118,6 +132,9 @@ if (parsedEnv.NODE_ENV === "production") {
   });
   if (invalidSecretFields.length) {
     throw new Error(`[Config Error] Production requires unique JWT secrets of at least 32 characters: ${invalidSecretFields.join(", ")}`);
+  }
+  if (parsedEnv.JWT_SECRET === parsedEnv.JWT_REFRESH_SECRET) {
+    throw new Error("[Config Error] Production JWT_SECRET and JWT_REFRESH_SECRET must be distinct");
   }
 
   if (parsedEnv.CONTACT_SHIELD_SECRET.length < 32 || insecureSecrets.has(parsedEnv.CONTACT_SHIELD_SECRET)) {
@@ -181,7 +198,10 @@ if (parsedEnv.NODE_ENV === "production") {
   }
 }
 
-if (parsedEnv.PUBLIC_BETA) {
+if (parsedEnv.PUBLIC_BETA && !parsedEnv.LEGAL_CONTENT_REVIEWED) {
+  throw new Error("[Config Error] PUBLIC_BETA requires the exact public legal and eligibility content to be reviewed and approved");
+}
+if (parsedEnv.LEGAL_CONTENT_REVIEWED) {
   const placeholderPattern = /change_me|change-me|replace-with|your-domain\.example|^development$/i;
   const requiredPublicBetaConfig = [
     ["TERMS_VERSION", parsedEnv.TERMS_VERSION],
@@ -193,19 +213,24 @@ if (parsedEnv.PUBLIC_BETA) {
     ["SUPPORT_EMAIL", parsedEnv.SUPPORT_EMAIL],
     ["GRIEVANCE_OFFICER_NAME", parsedEnv.GRIEVANCE_OFFICER_NAME],
     ["GRIEVANCE_CONTACT_EMAIL", parsedEnv.GRIEVANCE_CONTACT_EMAIL],
-    ["GOOGLE_CLIENT_ID", parsedEnv.GOOGLE_CLIENT_ID],
   ] as const;
-  const missingPublicBetaConfig = requiredPublicBetaConfig
-    .filter(([, value]) => !value || placeholderPattern.test(value))
-    .map(([field]) => field);
-  if (missingPublicBetaConfig.length) {
-    throw new Error(`[Config Error] PUBLIC_BETA requires configured legal and sign-in values: ${missingPublicBetaConfig.join(", ")}`);
+  for (const [field, value] of requiredPublicBetaConfig) {
+    if (!value.trim()) throw new Error(`[Config Error] ${field} is required when legal content is marked reviewed`);
+    if (placeholderPattern.test(value)) throw new Error(`[Config Error] ${field} contains unapproved placeholder content`);
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(parsedEnv.LEGAL_EFFECTIVE_DATE) || Number.isNaN(Date.parse(parsedEnv.LEGAL_EFFECTIVE_DATE))) {
-    throw new Error("[Config Error] LEGAL_EFFECTIVE_DATE must be an ISO date (YYYY-MM-DD)");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(parsedEnv.LEGAL_EFFECTIVE_DATE) || Number.isNaN(Date.parse(parsedEnv.LEGAL_EFFECTIVE_DATE))
+    || new Date(parsedEnv.LEGAL_EFFECTIVE_DATE).toISOString().slice(0, 10) !== parsedEnv.LEGAL_EFFECTIVE_DATE) {
+    throw new Error("[Config Error] LEGAL_EFFECTIVE_DATE must be a valid ISO date (YYYY-MM-DD)");
   }
   for (const [field, value] of [["PRIVACY_CONTACT_EMAIL", parsedEnv.PRIVACY_CONTACT_EMAIL], ["SUPPORT_EMAIL", parsedEnv.SUPPORT_EMAIL], ["GRIEVANCE_CONTACT_EMAIL", parsedEnv.GRIEVANCE_CONTACT_EMAIL]] as const) {
     if (!z.string().email().safeParse(value).success) throw new Error(`[Config Error] ${field} must be a valid email address`);
+  }
+}
+
+if (parsedEnv.PUBLIC_BETA) {
+  if (!parsedEnv.GOOGLE_CLIENT_ID) throw new Error('[Config Error] PUBLIC_BETA requires GOOGLE_CLIENT_ID');
+  if (/change_me|change-me|replace-with|your-domain\.example/i.test(parsedEnv.GOOGLE_CLIENT_ID)) {
+    throw new Error('[Config Error] GOOGLE_CLIENT_ID contains unapproved placeholder content');
   }
 }
 
@@ -236,3 +261,4 @@ export const allowedEmailDomains: string[] = parsedEnv.ALLOWED_EMAIL_DOMAINS
   .split(",")
   .map((domain) => domain.trim().toLowerCase().replace(/^@/, ""))
   .filter(Boolean);
+

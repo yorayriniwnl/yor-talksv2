@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useAppStore, type Message as DirectMessage, type MessageDraft } from '@/lib/store';
 import { api, type BackendUser, type UploadedMedia } from '@/lib/api-client';
-import { useParams, useLocation } from 'wouter';
+import { useParams, useLocation, Link } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -509,6 +509,7 @@ export default function Messages() {
   const typingConversationIdRef = useRef<string | null>(null);
   const remoteTypingTimers = useRef(new Map<string, number>());
   const messageRequestSequence = useRef(0);
+  const loadedMessagesConversationRef = useRef<string | null>(null);
   const requestedProfiles = useRef(new Set<string>());
 
   useEffect(() => {
@@ -563,27 +564,33 @@ export default function Messages() {
 
   useEffect(() => {
     const socket = getSocket();
-    const update = () => {
+    const updateStatus = () => {
       setRealtimeConnected(Boolean(socket?.connected));
       setOnline(navigator.onLine);
-      if (socket?.connected && id) {
+    };
+    const onConnect = () => {
+      updateStatus();
+      // The initial conversation snapshot is already loaded on entry. Avoid
+      // racing a second full snapshot against it if Socket.IO connects while
+      // that first request is still in flight.
+      if (id && loadedMessagesConversationRef.current === id) {
         void syncConversationMessages(id).catch(() => {
           toast.error('Realtime restored. This conversation could not finish syncing yet.');
         });
       }
     };
-    update();
-    socket?.on('connect', update);
-    socket?.on('disconnect', update);
-    socket?.on('connect_error', update);
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
+    updateStatus();
+    socket?.on('connect', onConnect);
+    socket?.on('disconnect', updateStatus);
+    socket?.on('connect_error', updateStatus);
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
     return () => {
-      socket?.off('connect', update);
-      socket?.off('disconnect', update);
-      socket?.off('connect_error', update);
-      window.removeEventListener('online', update);
-      window.removeEventListener('offline', update);
+      socket?.off('connect', onConnect);
+      socket?.off('disconnect', updateStatus);
+      socket?.off('connect_error', updateStatus);
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
     };
   }, [currentUser?.id, id, syncConversationMessages]);
 
@@ -593,6 +600,7 @@ export default function Messages() {
     setMessageLoadError('');
     try {
       await loadConversationMessages(conversationId);
+      if (sequence === messageRequestSequence.current) loadedMessagesConversationRef.current = conversationId;
     } catch {
       if (sequence === messageRequestSequence.current) setMessageLoadError('Could not load this conversation. Your existing messages are safe. Try again.');
     } finally {
@@ -601,6 +609,7 @@ export default function Messages() {
   }, [loadConversationMessages]);
 
   useEffect(() => {
+    loadedMessagesConversationRef.current = null;
     if (id) void requestConversationMessages(id);
     else {
       setLoadingMessages(false);
@@ -875,6 +884,10 @@ export default function Messages() {
               />
             </div>
             <div className="operator-inbox__summary"><span>{conversationList.length} conversations</span><StatusBadge status={!online ? 'offline' : realtimeConnected ? 'online' : 'away'}>{!online ? 'Offline' : realtimeConnected ? 'Live updates' : 'Periodic updates'}</StatusBadge></div>
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed">
+              <p>Standard messages can be processed by Yor’s servers.</p>
+              <Link href="/private-messages" className="mt-2 inline-flex min-h-11 items-center gap-2 font-medium underline underline-offset-4"><LockKeyhole size={15} /> Open encrypted private chats</Link>
+            </div>
           </header>
           
           <div className="operator-inbox__list">
@@ -883,7 +896,7 @@ export default function Messages() {
               <div className="operator-inbox__empty">
                 <Inbox aria-hidden="true" />
                 <h2>{searchQuery ? 'No matching conversations' : 'Your inbox is clear'}</h2>
-                <p>{searchQuery ? 'Try a shorter name or username.' : 'Start a private conversation with someone in your network.'}</p>
+                <p>{searchQuery ? 'Try a shorter name or username.' : 'Start a conversation with someone in your network.'}</p>
                 {!searchQuery && <button type="button" onClick={() => setNewMessageOpen(true)}>Start a conversation</button>}
               </div>
             )) : (

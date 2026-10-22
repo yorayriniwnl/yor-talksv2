@@ -14,3 +14,12 @@ services:
       - "api.razorpay.com:127.0.0.1"
       - "oauth2.googleapis.com:127.0.0.1"
       - "www.googleapis.com:127.0.0.1"
+  backup:
+    # The CI remote alias writes only to this project-scoped volume.
+    networks:
+      - backend
+    volumes:
+      - backup_smoke_target:/ci-backup-target
+
+volumes:
+  backup_smoke_target:

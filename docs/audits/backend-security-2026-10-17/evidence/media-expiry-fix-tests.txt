@@ -1,0 +1,43 @@
+✔ a viewer-bound exact-resource grant cannot be copied to another account or anonymous delivery (332.2457ms)
+✔ a public reference to an asset cannot authorize its separate private reference (136.5467ms)
+✔ a cached grant is denied immediately after its exact entity reference is removed (158.9481ms)
+✔ a cached media read rechecks current eligibility instead of trusting cached bytes (76.2207ms)
+✔ revoked eligibility during a shared provider read returns no bytes to either caller (268.6738ms)
+✔ profile media rechecks minor privacy at issuance, cached delivery and renewed grants (250.7519ms)
+✔ unclassified profile media stays unavailable to child-safe and anonymous audiences (42.8566ms)
+✔ profile privacy changed during provider verification prevents delivery and new issuance (99.0452ms)
+✔ stories media expires at issuance and cached delivery without waiting for cleanup (96.0805ms)
+✔ stories expiry during provider verification returns no bytes (59.2945ms)
+✔ user_notes media expires at issuance and cached delivery without waiting for cleanup (92.7705ms)
+✔ user_notes expiry during provider verification returns no bytes (47.2197ms)
+✔ messages media expires at issuance and cached delivery without waiting for cleanup (570.3936ms)
+✔ messages expiry during provider verification returns no bytes (563.871ms)
+✔ an expired story retained in a highlight keeps its currently authorized media (143.926ms)
+✔ message attachment expiry uses the database UTC clock for near-future content (55.3749ms)
+✔ message expiry during awaited contact authorization prevents grant issuance (562.6534ms)
+✔ stories media expiry supports timestamp without time zone in non-UTC database sessions (171.6308ms)
+✔ user_notes media expiry supports timestamp without time zone in non-UTC database sessions (180.4515ms)
+✔ messages media expiry supports timestamp without time zone in non-UTC database sessions (157.3618ms)
+✔ stories media expiry supports timestamp with time zone in non-UTC database sessions (201.6461ms)
+✔ user_notes media expiry supports timestamp with time zone in non-UTC database sessions (204.3023ms)
+✔ messages media expiry supports timestamp with time zone in non-UTC database sessions (127.195ms)
+✔ the actual cleanup sweep preserves live media with timestamp in UTC (129.6825ms)
+✔ the actual cleanup sweep preserves live media with timestamp in Asia/Calcutta (52.1031ms)
+✔ the actual cleanup sweep preserves live media with timestamp in America/New_York (50.5326ms)
+✔ the actual cleanup sweep preserves live media with timestamptz in UTC (60.0398ms)
+✔ the actual cleanup sweep preserves live media with timestamptz in Asia/Calcutta (47.1383ms)
+✔ the actual cleanup sweep preserves live media with timestamptz in America/New_York (46.8789ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamp in UTC (202.6858ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamp in Asia/Calcutta (151.6299ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamp in America/New_York (139.8226ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamptz in UTC (142.464ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamptz in Asia/Calcutta (152.0148ms)
+✔ the migrated media expiry trigger compares UTC instants with timestamptz in America/New_York (139.2743ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10996.1849

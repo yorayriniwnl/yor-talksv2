@@ -17,44 +17,47 @@ const THEME_STORAGE_KEY = 'yor-talks-accent-theme';
 
 function setThemeVariables(theme: ThemePreset) {
   const root = document.documentElement;
+  // CSS selects readable light/dark pairs even after this control unmounts.
+  // Fixed inline colors previously survived theme changes with unreadable
+  // primary text and button labels in the opposite mode.
+  root.style.removeProperty('--primary');
+  root.style.removeProperty('--accent');
+  if (theme === 'default') delete root.dataset.yorAccent;
+  else root.dataset.yorAccent = theme;
+}
 
-  if (theme === 'midnight') {
-    root.style.setProperty('--primary', '0 66% 24%');
-    root.style.setProperty('--accent', '4 100% 75%');
-  } else if (theme === 'lilac') {
-    root.style.setProperty('--primary', '4 100% 75%');
-    root.style.setProperty('--accent', '0 77% 60%');
-  } else if (theme === 'amber') {
-    root.style.setProperty('--primary', '0 77% 60%');
-    root.style.setProperty('--accent', '0 66% 24%');
-  } else {
-    root.style.removeProperty('--primary');
-    root.style.removeProperty('--accent');
+function storedTheme(): ThemePreset {
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return THEME_PRESETS.find((theme) => theme.id === value)?.id ?? 'default';
+  } catch {
+    return 'default';
   }
+}
+
+export function initializeAccentTheme() {
+  setThemeVariables(storedTheme());
 }
 
 export function ThemeMorpher() {
   const [activeTheme, setActiveTheme] = useState<ThemePreset>('default');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored && THEME_PRESETS.some((theme) => theme.id === stored)) {
-      const theme = stored as ThemePreset;
-      setThemeVariables(theme);
-      setActiveTheme(theme);
-    }
+    const theme = storedTheme();
+    setThemeVariables(theme);
+    setActiveTheme(theme);
   }, []);
 
   const applyTheme = (theme: ThemePreset) => {
     sounds.playChime();
     setActiveTheme(theme);
     setThemeVariables(theme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* Keep this page's choice. */ }
     toast.success(`${THEME_PRESETS.find((preset) => preset.id === theme)?.name} accent applied`);
   };
 
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/35 p-1 font-sans" aria-label="Choose accent theme">
+    <div role="group" className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/35 p-1 font-sans" aria-label="Choose accent theme">
       {THEME_PRESETS.map((theme) => (
         <button
           key={theme.id}
@@ -63,7 +66,7 @@ export function ThemeMorpher() {
           className={cn(
             'grid h-7 w-7 place-items-center rounded-lg transition-all',
             theme.swatch,
-            activeTheme === theme.id ? 'scale-100 text-white shadow-sm ring-2 ring-background' : 'opacity-55 hover:scale-105 hover:opacity-100'
+            activeTheme === theme.id ? cn('scale-100 shadow-sm ring-2 ring-background', theme.id === 'lilac' ? 'text-black' : 'text-white') : 'opacity-55 hover:scale-105 hover:opacity-100'
           )}
           title={`${theme.name} accent`}
           aria-label={`Use ${theme.name} accent`}

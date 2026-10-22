@@ -35,7 +35,7 @@ function buildDocuments(): Record<string, LegalDocument> {
   return {
     '/privacy': {
       title: 'Privacy Notice',
-      eyebrow: publicBetaConfig.publicBeta ? 'Yor Talks · public beta trust center' : 'Yor Talks · development trust center',
+      eyebrow: legalConfigReady ? 'Yor Talks · approved trust center' : 'Yor Talks · pending review draft',
       intro: `${betaNotice} This notice explains the personal data processed to provide Yor Talks, protect people, and honor account controls.`,
       sections: [
         { heading: 'Data categories and purposes', body: 'Depending on features you use, Yor processes email address and verification status, credentials, device/session identifiers, two-factor authentication settings and security challenges; username, profile and eligibility information; posts, media, messages, reactions, follows and other social activity; reports, appeals and moderation records; support or grievance submissions; optional Contact Shield match digests; and, only when payments are enabled, order and financial records. These data support account access, service delivery, safety and moderation, payment processing, support, legal obligations and optional reliability analytics.' },
@@ -49,9 +49,9 @@ function buildDocuments(): Record<string, LegalDocument> {
     '/terms': {
       title: 'Terms of Use',
       eyebrow: publicBetaConfig.publicBeta ? `Yor Talks · terms ${publicBetaConfig.termsVersion}` : 'Yor Talks · development terms',
-      intro: `${betaNotice} By using the public beta, you agree to these terms and the Community Guidelines. You must meet the currently configured minimum age of ${publicBetaConfig.minimumAge}.`,
+      intro: `${betaNotice} By using the public beta, you agree to these terms and the Community Guidelines. Age and eligibility requirements depend on the rules configured for your territory and are verified separately from terms acceptance.`,
       sections: [
-        { heading: 'Eligibility and account security', body: `You must meet the configured minimum age of ${publicBetaConfig.minimumAge}, complete any separate eligibility verification required for your location or feature, and use an email accepted by this deployment. A terms checkbox is not age verification. Keep your password, recovery links and authenticator codes private. Do not create accounts for other people, impersonate someone, or evade a safety restriction.` },
+        { heading: 'Eligibility and account security', body: `You must meet the territory-specific age and eligibility rules, complete the required verification, and use an email accepted by this deployment. A terms checkbox is not age verification. Keep your password, recovery links and authenticator codes private. Do not create accounts for other people, impersonate someone, or evade a safety restriction.` },
         { heading: 'Accounts and user content', body: 'Keep your account credentials private and provide information you are authorized to use. You retain rights you hold in content you submit and grant Yor Talks a limited, non-exclusive permission to host, store, transmit, display and moderate it only as needed to operate the service. You are responsible for having rights to what you post. Account export and deletion controls are available in Settings; deletion may not immediately remove recipient copies, backups, safety evidence or legally retained payment records.' },
         { heading: 'Prohibited behavior and reporting', body: 'Do not threaten, harass, stalk, dox, exploit, scam, spam, phish, distribute non-consensual intimate material, sexualize or target minors, infringe copyright, manipulate engagement, disrupt the service, evade restrictions, or attempt unauthorized access. Report content in-product or use the grievance portal. Copyright and privacy complaints should identify the material, location, basis for the request and a reliable contact.' },
         { heading: 'Moderation, suspension and deletion', body: 'We may review reports, warn, restrict reach or features, remove content, preserve relevant evidence, or suspend accounts when needed for safety, policy enforcement or service integrity. Decisions may be appealed through the grievance portal. Users may request account deletion through Settings; certain security, safety, payment or legal records may remain subject to the Privacy Notice and retention schedule.' },
@@ -68,7 +68,7 @@ function buildDocuments(): Record<string, LegalDocument> {
         { heading: 'Consent matters', body: 'Do not share private information, intimate imagery, recordings or identifying material without consent. Never sexualize, groom or exploit minors. Do not use Yor to solicit harmful contact with a minor.' },
         { heading: 'Be honest', body: 'No impersonation, fraud, phishing, fake giveaways, deceptive engagement, spam, coordinated manipulation or attempts to bypass account restrictions.' },
         { heading: 'Respect creative work', body: 'Post only material you created or have permission to use. Copyright and takedown requests should include the relevant work, location and a reliable contact.' },
-        { heading: 'How enforcement works', body: `We may warn, limit reach, remove content, lock features or suspend accounts. Decisions consider severity, context, repeated behavior and safety risk. You can request human review through the grievance portal; the appointed contact is ${publicBetaConfig.grievanceOfficerName || 'the operator contact shown on that portal'} at ${grievanceContact}.` },
+        { heading: 'How enforcement works', body: `We may warn, limit reach, remove content, lock features or suspend accounts. Decisions consider severity, context, repeated behavior and safety risk. You can request review through the grievance portal; the appointed contact is ${publicBetaConfig.grievanceOfficerName || 'the operator contact shown on that portal'} at ${grievanceContact}.` },
         { heading: 'Report a problem', body: 'Use report controls on content or visit the grievance portal. Include links, context and timestamps. Do not submit emergencies through Yor; contact local emergency services instead.' },
       ],
     },
@@ -121,6 +121,14 @@ export default function LegalPage() {
           <Button asChild variant="ghost" className="rounded-xl"><Link href="/auth"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Yor</Link></Button>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Trust center</div>
         </div>
+        {!legalConfigReady && (
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Unapproved Legal Draft Notice</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-200/90">
+              This document is a technical and product draft. Operating entity details, statutory contacts, governing jurisdiction, effective dates, and territorial age assurance policies are pending formal qualified legal and executive approval. Do not rely on this draft as binding approval or final public policy.
+            </p>
+          </div>
+        )}
         <article className="rounded-3xl border border-border/60 bg-card/70 p-7 shadow-2xl sm:p-10">
           <div className="mb-8 border-b border-border/50 pb-7">
             <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary"><FileText className="h-4 w-4" /> {document.eyebrow}</p>

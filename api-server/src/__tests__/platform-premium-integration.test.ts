@@ -107,13 +107,14 @@ test('concurrent checkout and repeated client keys create a single durable provi
 
 test('temporary overrides are independent of payment, expire, and cannot defeat operational availability', async () => {
   const userId = await person();
-  await pool.query(`INSERT INTO user_feature_overrides(user_id,feature_key,enabled,expires_at) VALUES($1,'MESSAGE_FONT',true,now()+interval '1 hour')`, [userId]);
+  await pool.query(`INSERT INTO user_feature_overrides(user_id,feature_key,enabled,expires_at) VALUES($1,'MESSAGE_FONT',true,$2)`,
+    [userId, new Date(Date.now() + 3_600_000).toISOString()]);
   assert.equal(await entitlements.hasFeature(userId, 'MESSAGE_FONT'), true);
   assert.equal(await new FeatureEntitlementService(undefined, { MESSAGE_FONT: false }).hasFeature(userId, 'MESSAGE_FONT'), false);
-  await pool.query(`UPDATE user_feature_overrides SET expires_at=now()-interval '1 second' WHERE user_id=$1`, [userId]);
+  await pool.query(`UPDATE user_feature_overrides SET expires_at=$2 WHERE user_id=$1`, [userId, new Date(Date.now() - 1_000).toISOString()]);
   assert.equal(await entitlements.hasFeature(userId, 'MESSAGE_FONT'), false);
   await buy(userId);
-  await pool.query(`UPDATE user_feature_overrides SET enabled=false,expires_at=now()+interval '1 hour' WHERE user_id=$1`, [userId]);
+  await pool.query(`UPDATE user_feature_overrides SET enabled=false,expires_at=$2 WHERE user_id=$1`, [userId, new Date(Date.now() + 3_600_000).toISOString()]);
   assert.equal(await entitlements.hasFeature(userId, 'MESSAGE_FONT'), false);
   assert.equal(await entitlements.hasFeature(userId, 'STORY_FONT'), true);
 });

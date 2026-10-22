@@ -1,0 +1,126 @@
+✖ analytics UTC boundaries and rollup retries preserve timestamp data in Asia/Calcutta (97.631ms)
+✖ analytics UTC boundaries and rollup retries preserve timestamp data in America/New_York (34.3575ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamptz data in Asia/Calcutta (63.2455ms)
+✔ analytics UTC boundaries and rollup retries preserve timestamptz data in America/New_York (48.2453ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 2
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1294.1205
+
+✖ failing tests:
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics-timezone.integration.test.ts:2:502
+✖ analytics UTC boundaries and rollup retries preserve timestamp data in Asia/Calcutta (97.631ms)
+  Error: Failed query:
+          INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
+          SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
+          FROM product_analytics_events
+          WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz
+          GROUP BY event_name
+          UNION ALL
+          SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()
+          FROM (
+            SELECT DISTINCT actor_id
+            FROM product_analytics_events
+            WHERE actor_id IS NOT NULL
+              AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz
+          ) active
+
+  params: 2026-03-08T00:00:00.000Z,2026-03-08T00:00:00.000Z,2026-03-09T00:00:00.000Z,2026-03-08T00:00:00.000Z,2026-03-08T00:00:00.000Z,2026-03-09T00:00:00.000Z
+      at NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:73:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+      ... 4 lines matching cause stack trace ...
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    query: "\n        INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)\n        SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()\n        FROM product_analytics_events\n        WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz\n        GROUP BY event_name\n        UNION ALL\n        SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()\n        FROM (\n          SELECT DISTINCT actor_id\n          FROM product_analytics_events\n          WHERE actor_id IS NOT NULL\n            AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz\n        ) active\n      ",
+    params: [ '2026-03-08T00:00:00.000Z', '2026-03-08T00:00:00.000Z', '2026-03-09T00:00:00.000Z', '2026-03-08T00:00:00.000Z', '2026-03-08T00:00:00.000Z', '2026-03-09T00:00:00.000Z' ],
+    cause: error: duplicate key value violates unique constraint "product_analytics_daily_pkey"
+        at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\pg@8.23.0\node_modules\pg\lib\client.js:694:17
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:149:14)
+        at async NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:71:12)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+        at async NodePgSession.transaction (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:259:19)
+        at async ProductAnalyticsService.rollupDay (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:94:5)
+        at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics-timezone.integration.test.ts:61:9)
+        at async Test.run (node:internal/test_runner/test:1389:7)
+        at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+      length: 281,
+      severity: 'ERROR',
+      code: '23505',
+      detail: 'Key (date, event_name)=(2026-03-08 05:30:00, navigation) already exists.',
+      hint: undefined,
+      position: undefined,
+      internalPosition: undefined,
+      internalQuery: undefined,
+      where: undefined,
+      schema: 'pg_temp_3',
+      table: 'product_analytics_daily',
+      column: undefined,
+      dataType: undefined,
+      constraint: 'product_analytics_daily_pkey',
+      file: 'nbtinsert.c',
+      line: '673',
+      routine: '_bt_check_unique'
+    }
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics-timezone.integration.test.ts:2:502
+✖ analytics UTC boundaries and rollup retries preserve timestamp data in America/New_York (34.3575ms)
+  Error: Failed query:
+          INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
+          SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
+          FROM product_analytics_events
+          WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz
+          GROUP BY event_name
+          UNION ALL
+          SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()
+          FROM (
+            SELECT DISTINCT actor_id
+            FROM product_analytics_events
+            WHERE actor_id IS NOT NULL
+              AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz
+          ) active
+
+  params: 2026-03-08T00:00:00.000Z,2026-03-08T00:00:00.000Z,2026-03-09T00:00:00.000Z,2026-03-08T00:00:00.000Z,2026-03-08T00:00:00.000Z,2026-03-09T00:00:00.000Z
+      at NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:73:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+      ... 4 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    query: "\n        INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)\n        SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()\n        FROM product_analytics_events\n        WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz\n        GROUP BY event_name\n        UNION ALL\n        SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()\n        FROM (\n          SELECT DISTINCT actor_id\n          FROM product_analytics_events\n          WHERE actor_id IS NOT NULL\n            AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz\n        ) active\n      ",
+    params: [ '2026-03-08T00:00:00.000Z', '2026-03-08T00:00:00.000Z', '2026-03-09T00:00:00.000Z', '2026-03-08T00:00:00.000Z', '2026-03-08T00:00:00.000Z', '2026-03-09T00:00:00.000Z' ],
+    cause: error: duplicate key value violates unique constraint "product_analytics_daily_pkey"
+        at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\pg@8.23.0\node_modules\pg\lib\client.js:694:17
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:149:14)
+        at async NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:71:12)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+        at async NodePgSession.transaction (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:259:19)
+        at async ProductAnalyticsService.rollupDay (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:94:5)
+        at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics-timezone.integration.test.ts:61:9)
+        at async Test.run (node:internal/test_runner/test:1389:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+      length: 281,
+      severity: 'ERROR',
+      code: '23505',
+      detail: 'Key (date, event_name)=(2026-03-07 19:00:00, navigation) already exists.',
+      hint: undefined,
+      position: undefined,
+      internalPosition: undefined,
+      internalQuery: undefined,
+      where: undefined,
+      schema: 'pg_temp_3',
+      table: 'product_analytics_daily',
+      column: undefined,
+      dataType: undefined,
+      constraint: 'product_analytics_daily_pkey',
+      file: 'nbtinsert.c',
+      line: '673',
+      routine: '_bt_check_unique'
+    }
+  }

@@ -9,8 +9,8 @@ test("socket budgets are atomic across connections and expire", async (t) => {
   const second = new RedisRepository();
   const key = `test:socket-budget:${randomUUID()}`;
   t.after(async () => {
-    await first.delStrict(key);
-    await Promise.all([first.disconnect(), second.disconnect()]);
+    try { await first.delStrict(key); }
+    finally { await Promise.all([first.disconnect(), second.disconnect()]); }
   });
   const attempts = await Promise.all(Array.from({ length: 12 }, (_, index) =>
     (index % 2 ? first : second).consumeBudgetStrict(key, 5, 1),

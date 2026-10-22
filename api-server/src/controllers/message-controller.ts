@@ -6,23 +6,7 @@ import { dispatchSocketToUsers, type SocketRequester } from "../socket/policy.js
 import { InvalidMessageContentError, InvalidMessageStyleError, InvalidReplyTargetError, MessageBlockedError, MessageService, PremiumFeatureUnavailableError, UnauthorizedError } from "../services/message-service.js";
 import { conversationMessagesQuerySchema } from "../validators/message.js";
 import { createResponse } from "../utils/response.js";
-
-function isMessageVisibleAtResponse(message: { deletedAt?: string | null; expiresAt?: string | null }): boolean {
-  if (message.deletedAt) return false;
-  if (message.expiresAt == null) return true;
-  const expiresAt = Date.parse(message.expiresAt);
-  return Number.isFinite(expiresAt) && expiresAt > Date.now();
-}
-
-function isMessageExpiredAtResponse(message: { expiresAt?: string | null }): boolean {
-  if (message.expiresAt == null) return false;
-  const expiresAt = Date.parse(message.expiresAt);
-  return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
-}
-
-function redactDeletedMessage<T extends { deletedAt?: string | null; content: string; reactions?: Record<string, string[]> }>(message: T): T {
-  return message.deletedAt ? { ...message, content: "", reactions: {} } : message;
-}
+import { toMessageTombstone } from "../utils/message-visibility.js";
 
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
@@ -63,11 +47,12 @@ export class MessageController {
       if (io) {
         const memberIds = await this.messageService.getConversationMemberIds(actualConversationId, message.senderId);
         await dispatchSocketToUsers(io,memberIds,"message:receive",async(requester:SocketRequester)=>{
-          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId,message.id);
           return hydrateMediaValue(message,undefined,requester);
-        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId,message.id));
       }
       
+      if (message.content || message.mediaId) await this.messageService.authorizeConversationDelivery(message.conversationId,req.user!.id,message.id);
       return res.status(201).json(createResponse("Message sent", message));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
@@ -208,24 +193,19 @@ export class MessageController {
       cursorId: query.cursorId,
       limit: query.limit ?? 200,
     });
-    return res.status(200).json(createResponse("Conversation loaded", messages.filter(isMessageVisibleAtResponse)));
+    return res.status(200).json(createResponse("Conversation loaded", messages));
   };
 
   listConversations = async (req: Request, res: Response) => {
     const conversations = await this.messageService.getConversationsForUser(req.user?.id ?? "");
-    return res.status(200).json(createResponse("Conversations loaded", conversations.map((item) => ({
-      ...item,
-      lastMessage: item.lastMessage && isMessageVisibleAtResponse(item.lastMessage) ? item.lastMessage : undefined,
-    }))));
+    return res.status(200).json(createResponse("Conversations loaded", conversations));
   };
 
   preview = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.previewMessage(messageId, req.user?.id ?? "");
-      if (!message || !isMessageVisibleAtResponse(message)) {
-        return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
-      }
+      if (!message) return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
       return res.status(200).json(createResponse("Message preview loaded", message));
     } catch (error) {
       if (error instanceof PremiumFeatureUnavailableError) {
@@ -258,16 +238,15 @@ export class MessageController {
   markSeen = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     const message = await this.messageService.markSeen(messageId, req.user?.id ?? "");
-    if (!message || isMessageExpiredAtResponse(message)) {
+    if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
-    const responseMessage = redactDeletedMessage(message);
     
     const io = getIo();
     if (io) {
-      if (responseMessage.deletedAt) {
-        io.to(`conversation:${responseMessage.conversationId}`).emit("message:update", responseMessage);
-      } else {
+      if (message.deletedAt) {
+        await this.emitMessage(io,message,req.user?.id??"","message:update");
+      } else if (await this.messageService.canPublishReadReceipt(message, req.user?.id ?? "")) {
         const members=await this.messageService.getConversationMemberIds(message.conversationId,req.user?.id??"");
         await dispatchSocketToUsers(io,members, "message:seen:update", async(requester:SocketRequester)=>{
           await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
@@ -276,17 +255,20 @@ export class MessageController {
           userId: req.user?.id,
           seenAt: message.seenAt,
           };
-        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
+        },'message:deliver',undefined,async requester=>{
+          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+          return this.messageService.canPublishReadReceipt(message,req.user?.id??"");
+        });
       }
     }
 
-    return res.status(200).json(createResponse("Message marked as seen", responseMessage));
+    return res.status(200).json(createResponse("Message marked as seen", message));
   };
 
   editMessage = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     const message = await this.messageService.editMessage(messageId, req.user?.id ?? "", req.body.content);
-    if (!message || !isMessageVisibleAtResponse(message)) {
+    if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
     const io=getIo();if(io)await this.emitMessage(io,message,req.user?.id??"","message:update");
@@ -296,10 +278,10 @@ export class MessageController {
   deleteMessage = async (req: Request, res: Response) => {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     const message = await this.messageService.deleteMessage(messageId, req.user?.id ?? "");
-    if (!message || isMessageExpiredAtResponse(message)) {
+    if (!message) {
       return res.status(404).json(createResponse("Message not found", null, {}, ["Message not found"]));
     }
-    const responseMessage = redactDeletedMessage(message);
+    const responseMessage = toMessageTombstone(message);
     getIo()?.to(`conversation:${message.conversationId}`).emit("message:update", responseMessage);
     return res.status(200).json(createResponse("Message deleted", responseMessage));
   };
@@ -308,9 +290,8 @@ export class MessageController {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.addReaction(messageId, req.user?.id ?? "", req.body.reaction);
-      const visible = message && isMessageVisibleAtResponse(message) ? message : undefined;
-      if (visible) getIo()?.to(`conversation:${visible.conversationId}`).emit("message:update", visible);
-      return res.status(200).json(createResponse("Reaction added", visible));
+      const io=getIo();if(message&&io)await this.emitMessage(io,message,req.user?.id??"","message:update");
+      return res.status(200).json(createResponse("Reaction added", message));
     } catch (error) {
       return res.status(403).json(createResponse("Cannot react to this message", null, {}, [error instanceof Error ? error.message : "Forbidden"]));
     }
@@ -320,9 +301,8 @@ export class MessageController {
     const messageId = typeof req.params.messageId === "string" ? req.params.messageId : "";
     try {
       const message = await this.messageService.pinMessage(messageId, req.user?.id ?? "");
-      const visible = message && isMessageVisibleAtResponse(message) ? message : undefined;
-      if (visible) getIo()?.to(`conversation:${visible.conversationId}`).emit("message:update", visible);
-      return res.status(200).json(createResponse("Message pinned", visible));
+      const io=getIo();if(message&&io)await this.emitMessage(io,message,req.user?.id??"","message:update");
+      return res.status(200).json(createResponse("Message pinned", message));
     } catch (error) {
       return res.status(403).json(createResponse("Cannot pin this message", null, {}, [error instanceof Error ? error.message : "Forbidden"]));
     }

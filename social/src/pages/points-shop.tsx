@@ -20,12 +20,12 @@ const SHOP_ITEMS = [
   { id: 'frame-glitch', type: 'frame', title: 'Quantum Glitch Hologram', points: 1400, previewColor: 'from-fuchsia-500 to-cyan-400', category: 'Avatar Frame' },
   { id: 'frame-obsidian', type: 'frame', title: 'Obsidian Void Armor', points: 1600, previewColor: 'from-slate-700 to-zinc-900', category: 'Avatar Frame' },
   
-  { id: 'bg-cyber', type: 'background', title: 'Cyberpunk Metropolis Wallpaper', points: 1500, coverUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
-  { id: 'bg-nebula', type: 'background', title: 'Deep Space Nebula Wallpaper', points: 1500, coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
-  { id: 'bg-sunset', type: 'background', title: 'Synthwave Sunset Wallpaper', points: 1500, coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
-  { id: 'bg-shibuya', type: 'background', title: 'Rainy Shibuya 2099 Wallpaper', points: 1800, coverUrl: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
-  { id: 'bg-aurora', type: 'background', title: 'Nordic Boreal Aurora Wallpaper', points: 1750, coverUrl: 'https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
-  { id: 'bg-accelerator', type: 'background', title: 'Quantum Collider Core Wallpaper', points: 2200, coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop', category: 'Profile Theme' },
+  { id: 'bg-cyber', type: 'background', title: 'Cyberpunk Metropolis Wallpaper', points: 1500, coverUrl: '/images/demo-preview-1.svg', category: 'Profile Theme' },
+  { id: 'bg-nebula', type: 'background', title: 'Deep Space Nebula Wallpaper', points: 1500, coverUrl: '/images/demo-preview-2.svg', category: 'Profile Theme' },
+  { id: 'bg-sunset', type: 'background', title: 'Synthwave Sunset Wallpaper', points: 1500, coverUrl: '/images/demo-preview-3.svg', category: 'Profile Theme' },
+  { id: 'bg-shibuya', type: 'background', title: 'Rainy Shibuya 2099 Wallpaper', points: 1800, coverUrl: '/images/demo-preview-4.svg', category: 'Profile Theme' },
+  { id: 'bg-aurora', type: 'background', title: 'Nordic Boreal Aurora Wallpaper', points: 1750, coverUrl: '/images/demo-preview-5.svg', category: 'Profile Theme' },
+  { id: 'bg-accelerator', type: 'background', title: 'Quantum Collider Core Wallpaper', points: 2200, coverUrl: '/images/demo-preview-6.svg', category: 'Profile Theme' },
 
   { id: 'badge-voyager', type: 'badge', title: 'Multiverse Pioneer Badge', points: 2000, category: 'Steam Badge' },
   { id: 'badge-master', type: 'badge', title: 'Code Architect Badge', points: 2500, category: 'Steam Badge' },
@@ -40,7 +40,7 @@ export default function PointsShop() {
   const [unlockedItems] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'frame' | 'background' | 'badge'>('all');
   const [previewFrame, setPreviewFrame] = useState<string>('from-cyan-400 to-blue-500');
-  const [previewBackground, setPreviewBackground] = useState<string>('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop');
+  const [previewBackground, setPreviewBackground] = useState<string>('/images/demo-preview-1.svg');
 
   const handlePurchase = (item: typeof SHOP_ITEMS[number]) => {
     void item;
@@ -84,7 +84,7 @@ export default function PointsShop() {
               <div className={cn("p-1.5 rounded-full bg-gradient-to-tr animate-[spin_5s_linear_infinite] shadow-2xl", previewFrame)}>
                 <div className="p-0.5 bg-background rounded-full">
                   <Avatar className="w-20 h-20 border-2 border-background">
-                    <AvatarImage src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'} />
+                    <AvatarImage src={currentUser?.avatarUrl} />
                     <AvatarFallback className="text-xl font-bold font-display">{currentUser?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
                 </div>

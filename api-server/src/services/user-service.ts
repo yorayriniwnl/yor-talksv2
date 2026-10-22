@@ -12,6 +12,8 @@ import { assertPremiumProfileSelection, PREMIUM_APP_ICONS, PREMIUM_BIO_STYLES, P
 import { EligibilityService } from "./eligibility-service.js";
 import { ContactAuthorizationService } from "./contact-authorization-service.js";
 import type { EligibilityDecision } from "../eligibility/types.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
+import { ProfileVisibilityService } from './profile-visibility-service.js';
 
 export class PremiumProfileFeatureUnavailableError extends Error {}
 export class PremiumStoryViewFeatureUnavailableError extends Error {}
@@ -26,15 +28,15 @@ export class UserService {
     private readonly entitlementService: FeatureEntitlementService = new FeatureEntitlementService(),
     private readonly eligibilityService: EligibilityService = new EligibilityService(),
     private readonly contactAuthorization: ContactAuthorizationService = new ContactAuthorizationService(),
+    private readonly profileVisibility = new ProfileVisibilityService(userRepository, contactShieldService, eligibilityService),
   ) {}
 
   async getProfile(userId: string, viewerId?: string): Promise<UserRecord | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
     if (viewerId === userId) return { ...user, ...(await this.userRepository.getOwnRelationships(userId)) };
-    const shouldRecordAnalytics = viewerId ? await this.mayRecordProfileAnalytics(userId, viewerId) : false;
     if (!(await this.canViewProfile(user, viewerId))) return undefined;
-    if (viewerId && shouldRecordAnalytics) void this.creatorAnalyticsService.recordProfileView(userId, viewerId);
+    if (viewerId) void this.creatorAnalyticsService.recordProfileView(userId, viewerId);
     return this.withoutPreciseLocation(user);
   }
 
@@ -47,9 +49,8 @@ export class UserService {
     const user = await this.userRepository.findByUsername(username.trim().toLowerCase());
     if (!user) return undefined;
     if (viewerId === user.id) return { ...user, ...(await this.userRepository.getOwnRelationships(user.id)) };
-    const shouldRecordAnalytics = viewerId ? await this.mayRecordProfileAnalytics(user.id, viewerId) : false;
     if (!(await this.canViewProfile(user, viewerId))) return undefined;
-    if (viewerId && shouldRecordAnalytics) void this.creatorAnalyticsService.recordProfileView(user.id, viewerId);
+    if (viewerId) void this.creatorAnalyticsService.recordProfileView(user.id, viewerId);
     return this.withoutPreciseLocation(user);
   }
 
@@ -112,8 +113,8 @@ export class UserService {
 
   async searchUsers(search: string, viewerId?: string): Promise<UserRecord[]> {
     const candidates = await this.userRepository.list(search);
-    const visible = await Promise.all(candidates.map(async user => await this.canViewProfile(user, viewerId) ? user : undefined));
-    return visible.filter((user): user is UserRecord => !!user).map(user => this.withoutPreciseLocation(user));
+    const visible = await this.profileVisibility.filter(candidates, viewerId, { discovery: true });
+    return visible.map(user => this.withoutPreciseLocation(user));
   }
 
   async followUser(userId: string, targetId: string): Promise<{ follower: UserRecord; target: UserRecord; status: "accepted" | "pending" } | undefined> {
@@ -136,7 +137,11 @@ export class UserService {
       };
     }
 
-    const requiresApproval = target.settings?.privateAccount === true
+    const eligibilityEnforced = isEligibilityEnforcementEnabled();
+    const targetDecision = eligibilityEnforced ? await this.eligibilityService.decisionFor(targetId) : undefined;
+    const minorOrUnverified = eligibilityEnforced && targetDecision?.experience !== "adult_18_plus";
+    const requiresApproval = minorOrUnverified
+      || target.settings?.privateAccount === true
       || target.privacy?.profileVisibility === "private"
       || target.privacy?.profileVisibility === "followers";
     if (requiresApproval) {
@@ -208,8 +213,8 @@ export class UserService {
     const owner = await this.userRepository.findById(userId);
     if (!owner || !(await this.canViewProfile(owner, viewerId))) return [];
     const followers = await this.userRepository.listFollowers(userId);
-    const visible = await Promise.all(followers.map(async user => await this.canViewProfile(user, viewerId) ? user : undefined));
-    return visible.filter((user): user is UserRecord => !!user).map(user => this.withoutPreciseLocation(user));
+    const visible = await this.profileVisibility.filter(followers, viewerId);
+    return visible.map(user => this.withoutPreciseLocation(user));
   }
 
   async listFollowRequests(targetId: string): Promise<Array<{ request: FollowRequestRecord; requester: UserRecord }>> {
@@ -256,8 +261,8 @@ export class UserService {
     const owner = await this.userRepository.findById(userId);
     if (!owner || !(await this.canViewProfile(owner, viewerId))) return [];
     const following = await this.userRepository.listFollowing(userId);
-    const visible = await Promise.all(following.map(async user => await this.canViewProfile(user, viewerId) ? user : undefined));
-    return visible.filter((user): user is UserRecord => !!user).map(user => this.withoutPreciseLocation(user));
+    const visible = await this.profileVisibility.filter(following, viewerId);
+    return visible.map(user => this.withoutPreciseLocation(user));
   }
 
   async listFavoriteCreatorIds(userId: string): Promise<string[]> {
@@ -349,24 +354,7 @@ export class UserService {
   }
 
   private async canViewProfile(user: UserRecord, viewerId?: string): Promise<boolean> {
-    if (viewerId === user.id) return true;
-    if (['suspended', 'deactivated', 'deleted'].includes(user.accountStatus ?? 'active')) return false;
-    // This service has no trusted request-territory context for a guest. A
-    // profile must not turn an unknown public decision into public access.
-    if (!viewerId) return false;
-    if (!(await this.contactShieldService.canView(viewerId, user.id))) return false;
-    const following = await this.userRepository.isFollowing(viewerId, user.id);
-    const [viewerDecision, targetDecision] = await Promise.all([
-      this.eligibilityService.decisionFor(viewerId), this.eligibilityService.decisionFor(user.id),
-    ]);
-    if (!viewerDecision.activated || !viewerDecision.capabilities.social || !targetDecision.activated) return false;
-    const minorProfile = targetDecision.experience !== 'adult_18_plus';
-    // Underage accounts stay private even if a stale/client-written profile
-    // preference says public. Contact-aware exceptions are handled separately.
-    const visibility = minorProfile ? 'private'
-      : user.privacy?.profileVisibility ?? (user.settings?.privateAccount ? 'private' : 'public');
-    if (visibility === "private" || visibility === "followers") return following;
-    return true;
+    return this.profileVisibility.canView(user, viewerId);
   }
 
   private clampSettings(settings: Partial<UserSettings>, decision?: EligibilityDecision): Partial<UserSettings> {
@@ -382,19 +370,6 @@ export class UserService {
       sharePreciseLocation: false,
       contentFilter: "child_safe",
     };
-  }
-
-  private async mayRecordProfileAnalytics(profileId: string, viewerId: string): Promise<boolean> {
-    try {
-      const [profile, viewer] = await Promise.all([
-        this.eligibilityService.decisionFor(profileId),
-        this.eligibilityService.decisionFor(viewerId),
-      ]);
-      return profile.activated && profile.experience === "adult_18_plus" && profile.capabilities.profiling
-        && viewer.activated && viewer.experience === "adult_18_plus" && viewer.capabilities.profiling;
-    } catch {
-      return false;
-    }
   }
 
   /** Precise location is never included in a social profile DTO. */

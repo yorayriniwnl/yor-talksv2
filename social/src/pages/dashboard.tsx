@@ -23,13 +23,13 @@ export default function Dashboard() {
   const totalWaves = myPosts.reduce((sum, p) => sum + p.likes, 0);
   const followers = currentUser?.followers || 0;
   
-  const engagementRate = totalPosts > 0 ? ((totalWaves / (followers || 1)) * 100).toFixed(1) : '0.0';
+  const engagementRate = totalPosts > 0 && followers > 0 ? ((totalWaves / followers) * 100).toFixed(1) + '%' : 'Not available';
 
   const stats = [
     { label: 'Total Posts', value: totalPosts, detail: 'Loaded from your account' },
     { label: 'Waves Received', value: totalWaves, detail: 'Across loaded posts' },
     { label: 'Followers', value: followers, detail: 'Current account total' },
-    { label: 'Engagement Rate', value: `${engagementRate}%`, detail: 'Waves ÷ followers' },
+    { label: 'Engagement Rate', value: engagementRate, detail: 'Loaded waves ÷ current followers' },
   ];
 
   const activityData = useMemo(() => {
@@ -103,7 +103,7 @@ export default function Dashboard() {
           >
             <div className="showcase-section-title mb-6">
               <Sparkles className="w-4 h-4 text-primary" />
-              <h3>Interactions & Resonance Over Time</h3>
+              <h3>Current interactions by post publication day</h3>
             </div>
             <div className="h-64 w-full">
               <Suspense fallback={<div className="w-full h-full skeleton-aurora rounded-2xl" />}>

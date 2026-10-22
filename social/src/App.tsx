@@ -1,5 +1,6 @@
-import { Suspense, useEffect } from 'react';
-import { MotionConfig } from 'framer-motion';
+﻿import { Suspense, useEffect, useLayoutEffect } from 'react';
+import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
+import { initializeAccentTheme } from '@/components/ui/ThemeMorpher';
 import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 import { ThemeProvider } from 'next-themes';
@@ -10,21 +11,19 @@ import { useAppStore } from '@/lib/store';
 import { publicBetaConfig } from '@/lib/public-beta-config';
 import { safeInternalRedirect } from '@/lib/safe-redirect';
 
-// Shell & Layout
-import { AppShell } from '@/components/layout/AppShell';
-
 // Helpers
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import RouteSkeleton from '@/components/ui/RouteSkeleton';
 import { PageTransition } from '@/components/ui/PageTransition';
 
-// ═══════════════════════════════════════════════════════════════
-//  PAGES — Route-level code-splitting (43 pages)
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  PAGES â€” Route-level code-splitting (43 pages)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Core Social
 const Auth = lazyWithRetry(() => import('@/pages/auth'));
+const Preregister = lazyWithRetry(() => import('@/pages/preregister'));
 const VerifyEmail = lazyWithRetry(() => import('@/pages/verify-email'));
 const ResetPassword = lazyWithRetry(() => import('@/pages/reset-password'));
 const LegalPage = lazyWithRetry(() => import('@/pages/legal'));
@@ -41,6 +40,7 @@ const Profile = lazyWithRetry(() => import('@/pages/profile'));
 const Projects = lazyWithRetry(() => import('@/pages/projects'));
 const PostDetail = lazyWithRetry(() => import('@/pages/post-detail'));
 const Messages = lazyWithRetry(() => import('@/pages/messages'));
+const PrivateMessages = lazyWithRetry(() => import('@/pages/private-messages'));
 const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
 const Saved = lazyWithRetry(() => import('@/pages/saved'));
 const BroadcastChannels = lazyWithRetry(() => import('@/pages/broadcast-channels'));
@@ -96,12 +96,13 @@ const SquadComms = lazyWithRetry(() => import('@/pages/squad-comms'));
 const CustomRoom = lazyWithRetry(() => import('@/pages/custom-room'));
 const PodcastStudio = lazyWithRetry(() => import('@/pages/podcast-studio'));
 const Grievance = lazyWithRetry(() => import('@/pages/grievance'));
+const AppShell = lazyWithRetry(() => import('@/components/layout/AppShell').then(({ AppShell }) => ({ default: AppShell })));
 
 import { PushNotificationManager } from '@/components/notifications/PushNotificationManager';
 
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  PROTECTED ROUTES
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function ProtectedRoutes() {
   const [location] = useLocation();
@@ -124,6 +125,7 @@ function ProtectedRoutes() {
                 <Route path="/profile/:id?" component={Profile} />
                 <Route path="/projects" component={Projects} />
                 <Route path="/messages/:id?" component={Messages} />
+                <Route path="/private-messages" component={PrivateMessages} />
                 <Route path="/notifications" component={Notifications} />
                 <Route path="/saved" component={Saved} />
                 <Route path="/channels" component={BroadcastChannels} />
@@ -181,6 +183,8 @@ function ProtectedRoutes() {
                 <Route path="/rooms" component={CustomRoom} />
                 <Route path="/podcasts" component={PodcastStudio} />
                 <Route path="/grievance" component={Grievance} />
+                <Route path="/preregister" component={Preregister} />
+                <Route path="/launch" component={Preregister} />
 
                 {/* 404 */}
                 <Route component={NotFound} />
@@ -193,9 +197,9 @@ function ProtectedRoutes() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  ROUTER — Auth gating & redirect preservation
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  ROUTER â€” Auth gating & redirect preservation
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function AuthRedirect() {
   const [location] = useLocation();
@@ -225,23 +229,28 @@ function Router() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (isInitializing) {
+  const publicEntry = ['/preregister', '/launch', '/privacy', '/cookies', '/terms', '/community-guidelines', '/grievance', '/reset-password', '/verify-email'].includes(location)
+    || location.startsWith('/verify-email/');
+  if (isInitializing && !publicEntry) {
     return <RouteSkeleton />;
   }
 
   return (
       <Switch>
+        <Route path="/preregister" component={Preregister} />
+        <Route path="/launch" component={Preregister} />
         <Route path="/privacy" component={LegalPage} />
+        <Route path="/cookies" component={LegalPage} />
         <Route path="/terms" component={LegalPage} />
         <Route path="/community-guidelines" component={LegalPage} />
         <Route path="/cookies" component={LegalPage} />
         <Route path="/refund-policy" component={LegalPage} />
         <Route path="/grievance" component={Grievance} />
+        <Route path="/verify-email/:token?" component={VerifyEmail} />
+        <Route path="/reset-password" component={ResetPassword} />
         {!currentUser && (
           <>
             <Route path="/auth" component={Auth} />
-            <Route path="/verify-email/:token" component={VerifyEmail} />
-            <Route path="/reset-password" component={ResetPassword} />
             <Route>
               <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />
             </Route>
@@ -250,6 +259,7 @@ function Router() {
         {currentUser && needsTerms && (
           <>
             <Route path="/consent" component={Consent} />
+            <Route path="/settings" component={Settings} />
             <Route path="/privacy" component={LegalPage} />
             <Route path="/terms" component={LegalPage} />
             <Route path="/community-guidelines" component={LegalPage} />
@@ -269,8 +279,6 @@ function Router() {
         )}
         {currentUser && !needsTerms && !needsEligibility && needsOnboarding && (
           <>
-            <Route path="/verify-email/:token" component={VerifyEmail} />
-            <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding" component={Onboarding} />
             <Route>
               <Redirect to="/onboarding" />
@@ -280,6 +288,7 @@ function Router() {
         {currentUser && !needsTerms && !needsEligibility && !needsOnboarding && (
           <>
             <Route path="/auth" component={AuthRedirect} />
+            <Route path="/consent"><Redirect to="/" /></Route>
             <Route path="/verify-email/:token" component={VerifyEmail} />
             <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding">
@@ -294,17 +303,19 @@ function Router() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  APP ROOT
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function App() {
+  useLayoutEffect(initializeAccentTheme, []);
   const currentUser = useAppStore((s) => s.currentUser);
   const eligibility = useAppStore((s) => s.eligibility);
   const canUsePush = Boolean(currentUser && currentUser.notificationsEnabled !== false && eligibility?.activated && eligibility.experience === 'adult_18_plus' && eligibility.capabilities.social);
+  const canLoadPreferences = Boolean(currentUser && eligibility?.activated && eligibility.capabilities.social && (!publicBetaConfig.publicBeta || currentUser.termsVersion === publicBetaConfig.termsVersion && currentUser.termsAcceptedAt));
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <MotionConfig reducedMotion="user">
+      <AccessibilityProvider userId={currentUser?.id ?? null} enabled={canLoadPreferences}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
             <ErrorBoundary>
@@ -316,7 +327,7 @@ function App() {
           {canUsePush && <PushNotificationManager />}
           <Toaster />
         </TooltipProvider>
-      </MotionConfig>
+      </AccessibilityProvider>
     </ThemeProvider>
   );
 }

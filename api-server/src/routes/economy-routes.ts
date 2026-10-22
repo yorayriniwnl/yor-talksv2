@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 import { requireTrustedOrigin } from '../middlewares/trusted-origin.js';
 import { authRateLimiter } from '../middlewares/rate-limit.js';
 import { CheckoutRequestError } from '../services/checkout-intent-service.js';
@@ -15,6 +16,7 @@ import {
 import { PaymentsNotConfiguredError, PaymentProviderError, RazorpayService } from "../services/razorpay-service.js";
 import { createResponse } from "../utils/response.js";
 import { CreatorAnalyticsService } from "../services/creator-analytics-service.js";
+import { EligibilityCapabilityError } from "../services/eligibility-service.js";
 import { MarketplaceOrderNotFoundError, MarketplaceRequestError, MarketplaceService } from "../services/marketplace-service.js";
 import { SubscriptionOrderNotFoundError, SubscriptionRequestError, SubscriptionService } from "../services/subscription-service.js";
 import { PaymentWebhookNotFoundError, PaymentWebhookRequestError, PaymentWebhookService, PaymentWebhookSignatureError } from "../services/payment-webhook-service.js";
@@ -34,7 +36,7 @@ router.get("/wallet", authenticate, async (req, res) => {
     const wallet = await economyService.getCreatorWallet(req.user!.id);
     res.json(createResponse("Wallet loaded", wallet));
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     res.status(500).json(createResponse("Failed to fetch wallet", null, {}, ["Internal server error"]));
   }
 });
@@ -44,6 +46,9 @@ router.get("/analytics", authenticate, async (req, res) => {
     const data = await creatorAnalyticsService.getRecent(req.user!.id);
     res.json(createResponse("Analytics loaded", data));
   } catch (error) {
+    if (error instanceof EligibilityCapabilityError) {
+      return res.status(403).json(createResponse("Creator analytics are unavailable", null, {}, ["capability_unavailable"]));
+    }
     res.status(500).json(createResponse("Failed to fetch analytics", null, {}, ["Internal server error"]));
   }
 });
@@ -62,7 +67,7 @@ async function createTipOrder(req: Request, res: Response) {
     if (error instanceof PaymentRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Payment order could not be created", null, {}, [error.message]));
     }
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Payment order could not be created", null, {}, ["Internal server error"]));
   }
 }
@@ -97,7 +102,7 @@ router.post("/orders/:orderId/verify", authenticate, requireTrustedOrigin, authR
     if (error instanceof PaymentRequestError || error instanceof CheckoutRequestError) {
       return res.status(400).json(createResponse("Payment verification failed", null, {}, [error.message]));
     }
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Payment verification failed", null, {}, ["Internal server error"]));
   }
 });
@@ -121,7 +126,7 @@ router.post("/webhooks/razorpay", async (req: Request & { rawBody?: Buffer }, re
     }
     if (error instanceof PaymentsNotConfiguredError) return res.status(503).json(createResponse("Payments are unavailable", null, {}, [error.message]));
     if (error instanceof PaymentProviderError) return res.status(502).json(createResponse("Payment reconciliation could not be completed", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Payment reconciliation failed", null, {}, ["Internal server error"]));
   }
 });

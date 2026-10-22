@@ -51,7 +51,9 @@ export function PwaInstallPrompt() {
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
-          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 max-w-sm w-full p-4 rounded-3xl glass-heavy border border-primary/40 shadow-2xl font-sans"
+          role="region"
+          aria-label="Install Yor Talks"
+          className="fixed bottom-20 lg:bottom-6 right-4 md:right-6 z-50 max-w-sm w-[calc(100%-2rem)] p-4 rounded-3xl glass-heavy border border-primary/40 shadow-2xl font-sans"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary via-purple-600 to-accent text-white flex items-center justify-center font-bold text-sm shadow-md glow-neon-primary shrink-0">
@@ -61,7 +63,6 @@ export function PwaInstallPrompt() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <h4 className="font-display font-black text-xs text-foreground">Install Yor Talks App</h4>
-                <span className="text-[0.6rem] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold">FAST PWA</span>
               </div>
               <p className="text-[0.68rem] text-muted-foreground mt-0.5 leading-snug">
                 Get fast access to Yor Talks and keep notifications close at hand.
@@ -69,6 +70,8 @@ export function PwaInstallPrompt() {
             </div>
 
             <button
+              type="button"
+              aria-label="Dismiss install prompt"
               onClick={() => setShowPrompt(false)}
               className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/50"
             >

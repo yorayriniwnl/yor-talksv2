@@ -110,7 +110,22 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'dismiss') return;
 
-  const targetUrl = event.notification.data?.url || '/';
+  // Push payloads can contain untrusted data. A notification may open a page
+  // within this application, but must not navigate to an external site, an API
+  // endpoint, or a script URL.
+  let targetUrl = new URL('/', self.location.origin).href;
+  try {
+    const requested = event.notification.data?.url;
+    if (typeof requested === 'string' && requested.length > 0) {
+      const candidate = new URL(requested, self.location.origin);
+      if (candidate.origin === self.location.origin
+        && ['https:', 'http:'].includes(candidate.protocol)
+        && !candidate.username && !candidate.password
+        && candidate.pathname !== '/api' && !candidate.pathname.startsWith('/api/')) {
+        targetUrl = candidate.href;
+      }
+    }
+  } catch { /* Invalid targets open the application home page. */ }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

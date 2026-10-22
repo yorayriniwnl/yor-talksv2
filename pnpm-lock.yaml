@@ -1,4 +1,4 @@
-lockfileVersion: '9.0'
+﻿lockfileVersion: '9.0'
 
 settings:
   autoInstallPeers: false
@@ -199,6 +199,9 @@ importers:
       multer:
         specifier: ^2.4.0
         version: 2.4.0
+      openpgp:
+        specifier: 6.3.2
+        version: 6.3.2
       otplib:
         specifier: ^12.0.1
         version: 12.0.1
@@ -351,6 +354,9 @@ importers:
       livekit-client:
         specifier: ^2.22.0
         version: 2.22.0(@types/dom-mediacapture-record@1.0.22)
+      openpgp:
+        specifier: 6.3.2
+        version: 6.3.2
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -3058,6 +3064,15 @@ packages:
   open@8.4.2:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
+
+  openpgp@6.3.2:
+    resolution: {integrity: sha512-wcZTzHz41LV8Y48zH/JlD1JT8YdNmpWOuMAjQ/podvvCwsjBEU37K3znJh4UQcj3hksE5z9TzvhbUbwzsGvlLQ==}
+    engines: {node: '>= 18.0.0', typescript: '>= 5.0.0'}
+    peerDependencies:
+      '@openpgp/web-stream-tools': ~0.3.0
+    peerDependenciesMeta:
+      '@openpgp/web-stream-tools':
+        optional: true
 
   orval@8.22.0:
     resolution: {integrity: sha512-N8UmB4DOhW+Z2SzVq4oS/pN3DsRPq+msrRU8NyRldP1i0yiqT6qo8mUxHPk2umqYjyY0FlR2mvPbi/Jf5CiP7A==}
@@ -6545,6 +6560,8 @@ snapshots:
       define-lazy-prop: 2.0.0
       is-docker: 2.2.1
       is-wsl: 2.2.0
+
+  openpgp@6.3.2: {}
 
   orval@8.22.0(typescript@5.6.3):
     dependencies:

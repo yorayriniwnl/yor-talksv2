@@ -128,10 +128,10 @@ export default function FanClubSubscriptions() {
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-rose-500 text-black flex items-center justify-center font-bold shadow-md glow-neon-primary shrink-0"><Crown className="w-5 h-5" /></div>
           <div className="min-w-0">
             <h1 className="text-xl font-bold font-display text-foreground truncate">{creator ? `${creator.fullName || creator.username}'s Fan Club` : 'Creator Fan Clubs'}</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Verified 30-day memberships • no silent autopay</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Prepaid 30-day memberships · no automatic renewal</p>
           </div>
         </div>
-        <div className="level-badge shadow-sm shrink-0"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> {creatorId ? 'Razorpay verified' : 'Creator not selected'}</div>
+        <div className="level-badge shadow-sm shrink-0"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> {!publicBetaConfig.paymentsEnabled ? 'Payments paused' : creatorId ? 'Payment confirmation required' : 'Creator not selected'}</div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">

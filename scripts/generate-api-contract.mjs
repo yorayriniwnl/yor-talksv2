@@ -16,6 +16,7 @@ const mountPrefixes = {
   "onboarding.ts": "/onboarding",
   "projects.ts": "/projects",
   "reports.ts": "/reports",
+  "moderation.ts": "/moderation",
   "subscriptions.ts": "/subscriptions",
 };
 
@@ -50,7 +51,49 @@ const publicGrievanceSchema = {
     ticketId: { type: "string" },
     status: { type: "string", enum: ["received", "under_review", "resolved", "dismissed"] },
     createdAt: { type: "string", format: "date-time" },
-    slaDeadline: { type: "string", format: "date-time", description: "Operational review target, not a universal statutory deadline." },
+  },
+};
+const moderationSchemas = {
+  ModerationDecisionRequest: {
+    type: 'object', additionalProperties: false, required: ['targetType','targetId','action','rationale'],
+    properties: { targetType: { type: 'string', enum: ['post','user','comment','message','video'] }, targetId: { type: 'string', format: 'uuid' },
+      action: { type: 'string', enum: ['no_action','restrict','remove','restore'] }, scope: { type: 'string', enum: ['public','direct_only','global'], default: 'global', description: 'Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads.' },
+      rationale: { type: 'string', minLength: 10, maxLength: 5000, description: 'Public explanation shown to the content author. Never include private evidence or reporter identity.' },
+      internalNotes: { type: 'string', maxLength: 5000 }, expiresAt: { type: 'string', format: 'date-time' },
+      reportId: { type: 'string', format: 'uuid' }, grievanceTicketId: { type: 'string', format: 'uuid' } },
+  },
+  ModerationAppealRequest: { type: 'object', additionalProperties: false, required: ['decisionId','statement'], properties: {
+    decisionId: { type: 'string', format: 'uuid' }, statement: { type: 'string', minLength: 10, maxLength: 5000 },
+    relationship: { type: 'string', enum: ['author','reporter','affected_party'], description: 'If supplied, must match the private notice already issued to this account. It cannot establish authority.' },
+  } },
+  ModerationReviewRequest: { type: 'object', additionalProperties: false, required: ['outcome','reviewerNotes','rationale'], properties: {
+    outcome: { type: 'string', enum: ['upheld','reversed','rejected'] },
+    action: { type: 'string', enum: ['restore','restrict','remove'], description: 'Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action.' },
+    reviewerNotes: { type: 'string', minLength: 10, maxLength: 5000, description: 'Staff-only review evidence.' },
+    rationale: { type: 'string', minLength: 10, maxLength: 5000, description: 'Public review explanation visible only to the affected parties.' },
+  } },
+  PublicModerationAppeal: { type: 'object', additionalProperties: false,
+    required: ['id','decisionId','relationship','statement','status','rationale','outcomeDecisionId','reviewedAt','createdAt','updatedAt'], properties: {
+      id: { type: 'string', format: 'uuid' }, decisionId: { type: 'string', format: 'uuid' }, relationship: { type: 'string', enum: ['author','reporter','affected_party'] },
+      statement: { type: 'string' }, status: { type: 'string', enum: ['pending','under_review','upheld','reversed','rejected'] },
+      rationale: { type: ['string','null'] }, outcomeDecisionId: { type: ['string','null'], format: 'uuid' },
+      reviewedAt: { type: ['string','null'], format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
+    } },
+  PublicModerationAppealList: { type: 'array', items: { $ref: '#/components/schemas/PublicModerationAppeal' } },
+  ReportStatusUpdateRequest: {
+    oneOf: [
+      {
+        type: "object", additionalProperties: false, required: ["status"],
+        properties: { status: { type: "string", enum: ["pending", "reviewed"] } },
+      },
+      {
+        type: "object", additionalProperties: false, required: ["status", "decisionReason"],
+        properties: {
+          status: { type: "string", enum: ["resolved", "dismissed"] },
+          decisionReason: { type: "string", minLength: 10, maxLength: 2000, description: "Staff-only rationale required for a resolved or dismissed decision." },
+        },
+      },
+    ],
   },
 };
 const authorizationPurposes = ['account_collection','account_activation','social_contact'];
@@ -169,6 +212,92 @@ function contactContract(route) {
     'post /contacts/requests/{requestId}/reject': { result: 'SafeContactRequest' },
   };
   return definitions[`${route.method} ${route.path}`];
+}
+const privacyPurpose = { type: 'string', enum: ['correction','restriction','objection','erasure','access'] };
+const privacyToken = { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Single-use email challenge, bound to its issued purpose and 15-minute database expiry.' };
+const privacySchemas = {
+  PrivacyChallengeRequest: { type: 'object',additionalProperties: false,required: ['email'],properties: {
+    email: { type: 'string',format: 'email',maxLength: 255 },purpose: { ...privacyPurpose,default: 'access' } } },
+  PrivacyChallengeReceipt: { type: 'object',additionalProperties: false,required: ['initiated'],properties: { initiated: { type: 'boolean',const: true } } },
+  PrivacyVerifyRequest: { type: 'object',additionalProperties: false,required: ['token'],properties: { token: privacyToken } },
+  PrivacyVerifyReceipt: { type: 'object',additionalProperties: false,required: ['valid','purpose'],properties: {
+    valid: { type: 'boolean',const: true },purpose: privacyPurpose } },
+  PrivacyRightsRequest: { type: 'object',additionalProperties: false,required: ['token','requestType'],properties: {
+    token: privacyToken,requestType: privacyPurpose,details: { type: 'object',additionalProperties: false,properties: {
+      reason: { type: 'string',maxLength: 500 },preferredUsername: { type: 'string',pattern: '^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$' } } } } },
+  PrivacyRightsResult: { type: 'object',additionalProperties: false,required: ['executed','requestType','message'],properties: {
+    executed: { type: 'boolean' },requestType: privacyPurpose,message: { type: 'string' },recordStatus: { type: 'string' },
+    erasedAt: { type: 'string',format: 'date-time' },details: { type: 'object',additionalProperties: true } } },
+};
+function privacyContract(route) {
+  return {
+    'post /privacy/challenge': { request: 'PrivacyChallengeRequest',result: 'PrivacyChallengeReceipt' },
+    'post /privacy/verify': { request: 'PrivacyVerifyRequest',result: 'PrivacyVerifyReceipt' },
+    'post /privacy/request': { request: 'PrivacyRightsRequest',result: 'PrivacyRightsResult' },
+  }[`${route.method} ${route.path}`];
+}
+function moderationContract(route) {
+  const definitions = {
+    'post /moderation/decisions': { request: 'ModerationDecisionRequest', created: true },
+    'post /moderation/appeals': { request: 'ModerationAppealRequest', result: 'PublicModerationAppeal', created: true },
+    'patch /moderation/appeals/{appealId}/review': { request: 'ModerationReviewRequest' },
+    'get /moderation/appeals/mine': { result: 'PublicModerationAppealList' },
+  };
+  if (definitions[`${route.method} ${route.path}`]) return definitions[`${route.method} ${route.path}`];
+  if (route.path === "/reports/{reportId}/status" && route.method === "patch") {
+    return { request: "ReportStatusUpdateRequest" };
+  }
+  return undefined;
+}
+const preregistrationPerkIds = ['founder-badge', 'priority-access', 'community-input', 'username-preference'];
+const preregistrationCommonProperties = {
+  launchDate: { type: 'string', format: 'date-time', description: 'Launch is 1 December 2026 at midnight in Asia/Kolkata.' },
+  perks: { type: 'array', items: { $ref: '#/components/schemas/PreregistrationPerk' }, description: 'Planned early member benefits; no paid entitlement or handle reservation is granted.' },
+};
+const preregistrationSchemas = {
+  PreregistrationRequest: {
+    type: 'object', additionalProperties: false, required: ['email', 'username', 'launchUpdatesConsent'],
+    properties: {
+      email: { type: 'string', format: 'email', maxLength: 255, description: 'Trimmed and lowercased before storage.' },
+      username: { type: 'string', minLength: 3, maxLength: 24, pattern: '^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$', description: 'Preferred username, trimmed and lowercased. Availability is confirmed when an account is created.' },
+      launchUpdatesConsent: { type: 'boolean', const: true, description: 'Explicit agreement to receive launch and early member updates.' },
+      referralCode: { type: 'string', maxLength: 28, pattern: '^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$' },
+      perks: { type: 'array', maxItems: 4, items: { type: 'string', enum: preregistrationPerkIds } },
+    },
+  },
+  PreregistrationPerk: {
+    type: 'object', additionalProperties: false, required: ['id', 'title', 'description', 'icon'],
+    properties: {
+      id: { type: 'string', enum: preregistrationPerkIds }, title: { type: 'string' },
+      description: { type: 'string' }, icon: { type: 'string' },
+    },
+  },
+  PreregistrationReceipt: {
+    type: 'object', additionalProperties: false,
+    required: ['id', 'username', 'referralCode', 'createdAt', 'passNumber', 'launchDate', 'perks', 'isExisting'],
+    properties: {
+      id: { type: 'string', format: 'uuid' }, username: { type: 'string' },
+      referralCode: { type: ['string', 'null'] }, createdAt: { type: 'string', format: 'date-time' },
+      passNumber: { type: 'string', pattern: '^FOUNDER-[0-9A-F-]{36}$', description: 'Unique registration reference; it is not a queue position or authentication credential.' },
+      ...preregistrationCommonProperties, isExisting: { type: 'boolean', const: false },
+    },
+  },
+  PreregistrationExistingReceipt: {
+    type: 'object', additionalProperties: false, required: ['isExisting', 'launchDate', 'perks'],
+    properties: { ...preregistrationCommonProperties, isExisting: { type: 'boolean', const: true } },
+    description: 'Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned.',
+  },
+  PreregistrationStats: {
+    type: 'object', additionalProperties: false, required: ['totalRegistered', 'launchDate', 'perks'],
+    properties: { totalRegistered: { type: 'integer', minimum: 0, description: 'Actual stored registrations with no artificial offset.' }, ...preregistrationCommonProperties },
+  },
+};
+function preregistrationContract(route) {
+  if (route.path === '/preregister' && route.method === 'post') {
+    return { request: 'PreregistrationRequest', result: 'PreregistrationReceipt', created: true };
+  }
+  if (route.path === '/preregister/stats' && route.method === 'get') return { result: 'PreregistrationStats' };
+  return undefined;
 }
 const publicationMediaFields = {
   "post /posts": { mediaIds }, "post /products": { mediaIds }, "post /stories": { mediaId }, "post /messages": { mediaId },
@@ -364,8 +493,31 @@ function renderYaml(routes) {
         }
       }
 
+      if (route.method === 'get' && ['/reports/queue', '/reports/grievances', '/posts/saved', '/videos/saved'].includes(route.path)) {
+        const statuses = route.path === '/reports/queue'
+          ? ['pending', 'reviewed', 'resolved', 'dismissed']
+          : route.path === '/reports/grievances' ? ['received', 'under_review', 'resolved', 'dismissed'] : undefined;
+        lines.push('      parameters:');
+        for (const parameter of [
+          ...(statuses ? [{ name: 'status', required: false, schema: { type: 'string', enum: statuses }, description: 'Return only records currently in this status.' }] : []),
+          { name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
+          { name: 'cursor', required: false, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{43}$' }, description: statuses ? 'Signed, status-scoped keyset cursor returned in meta.nextCursor.' : 'Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.' },
+        ]) {
+          lines.push(...indent([
+            `- name: ${parameter.name}`, '  in: query', `  required: ${parameter.required}`,
+            `  description: ${parameter.description ?? 'Page size from 1 to 100.'}`, '  schema:',
+            `    type: ${parameter.schema.type}`,
+            ...(parameter.schema.enum ? [`    enum: [${parameter.schema.enum.join(', ')}]`] : []),
+            ...(parameter.schema.minimum !== undefined ? [`    minimum: ${parameter.schema.minimum}`] : []),
+            ...(parameter.schema.maximum !== undefined ? [`    maximum: ${parameter.schema.maximum}`] : []),
+            ...(parameter.schema.default !== undefined ? [`    default: ${parameter.schema.default}`] : []),
+            ...(parameter.schema.pattern ? [`    pattern: '${parameter.schema.pattern}'`] : []),
+          ], 8));
+        }
+      }
+
       if (["post", "put", "patch"].includes(route.method)) {
-        const contract = eligibilityContract(route) ?? contactContract(route);
+        const contract = eligibilityContract(route) ?? contactContract(route) ?? moderationContract(route) ?? privacyContract(route) ?? preregistrationContract(route);
         const request = contract?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${contract.request}` } } } } : mediaRequest(route);
         if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
         else lines.push(...indent([
@@ -382,7 +534,8 @@ function renderYaml(routes) {
       const publicGrievance = (route.path === "/reports/grievance" && route.method === "post") ||
         (route.path === "/reports/grievance/{ticketId}" && route.method === "get");
       const eligibility = eligibilityContract(route);
-      const contract = eligibility ?? contactContract(route);
+      const preregistration = preregistrationContract(route);
+      const contract = eligibility ?? contactContract(route) ?? moderationContract(route) ?? privacyContract(route) ?? preregistration;
       const resultSchema = contract?.result ?? (publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined);
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
@@ -401,6 +554,18 @@ function renderYaml(routes) {
         ...(route.authenticated ? ['  "401":', "    description: Authentication required"] : []),
         ...(route.roles.length > 0 ? ['  "403":', `    description: "Required role: ${route.roles.join(", ")}"`] : []),
       ], 6));
+      if (preregistration) {
+        if (route.method === 'post') {
+          lines.push(...indent([
+            '  "200":', '    description: Generic repeat-submission receipt; saved registration details are not disclosed',
+            '    content:', '      application/json:', '        schema:',
+            `          ${JSON.stringify({ allOf: [{ $ref: '#/components/schemas/ApiEnvelope' }, { properties: { data: { $ref: '#/components/schemas/PreregistrationExistingReceipt' } } }] })}`,
+            '  "409":', '    description: Choose another preferred username',
+            '  "429":', '    description: Pre-registration request allowance exceeded',
+          ], 6));
+        }
+        lines.push(...indent(['  "503":', '    description: Registration storage is unavailable; no fabricated success or count is returned'], 6));
+      }
       if (eligibility) lines.push(...indent(['  "403":','    description: Current account or territory does not permit verification','  "404":','    description: Owner-bound record unavailable','  "429":','    description: Verification rate or outstanding challenge limit exceeded','  "503":','    description: Verification provider unavailable; no authority granted'],6));
       if (route.path.startsWith("/media/") && route.method !== "get") {
         if (route.path === "/media/{id}/finalize") lines.push('        "202":', '          description: Verification already in progress; retry the same media ID');
@@ -440,8 +605,11 @@ function renderYaml(routes) {
   );
   for (const [name, schema] of Object.entries(mediaSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   lines.push(`    PublicGrievanceReceipt: ${JSON.stringify(publicGrievanceSchema)}`);
+  for (const [name, schema] of Object.entries(moderationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(eligibilitySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(contactSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
+  for (const [name,schema] of Object.entries(privacySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
+  for (const [name,schema] of Object.entries(preregistrationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;
 }
 

@@ -1,11 +1,23 @@
 # Replace both example hostnames with domains whose DNS points at this host.
-# Caddy obtains and renews HTTPS certificates automatically.
+# Caddy obtains and renews HTTPS certificates automatically. Send API and
+# Socket.IO traffic directly to the API so Express sees one trusted proxy hop;
+# route only frontend assets through Nginx.
+# This assumes Caddy is the first public proxy. If a CDN or load balancer sits
+# in front, configure its exact trusted source ranges before relying on client IPs.
 app.yor-talks.example {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:8080
+	header Strict-Transport-Security "max-age=31536000"
+	@api path /api /api/* /socket.io /socket.io/*
+	handle @api {
+		reverse_proxy 127.0.0.1:4000
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8080
+	}
 }
 
 api.yor-talks.example {
 	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy 127.0.0.1:4000
 }

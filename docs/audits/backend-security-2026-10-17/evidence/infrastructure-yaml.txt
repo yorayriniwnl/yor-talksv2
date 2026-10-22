@@ -1,0 +1,6 @@
+PASS YAML syntax and unique mappings: docker-compose.production.yml
+PASS YAML syntax and unique mappings: docker-compose.yml
+PASS YAML syntax and unique mappings: ops/compose.verify.yml
+PASS YAML syntax and unique mappings: ops/prometheus/prometheus.yml
+PASS YAML syntax and unique mappings: ops/prometheus/alerts.yml
+PASS YAML syntax and unique mappings: ops/prometheus/alertmanager.yml

@@ -1,3 +1,5 @@
+import { publicBetaConfig } from './public-beta-config';
+
 export type RazorpayCheckout = new (options: Record<string, unknown>) => {
   open: () => void;
   on?: (event: 'payment.failed', callback: () => void) => void;
@@ -5,6 +7,9 @@ export type RazorpayCheckout = new (options: Record<string, unknown>) => {
 
 let loading: Promise<RazorpayCheckout> | null = null;
 export function loadRazorpayCheckout(): Promise<RazorpayCheckout> {
+  if (!publicBetaConfig.paymentsEnabled) {
+    return Promise.reject(new Error('Payments are paused for this beta. Existing payments can still be recovered or cancelled in billing history.'));
+  }
   const read = () => (window as Window & { Razorpay?: RazorpayCheckout }).Razorpay;
   const existing = read();
   if (existing) return Promise.resolve(existing);

@@ -43,7 +43,7 @@
 **Interface produced:**
 
 ```ts
-export type PublicGrievanceStatus = Pick<GrievanceTicket, "ticketId" | "status" | "createdAt" | "slaDeadline">;
+export type PublicGrievanceStatus = Pick<GrievanceTicket, "ticketId" | "status" | "createdAt">;
 export function toPublicGrievanceStatus(ticket: GrievanceTicket): PublicGrievanceStatus;
 ```
 

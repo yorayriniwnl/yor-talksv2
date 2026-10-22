@@ -1,12 +1,26 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { notificationsTable } from "@workspace/db/schema";
+import { notificationsTable, usersTable } from "@workspace/db/schema";
 import { db } from "@workspace/db";
 import type { NotificationRecord } from "../types/index.js";
 
 export class NotificationRepository {
   async create(notification: NotificationRecord): Promise<NotificationRecord> {
-    const [created] = await db.insert(notificationsTable).values(notification).returning();
-    return created as NotificationRecord;
+    return db.transaction(async (tx) => {
+      const actorId = notification.metadata?.actorId;
+      if (actorId !== undefined) {
+        if (typeof actorId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actorId)) {
+          throw new Error('Notification actor is invalid');
+        }
+        // The metadata actor has no FK. Hold this lock until insertion commits
+        // so account deletion either scrubs this row or makes creation fail.
+        // An action authorized before deletion cannot recreate the erased name.
+        const [actor] = await tx.select({ id: usersTable.id }).from(usersTable)
+          .where(eq(usersTable.id, actorId)).for('key share');
+        if (!actor) throw new Error('Notification actor is unavailable');
+      }
+      const [created] = await tx.insert(notificationsTable).values(notification).returning();
+      return created as NotificationRecord;
+    });
   }
 
   async listForUser(userId: string): Promise<NotificationRecord[]> {

@@ -3,19 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 import { fadeInUp } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
-import { Bot, SendHorizontal, Sparkles, Cpu } from 'lucide-react';
+import { Bot, SendHorizontal, Sparkles, ShieldAlert } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { Link } from 'wouter';
 
 const SUGGESTIONS = [
-  "Summarize my week on Yor Talks",
-  "Draft an engaging post about my project",
-  "What topics are trending today?",
+  "Help me brainstorm a post about my project",
+  "Suggest a clearer title for this idea",
+  "Explain this topic to a beginner",
 ];
 
 export default function AIAssistant() {
   const aiMessages = useAppStore((s) => s.aiMessages);
   const sendAIMessage = useAppStore((s) => s.sendAIMessage);
+  const aiAvailable = useAppStore((s) => Boolean(s.eligibility?.activated && s.eligibility.capabilities.ai));
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +43,26 @@ export default function AIAssistant() {
 
   const showSuggestions = aiMessages.length === 0;
 
+  if (!aiAvailable) {
+    return (
+      <main className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-12 font-sans text-foreground">
+        <section className="w-full max-w-xl rounded-3xl border border-border/50 bg-card/70 p-8 text-center shadow-xl sm:p-10" role="status">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-400/30 bg-amber-400/10 text-amber-300">
+            <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <p className="mt-5 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">Not available</p>
+          <h1 className="mt-2 font-display text-2xl font-black">AI Companion isn’t enabled here.</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+            AI responses aren’t available for this account in the current release. This screen won’t send a message to an AI provider.
+          </p>
+          <Link href="/" className="mt-7 inline-flex min-h-11 items-center rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground">
+            Return to your feed
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto h-[100dvh] flex flex-col font-sans bg-background">
       {/* Sticky Glass Header */}
@@ -51,12 +73,10 @@ export default function AIAssistant() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Yor AI Companion</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Powered by Multiverse AI</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Help for drafts and ideas</p>
           </div>
         </div>
-        <div className="level-badge">
-          <Cpu className="w-3.5 h-3.5" /> Neural v2.5
-        </div>
+        <span className="level-badge">AI assistant</span>
       </div>
 
       {/* Messages Feed */}
@@ -66,9 +86,9 @@ export default function AIAssistant() {
             <div className="w-16 h-16 rounded-full aurora-bg flex items-center justify-center mb-4 shadow-lg">
               <Sparkles className="w-8 h-8 text-primary animate-pulse" />
             </div>
-            <h2 className="font-display font-extrabold text-2xl mb-2 text-shimmer">How can I assist your multiverse today?</h2>
+            <h2 className="font-display font-extrabold text-2xl mb-2 text-shimmer">What would you like to work on?</h2>
             <p className="text-xs text-muted-foreground max-w-sm font-serif mb-8 leading-relaxed">
-              Ask questions, generate posts, analyze your engagement, or explore ideas together.
+              Brainstorm, draft, or refine an idea. Responses may be inaccurate or incomplete.
             </p>
             <div className="flex flex-wrap gap-2 justify-center max-w-md">
               {SUGGESTIONS.map((s, i) => (
@@ -120,7 +140,7 @@ export default function AIAssistant() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Yor anything..."
+            placeholder="Ask for help with an idea..."
             className="min-h-[44px] max-h-[160px] resize-none border-none bg-transparent focus-visible:ring-0 shadow-none text-sm py-2.5 px-3 hide-scrollbar font-serif"
             rows={1}
           />
@@ -137,7 +157,7 @@ export default function AIAssistant() {
           </Button>
         </div>
         <p className="text-[0.62rem] font-mono text-center text-muted-foreground/70 mt-2.5">
-          Yor AI can synthesize thoughts. Verify important information.
+          Messages go to the configured AI provider. Don’t include passwords or sensitive personal information.
         </p>
       </div>
     </div>

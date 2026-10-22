@@ -47,7 +47,7 @@ test("search service returns matching users and posts", async () => {
   });
 
   const searchService = new SearchService(userRepository, postRepository);
-  const result = await searchService.search(`jane-${unique.slice(0, 8)}`);
+  const result = await searchService.search(`jane-${unique.slice(0, 8)}`, userId);
 
   assert.equal(result.users.length, 1);
   assert.equal(result.users[0].id, userId);

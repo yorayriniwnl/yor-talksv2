@@ -50,7 +50,7 @@ export default function Clans() {
         </div>
 
         <div className="level-badge shadow-sm">
-          <Crown className="w-3.5 h-3.5 fill-amber-400" /> Rank #4 National Guild
+          <Crown className="w-3.5 h-3.5 fill-amber-400" /> Sample guild
         </div>
       </div>
 

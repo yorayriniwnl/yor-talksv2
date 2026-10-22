@@ -44,6 +44,31 @@ test("own profile restores canonical follow relationships without exposing them 
 
 test('production profile discovery requires current authority and keeps minor profiles private by default', async t => {
   const originalNodeEnv = env.NODE_ENV;
+  env.NODE_ENV = 'test';
+  t.after(() => { env.NODE_ENV = originalNodeEnv; });
+  const users = new UserRepository(), viewer = await createTestUser(users), target = await createTestUser(users);
+  t.after(async () => { await pool.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [[viewer.id, target.id]]); });
+  await users.followUser(viewer.id,target.id);
+  env.NODE_ENV = 'production';
+  const adult: EligibilityDecision = {
+    experience: 'adult_18_plus', activated: true,
+    capabilities: { social: true, publish: true, messaging: true, payments: false, seller: false,
+      memberships: false, live: false, rtc: false, ai: false, analytics: false, profiling: false },
+    maximumContentRating: 'mature', policyVersions: ['fixture:1'], revision: 'adult', reason: null, publicBrowsingAllowed: true,
+  };
+  const teen: EligibilityDecision = { ...adult, experience: 'teen_13_17', maximumContentRating: 'regular', revision: 'teen' };
+  t.mock.method(EligibilityService.prototype, 'decisionFor', async (userId: string) => userId === target.id ? teen : adult);
+  t.mock.method(EligibilityService.prototype, 'decisionForMany', async (ids: string[]) => new Map(ids.map(id => [id, id === target.id ? teen : adult])));
+  await users.update(target.id, { privacy: { profileVisibility: 'public', messageRequests: true, allowDmFromStrangers: true },
+    settings: { ...target.settings, privateAccount: false } });
+  const profiles = new UserService(users);
+  assert.equal((await profiles.getProfile(target.id, viewer.id))?.id, target.id,
+    'an existing follower may see the profile while the minor profile remains unavailable to discovery');
+  assert.deepEqual(await profiles.searchUsers(target.username, viewer.id), []);
+});
+
+test('production follow requests do not create public follow edges to minors with legacy public settings', async t => {
+  const originalNodeEnv = env.NODE_ENV;
   env.NODE_ENV = 'production';
   t.after(() => { env.NODE_ENV = originalNodeEnv; });
   const users = new UserRepository(), viewer = await createTestUser(users), target = await createTestUser(users);
@@ -55,15 +80,11 @@ test('production profile discovery requires current authority and keeps minor pr
     maximumContentRating: 'mature', policyVersions: ['fixture:1'], revision: 'adult', reason: null, publicBrowsingAllowed: true,
   };
   const teen: EligibilityDecision = { ...adult, experience: 'teen_13_17', maximumContentRating: 'regular', revision: 'teen' };
-  t.mock.method(EligibilityService.prototype, 'decisionFor', async (userId: string) => userId === target.id ? teen : adult);
-  await users.update(target.id, { privacy: { profileVisibility: 'public', messageRequests: true, allowDmFromStrangers: true },
-    settings: { ...target.settings, privateAccount: false } });
-  const profiles = new UserService(users);
-  assert.equal(await profiles.getProfile(target.id, viewer.id), undefined);
-  assert.deepEqual(await profiles.searchUsers(target.username, viewer.id), []);
-  await users.followUser(viewer.id, target.id);
-  assert.equal((await profiles.getProfile(target.id, viewer.id))?.id, target.id,
-    'an existing follower may see the profile while the minor profile remains unavailable to discovery');
+  t.mock.method(EligibilityService.prototype,'decisionFor',async (userId: string) => userId===target.id?teen:adult);
+  await users.update(target.id,{privacy:{profileVisibility:'public',messageRequests:true,allowDmFromStrangers:true},settings:{...target.settings,privateAccount:false}});
+  const result=await new UserService(users).followUser(viewer.id,target.id);
+  assert.equal(result?.status,'pending');
+  assert.equal(await users.isFollowing(viewer.id,target.id),false);
 });
 
 test("private follow requests remain pending at the HTTP boundary", async () => {

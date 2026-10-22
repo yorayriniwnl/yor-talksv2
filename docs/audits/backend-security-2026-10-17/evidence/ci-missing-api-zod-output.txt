@@ -1,0 +1,19 @@
+Fresh API typecheck without generated API-Zod declarations
+Observed: 18 October 2026
+
+Precondition: only the ignored lib/api-zod/dist directory was renamed to a
+unique sibling inside the verified audit workspace. Source files and tracked
+configuration were unchanged. Existing database declarations remained present,
+matching the workflow's preceding database build.
+
+Command (pinned pnpm 11.28.5):
+pnpm --filter @workspace/api-server exec tsc -p tsconfig.json --noEmit --incremental false
+
+Exit code: 0
+Compiler output: none
+Restoration: original lib/api-zod/dist restored in the PowerShell finally block.
+
+Source explanation: api-server/tsconfig.json references lib/api-zod, but the
+current api-server/src tree does not import @workspace/api-zod. Missing unused
+project-reference outputs therefore do not produce TS6305. No CI change was
+made for an unconfirmed build defect.

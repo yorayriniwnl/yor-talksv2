@@ -1,0 +1,137 @@
+[
+  {
+    "name": "@socket.io/redis-adapter",
+    "declared": "^8.3.0",
+    "installedVersion": "8.3.0"
+  },
+  {
+    "name": "@types/web-push",
+    "declared": "^3.6.4",
+    "installedVersion": null
+  },
+  {
+    "name": "@workspace/api-zod",
+    "declared": "file:../lib/api-zod",
+    "installedVersion": "0.0.0"
+  },
+  {
+    "name": "@workspace/db",
+    "declared": "file:../lib/db",
+    "installedVersion": "0.0.0"
+  },
+  {
+    "name": "bcryptjs",
+    "declared": "^2.4.0",
+    "installedVersion": "2.4.3"
+  },
+  {
+    "name": "bullmq",
+    "declared": "^5.8.2",
+    "installedVersion": "5.80.9"
+  },
+  {
+    "name": "cloudinary",
+    "declared": "^2.0.0",
+    "installedVersion": "2.10.0"
+  },
+  {
+    "name": "compression",
+    "declared": "^1.8.2",
+    "installedVersion": "1.8.2"
+  },
+  {
+    "name": "cookie-parser",
+    "declared": "^1.4.7",
+    "installedVersion": "1.4.7"
+  },
+  {
+    "name": "cors",
+    "declared": "^2.8.6",
+    "installedVersion": "2.8.6"
+  },
+  {
+    "name": "drizzle-orm",
+    "declared": "^0.45.2",
+    "installedVersion": "0.45.2"
+  },
+  {
+    "name": "express",
+    "declared": "^5.2.1",
+    "installedVersion": "5.2.1"
+  },
+  {
+    "name": "express-rate-limit",
+    "declared": "^8.6.2",
+    "installedVersion": "8.6.2"
+  },
+  {
+    "name": "google-auth-library",
+    "declared": "10.9.1",
+    "installedVersion": "10.9.1"
+  },
+  {
+    "name": "helmet",
+    "declared": "^7.0.0",
+    "installedVersion": "7.2.0"
+  },
+  {
+    "name": "ioredis",
+    "declared": "^5.11.1",
+    "installedVersion": "5.11.1"
+  },
+  {
+    "name": "jsonwebtoken",
+    "declared": "^9.0.3",
+    "installedVersion": "9.0.3"
+  },
+  {
+    "name": "livekit-server-sdk",
+    "declared": "^2.18.0",
+    "installedVersion": "2.18.0"
+  },
+  {
+    "name": "minimist",
+    "declared": "^1.2.8",
+    "installedVersion": "1.2.8"
+  },
+  {
+    "name": "multer",
+    "declared": "^2.4.0",
+    "installedVersion": "2.4.0"
+  },
+  {
+    "name": "otplib",
+    "declared": "^12.0.1",
+    "installedVersion": "12.0.1"
+  },
+  {
+    "name": "pino",
+    "declared": "^9.14.0",
+    "installedVersion": "9.14.0"
+  },
+  {
+    "name": "pino-http",
+    "declared": "^10.5.0",
+    "installedVersion": "10.5.0"
+  },
+  {
+    "name": "rate-limit-redis",
+    "declared": "^6.0.1",
+    "installedVersion": "6.0.1"
+  },
+  {
+    "name": "socket.io",
+    "declared": "^4.0.0",
+    "installedVersion": "4.8.3"
+  },
+  {
+    "name": "web-push",
+    "declared": "^3.6.7",
+    "installedVersion": "3.6.7"
+  },
+  {
+    "name": "zod",
+    "declared": "^3.25.76",
+    "installedVersion": "3.25.76"
+  }
+]

@@ -1,152 +1,153 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, Download, Share2, Sparkles, Trophy, 
-  IndianRupee, Users, TrendingUp, CheckCircle2, ShieldCheck, Mail 
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useState } from 'react';
+import { Download, FileText, Share2, TrendingUp, Users, Eye, Heart, CircleDollarSign } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { api, type CreatorAnalyticsDaily } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
-import { cn } from '@/lib/utils';
-import { sounds } from '@/lib/sound';
-import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
 
+type AnalyticsState = 'loading' | 'ready' | 'unavailable';
+
+function number(value: number | undefined): string {
+  return value === undefined ? '—' : new Intl.NumberFormat().format(value);
+}
+
+function currency(value: number | undefined): string {
+  return value === undefined ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value / 100);
+}
+
 export default function MediaKit() {
-  const currentUser = useAppStore((s) => s.currentUser);
+  const currentUser = useAppStore((state) => state.currentUser);
+  const [analytics, setAnalytics] = useState<CreatorAnalyticsDaily | null>(null);
+  const [analyticsState, setAnalyticsState] = useState<AnalyticsState>('loading');
+  const profileUrl = useMemo(() => currentUser?.id
+    ? new URL(`/profile/${encodeURIComponent(currentUser.id)}`, window.location.origin).toString()
+    : '', [currentUser?.id]);
 
-  const handleDownloadDeck = () => {
-    sounds.playChime();
-    triggerConfetti();
-    toast.success('Official Creator Sponsorship Media Kit (PDF) generated & downloaded!');
+  useEffect(() => {
+    let active = true;
+    if (!currentUser?.id) {
+      setAnalytics(null);
+      setAnalyticsState('unavailable');
+      return () => { active = false; };
+    }
+    setAnalyticsState('loading');
+    void api.getCreatorAnalytics().then((snapshots) => {
+      if (!active) return;
+      const latest = [...snapshots].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0] ?? null;
+      setAnalytics(latest);
+      setAnalyticsState('ready');
+    }).catch(() => {
+      if (!active) return;
+      setAnalytics(null);
+      setAnalyticsState('unavailable');
+    });
+    return () => { active = false; };
+  }, [currentUser?.id]);
+
+  const copyProfileLink = async () => {
+    if (!profileUrl) return;
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      toast.success('Profile link copied');
+    } catch {
+      toast.error('Could not copy the profile link on this device');
+    }
   };
 
-  const handleShareLink = () => {
-    sounds.playPop();
-    navigator.clipboard.writeText(`https://yortalks.in/mediakit/${currentUser?.username || 'ayush'}`);
-    toast.success('Public Sponsorship Deck link copied to clipboard!');
+  const downloadSnapshot = () => {
+    if (!currentUser?.id) return;
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      creator: {
+        displayName: currentUser.displayName,
+        username: currentUser.username,
+        verified: Boolean(currentUser.verified),
+        profileUrl,
+      },
+      latestAnalyticsSnapshot: analytics,
+      analyticsAvailable: analyticsState === 'ready',
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `yor-creator-media-kit-${currentUser.username || currentUser.id}.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    toast.success('Creator snapshot downloaded');
   };
+
+  const metrics = [
+    { label: 'Profile views today', value: number(analytics?.profileViews), icon: Eye },
+    { label: 'New followers today', value: number(analytics?.newFollowers), icon: Users },
+    { label: 'Post views to date', value: number(analytics?.totalPostViews), icon: TrendingUp },
+    { label: 'Video views to date', value: number(analytics?.totalReelViews), icon: Eye },
+    { label: 'Engagements to date', value: number(analytics?.totalEngagement), icon: Heart },
+    { label: 'Estimated earnings today (INR)', value: currency(analytics?.estimatedEarnings), icon: CircleDollarSign },
+  ];
 
   return (
-    <div className="min-h-screen bg-background pb-24 font-sans text-foreground">
-      {/* Sticky Glass Header */}
-      <div className="sticky top-0 z-30 glass-heavy px-4 py-3 sm:px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-md glow-neon-primary">
-            <FileText className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Creator Media Kit & Rate Card</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Official Brand Sponsorship & Partnership Deck</p>
+    <main className="min-h-screen bg-background pb-24 text-foreground">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/40 bg-background/90 px-4 py-3 backdrop-blur sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><FileText className="h-5 w-5" /></div>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold">Creator media kit</h1>
+            <p className="text-xs text-muted-foreground">Your profile and latest available account metrics</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleShareLink}
-            variant="outline"
-            className="rounded-2xl font-bold text-xs"
-          >
-            <Share2 className="w-3.5 h-3.5 mr-1" /> Copy Deck Link
+        <div className="flex shrink-0 items-center gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={() => void copyProfileLink()} disabled={!profileUrl}>
+            <Share2 className="mr-1.5 h-4 w-4" /> Copy profile link
           </Button>
-
-          <Button
-            size="sm"
-            onClick={handleDownloadDeck}
-            className="rounded-2xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary"
-          >
-            <Download className="w-3.5 h-3.5 mr-1" /> Export PDF
+          <Button type="button" size="sm" onClick={downloadSnapshot} disabled={!currentUser?.id}>
+            <Download className="mr-1.5 h-4 w-4" /> Download JSON
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
-        {/* Creator Hero Header Card */}
-        <div className="surface-1 rounded-3xl p-6 sm:p-8 border border-border/40 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <Avatar className="w-20 h-20 border-2 border-primary glow-neon-primary shadow-xl">
-              <AvatarImage src={currentUser?.avatarUrl} />
-              <AvatarFallback>U</AvatarFallback>
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+        <section className="surface-1 flex flex-col gap-5 rounded-3xl border border-border/40 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16 border border-border/60">
+              <AvatarImage src={currentUser?.avatarUrl} alt="" />
+              <AvatarFallback>{currentUser?.displayName?.slice(0, 1) || 'Y'}</AvatarFallback>
             </Avatar>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-full text-[0.62rem] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Verified Tier-1 Creator
-                </span>
-                <span className="text-xs font-mono text-muted-foreground">ID: YOR-PRO-2026</span>
-              </div>
-              <h2 className="font-display font-black text-2xl sm:text-3xl text-foreground">
-                {currentUser?.displayName || 'Ayush Roy'}
-              </h2>
-              <p className="text-xs text-muted-foreground font-serif mt-0.5">
-                Esports Athlete, WebGL Developer & Tech Content Creator · Bengaluru, India
-              </p>
+              <h2 className="text-2xl font-bold">{currentUser?.displayName || 'Creator'}</h2>
+              <p className="text-sm text-muted-foreground">{currentUser?.username ? `@${currentUser.username}` : 'Yor Talks member'}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{currentUser?.verified ? 'Verified account' : 'Community account'}</p>
             </div>
           </div>
+          <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+            Share your public profile with partners. Metrics below come from the latest creator analytics snapshot and may be unavailable for this account.
+          </p>
+        </section>
 
-          <div className="text-right sm:border-l sm:border-border/30 sm:pl-6">
-            <span className="text-[0.62rem] font-mono uppercase text-muted-foreground block">Verified Monthly Reach</span>
-            <strong className="font-display font-black text-3xl text-primary">3.8M+</strong>
-            <span className="text-[0.68rem] font-mono text-emerald-400 block font-bold">94% Indian Gen-Z Audience</span>
+        <section aria-labelledby="creator-metrics-heading" className="space-y-4">
+          <div>
+            <h2 id="creator-metrics-heading" className="text-lg font-bold">Creator metrics</h2>
+            <p className="text-xs text-muted-foreground">Counts are platform records, not verified audience estimates.</p>
           </div>
-        </div>
-
-        {/* Verified Performance Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-1">
-            <span className="text-[0.62rem] font-mono text-muted-foreground uppercase">Average Live Concurrents</span>
-            <div className="font-display font-black text-2xl text-foreground">4,200 CCV</div>
-            <span className="text-[0.68rem] text-muted-foreground font-mono">During BGMI / Valorant Watch Parties</span>
-          </div>
-
-          <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-1">
-            <span className="text-[0.62rem] font-mono text-muted-foreground uppercase">Reels & Video Views</span>
-            <div className="font-display font-black text-2xl text-amber-400">840,000 / mo</div>
-            <span className="text-[0.68rem] text-muted-foreground font-mono">Average 82% 30-second completion rate</span>
-          </div>
-
-          <div className="surface-1 p-5 rounded-3xl border border-border/40 space-y-1">
-            <span className="text-[0.62rem] font-mono text-muted-foreground uppercase">Engagement Rate</span>
-            <div className="font-display font-black text-2xl text-emerald-400">9.4% ER</div>
-            <span className="text-[0.68rem] text-muted-foreground font-mono">3.2x higher than industry average</span>
-          </div>
-        </div>
-
-        {/* Brand Sponsorship Rate Card */}
-        <div className="surface-1 p-6 sm:p-8 rounded-3xl border border-border/40 shadow-sm space-y-6">
-          <div className="showcase-section-title">
-            <IndianRupee className="w-4 h-4 text-emerald-400" />
-            <h3>Standard Sponsorship Rate Card (₹ INR)</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl bg-muted/30 border border-border/30 space-y-3">
-              <div>
-                <h4 className="font-display font-bold text-base text-foreground">Integrated Video Shoutout</h4>
-                <p className="text-xs text-muted-foreground font-serif">60-second dedicated mid-roll mention + bio link placement</p>
-              </div>
-              <div className="font-display font-black text-2xl text-emerald-400">₹45,000</div>
+          {analyticsState === 'loading' && <p role="status" className="rounded-2xl border border-border/40 p-5 text-sm text-muted-foreground">Loading the latest analytics snapshot…</p>}
+          {analyticsState === 'unavailable' && <p role="status" className="rounded-2xl border border-border/40 p-5 text-sm text-muted-foreground">Creator analytics are unavailable for this account right now.</p>}
+          {analyticsState === 'ready' && !analytics && <p role="status" className="rounded-2xl border border-border/40 p-5 text-sm text-muted-foreground">No analytics snapshot has been recorded yet.</p>}
+          {analytics && <>
+            <p className="text-xs text-muted-foreground">Snapshot date: {new Date(analytics.date).toLocaleDateString()}</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {metrics.map(({ label, value, icon: Icon }) => (
+                <article key={label} className="surface-1 rounded-2xl border border-border/40 p-5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon aria-hidden="true" className="h-4 w-4 text-primary" />{label}</div>
+                  <p className="mt-3 text-2xl font-bold tabular-nums">{value}</p>
+                </article>
+              ))}
             </div>
-
-            <div className="p-5 rounded-2xl bg-primary/10 border border-primary/30 space-y-3">
-              <div>
-                <h4 className="font-display font-bold text-base text-foreground">Live Stream Title Sponsor</h4>
-                <p className="text-xs text-muted-foreground font-serif">On-screen overlay banner, chatbot commands & live product demo</p>
-              </div>
-              <div className="font-display font-black text-2xl text-primary">₹75,000</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-muted/30 border border-border/30 space-y-3">
-              <div>
-                <h4 className="font-display font-bold text-base text-foreground">Tournament Title Partnership</h4>
-                <p className="text-xs text-muted-foreground font-serif">Full naming rights for monthly community invitational tournament</p>
-              </div>
-              <div className="font-display font-black text-2xl text-amber-400">₹1,50,000</div>
-            </div>
-          </div>
-        </div>
+          </>}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

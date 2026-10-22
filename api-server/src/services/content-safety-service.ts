@@ -1,3 +1,4 @@
+import { pool } from "@workspace/db";
 import { UserRepository } from "../repositories/user-repository.js";
 import { DEFAULT_CONTENT_RATING, normalizeContentRating } from "../utils/content-safety.js";
 import { evaluateAudience, type AudienceKind } from "../utils/audience-policy.js";
@@ -18,6 +19,13 @@ type RatedContent = {
   excludedViewerIds?: string[];
 };
 export type VisibilityOptions = { discovery?: boolean };
+
+function moderationType(item: RatedContent): string | undefined {
+  const record = item as Record<string, unknown>;
+  if ('conversationId' in record && 'senderId' in record) return 'message';
+  const type = contentEntityTypeFor(record);
+  return type === 'posts' ? 'post' : type === 'videos' ? 'video' : type === 'comments' ? 'comment' : undefined;
+}
 
 /** One request-scoped policy for current records. Caches never supply authority. */
 export class ContentSafetyService {
@@ -79,15 +87,61 @@ export class ContentSafetyService {
     const eligibilityDecision = viewerId && eligibilityEnforced
       ? await this.eligibilityService.decisionFor(viewerId)
       : undefined;
+    const authorDecisions = eligibilityEnforced
+      ? typeof this.eligibilityService.decisionForMany === 'function'
+        ? await this.eligibilityService.decisionForMany(authors)
+        : new Map(await Promise.all(authors.map(async id => [id,await this.eligibilityService.decisionFor(id)] as const)))
+      : new Map();
     const viewerPreference = normalizeContentRating(viewer?.settings?.contentFilter);
     const anonymousMaximum = eligibilityEnforced && !viewerId ? "child_safe" : undefined;
     const classifications = await this.approvedClassifications(contentItems);
+    const itemIds = contentItems.map(i => i.id).filter((id): id is string => typeof id === 'string');
+    const checkedTargetIds = [...new Set([...itemIds, ...ids])];
+    const enforcementsResult = checkedTargetIds.length > 0
+      ? await pool.query<{ target_type: string; target_id: string; state: string; scope: string }>(
+          `SELECT target_type, target_id, state, scope
+           FROM moderation_enforcements
+           WHERE target_id = ANY($1)
+             AND (expires_at IS NULL OR expires_at > clock_timestamp())`,
+          [checkedTargetIds]
+        )
+      : { rows: [] };
+    const enforcementsByTargetId = new Map(enforcementsResult.rows.map(row => [`${row.target_type}:${row.target_id}`, row]));
+
     const allows = (item: RatedContent, authorId: string): boolean => {
       const author = byId.get(authorId);
       if (!author || (viewerId && !viewer)) return false;
+      const authorDecision = authorDecisions.get(authorId);
+      if (eligibilityEnforced && (!authorDecision?.activated || !authorDecision.capabilities.social)) return false;
       if (item.deletedAt || ['removed', 'quarantined', 'rejected'].includes(item.moderationStatus ?? '')) return false;
       if (['suspended', 'deactivated', 'deleted'].includes(author.accountStatus ?? 'active')) return false;
       if (viewer && ['suspended', 'deactivated', 'deleted'].includes(viewer.accountStatus ?? 'active')) return false;
+
+      // Active moderation enforcements
+      const authorEnforcement = enforcementsByTargetId.get(`user:${authorId}`);
+      if (authorEnforcement?.target_type === 'user') {
+        if (authorEnforcement.state === 'removed') return false;
+        if (authorEnforcement.state === 'restricted') {
+          if (authorEnforcement.scope === 'global') return false;
+          if (options.discovery) return false;
+        }
+      }
+      if (viewerId) {
+        const viewerEnforcement = enforcementsByTargetId.get(`user:${viewerId}`);
+        if (viewerEnforcement) return false;
+      }
+      if (typeof item.id === 'string') {
+        const itemEnforcement = enforcementsByTargetId.get(`${moderationType(item)}:${item.id}`);
+        if (itemEnforcement) {
+          if (itemEnforcement.state === 'removed') return false;
+          if (itemEnforcement.state === 'restricted') {
+            if (itemEnforcement.scope === 'global') return false;
+            if (itemEnforcement.scope === 'public' && options.discovery) return false;
+            if (itemEnforcement.scope === 'direct_only' && (options.discovery || (viewerId !== authorId && !relationships.following.has(authorId)))) return false;
+          }
+        }
+      }
+
       const record = item as Record<string, unknown>;
       const entityType = contentEntityTypeFor(record);
       if (!allowsRatedContent({ contentRating: item.contentRating, viewerPreference,
@@ -97,7 +151,8 @@ export class ContentSafetyService {
       if (viewerId && (author.blockedUsers?.includes(viewerId) || viewer?.blockedUsers?.includes(authorId))) return false;
       if (viewerId === authorId) return true;
       if (options.discovery && viewer?.mutedUsers?.includes(authorId)) return false;
-      const visibility = author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? 'private' : 'public');
+      const visibility = eligibilityEnforced && authorDecision?.experience !== 'adult_18_plus' ? 'private'
+        : author.privacy?.profileVisibility ?? (author.settings?.privateAccount ? 'private' : 'public');
       if (visibility !== 'public' && !relationships.following.has(authorId)) return false;
       return evaluateAudience({ ownerId: authorId, viewerId, audience: (item.audience ?? 'public') as AudienceKind,
         isFollowing: relationships.following.has(authorId), isCloseFriend: relationships.closeFriends.has(authorId),
@@ -111,7 +166,15 @@ export class ContentSafetyService {
   async filterVisible<T extends RatedContent>(items: T[], viewerId?: string): Promise<T[]> {
     const filter = await this.getViewerFilter(viewerId);
     const classifications = await this.approvedClassifications(items);
+    const itemIds = items.map(i => i.id).filter((id): id is string => typeof id === 'string');
+    const enforcements = itemIds.length > 0
+      ? await pool.query<{ target_id: string; target_type: string }>(
+          `SELECT target_id, target_type FROM moderation_enforcements WHERE target_id = ANY($1) AND (state = 'removed' OR scope IN ('global','direct_only')) AND (expires_at IS NULL OR expires_at > clock_timestamp())`,
+          [itemIds]
+        ).then(res => new Set(res.rows.map(r => `${r.target_type}:${r.target_id}`)))
+      : new Set<string>();
     return items.filter(item => {
+      if (typeof item.id === 'string' && enforcements.has(`${moderationType(item)}:${item.id}`)) return false;
       const record = item as Record<string, unknown>, entityType = contentEntityTypeFor(record);
       return allowsRatedContent({ contentRating: item.contentRating, viewerPreference: filter, eligibilityEnforced: isEligibilityEnforcementEnabled(),
         item: record, entityType, classification: entityType ? classifications.get(this.contentKey(entityType, record)) : undefined });

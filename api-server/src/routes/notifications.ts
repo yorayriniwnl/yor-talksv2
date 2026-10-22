@@ -8,10 +8,10 @@ import { validateParams } from "../middlewares/validation.js";
 import { notificationIdParamSchema } from "../validators/params.js";
 import { z } from "zod";
 import { PushSubscriptionRepository } from "../repositories/push-subscription-repository.js";
-import { isAllowedPushEndpoint } from "../utils/push-endpoint.js";
 import { env } from "../config/env.js";
 import { EligibilityService } from "../services/eligibility-service.js";
 import { UserRepository } from "../repositories/user-repository.js";
+import { isAllowedPushEndpoint } from "../utils/push-endpoint.js";
 
 const router = Router();
 const notificationService = new NotificationService(new NotificationRepository());

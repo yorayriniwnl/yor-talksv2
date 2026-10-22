@@ -4,9 +4,14 @@ import { logger } from "./lib/logger.js";
 import { startNotificationWorker, type NotificationWorkerHandle } from "./workers/notification-worker.js";
 import { startLifecycleWorker } from './workers/lifecycle-worker.js';
 import { createPaymentRuntime } from './services/payment-runtime.js';
+import { assertPrivacySchema, assertRecoveryReplay } from './services/privacy-readiness.js';
+import { assertModerationSchema } from './services/moderation-readiness.js';
+import { assertPrivateChatSchema } from './services/private-chat-readiness.js';
 
 async function main(): Promise<void> {
-  await pool.query("SELECT 1");
+  await Promise.all([assertPrivacySchema(),assertModerationSchema(),assertPrivateChatSchema()]);
+  await assertRecoveryReplay({ enabled: env.RECOVERY_REPLAY_GATE,
+    through: env.RESTORE_DELETION_JOURNAL_THROUGH,sha256: env.RESTORE_DELETION_MANIFEST_SHA256 });
   const lifecycle = await startLifecycleWorker(createPaymentRuntime().handlers);
   let worker: NotificationWorkerHandle | null = await startNotificationWorker();
   if (env.NODE_ENV === "production" && !worker.isHealthy()) {

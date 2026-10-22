@@ -50,7 +50,7 @@ export const eligibilityChallengesTable = pgTable('eligibility_challenges', {
 export const guardianAuthorizationsTable = pgTable('guardian_authorizations', {
   id: uuid('id').primaryKey(), userId: uuid('user_id').references(() => usersTable.id, { onDelete: 'cascade' }),
   enrollmentId: uuid('enrollment_id').references(() => eligibilityEnrollmentsTable.id, { onDelete: 'cascade' }),
-  guardianUserId: uuid('guardian_user_id').references(() => usersTable.id, { onDelete: 'cascade' }),
+  guardianUserId: uuid('guardian_user_id').references(() => usersTable.id, { onDelete: 'set null' }),
   guardianReference: text('guardian_reference').notNull(), issuer: text('issuer').notNull(), responsibilityReference: text('responsibility_reference').notNull(),
   status: text('status').notNull().default('granted'), purposes: jsonb('purposes').notNull(),
   subjectRevision: bigint('subject_revision', { mode: 'bigint' }).notNull().default(sql`0`),

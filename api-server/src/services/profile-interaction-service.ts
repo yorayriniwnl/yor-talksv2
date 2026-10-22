@@ -5,31 +5,28 @@ import { db } from "@workspace/db";
 import { profileCommentsTable, profileShowcasesTable } from "@workspace/db/schema";
 import { UserRepository } from "../repositories/user-repository.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
+import { ContentSafetyService } from "./content-safety-service.js";
 import type { ProfileCommentRecord, ProfileShowcaseRecord, UserRecord } from "../types/index.js";
+import { ProfileVisibilityService } from './profile-visibility-service.js';
 
 export class ProfileInteractionRequestError extends Error {}
 export class ProfileInteractionForbiddenError extends Error {}
 export class ProfileInteractionService {
-  constructor(private readonly userRepository = new UserRepository()) {}
+  constructor(private readonly userRepository = new UserRepository(), private readonly contentSafetyService = new ContentSafetyService(userRepository),
+    private readonly profileVisibility = new ProfileVisibilityService(userRepository)) {}
 
   private async assertVisible(profileId: string, viewerId: string): Promise<UserRecord> {
     const profile = await this.userRepository.findById(profileId);
     if (!profile) throw new ProfileInteractionRequestError("Profile not found");
-    if (profileId === viewerId) return profile;
-    if (profile.blockedUsers?.includes(viewerId)) throw new ProfileInteractionForbiddenError("This profile is unavailable");
-    const viewer = await this.userRepository.findById(viewerId);
-    if (viewer?.blockedUsers?.includes(profileId)) throw new ProfileInteractionForbiddenError("This profile is unavailable");
-    const visibility = profile.privacy?.profileVisibility ?? (profile.settings?.privateAccount ? "private" : "public");
-    if (visibility === "private" || (visibility === "followers" && !(await this.userRepository.isFollowing(viewerId, profileId)))) {
-      throw new ProfileInteractionForbiddenError("Follow this profile to view its interactions");
-    }
+    if (!(await this.profileVisibility.canView(profile, viewerId))) throw new ProfileInteractionForbiddenError("This profile is unavailable");
     return profile;
   }
 
   async listCommentsWithAuthors(profileId: string, viewerId: string) {
     await this.assertVisible(profileId, viewerId);
     const rows = await db.select().from(profileCommentsTable).where(eq(profileCommentsTable.profileId, profileId)).orderBy(asc(profileCommentsTable.createdAt));
-    return Promise.all(rows.map(async (comment) => ({ comment: comment as ProfileCommentRecord, author: await this.userRepository.findById(comment.authorId) })));
+    const visible = await this.contentSafetyService.filterVisibleByAuthor(rows,viewerId,comment => comment.authorId);
+    return Promise.all(visible.map(async (comment) => ({ comment: comment as ProfileCommentRecord, author: await this.userRepository.findById(comment.authorId) })));
   }
 
   async createComment(profileId: string, authorId: string, content: string) {

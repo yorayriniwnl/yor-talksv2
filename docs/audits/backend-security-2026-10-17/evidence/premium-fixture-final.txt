@@ -1,0 +1,21 @@
+✔ free accounts have no paid perks and one SQL query resolves the entire snapshot (65.369ms)
+✔ concurrent checkout and repeated client keys create a single durable provider order (185.5646ms)
+✔ temporary overrides are independent of payment, expire, and cannot defeat operational availability (31.8316ms)
+✔ failed payment attempts are visible and a later successful attempt on the same order grants access (36.8331ms)
+✔ closed checkout settles through encrypted durable webhook acceptance exactly once (56.8012ms)
+✔ uncertain provider creation recovers by durable receipt without repeating the POST (22.9898ms)
+✔ capture overtaking local provider binding recovers association from provider receipt and notes (22.9259ms)
+✔ amount, currency, receipt, order, signature and account tampering never grant access (19.4724ms)
+✔ cancellation preserves paid access, expiry removes perks, and late cancelled captures require refund review (48.0696ms)
+✔ out-of-order refunds and later capture replays never restore access or duplicate accounting (32.2937ms)
+✔ a settlement database failure rolls back money and access together, then replay succeeds (26.8725ms)
+✔ free/expired saved typography continues to send ordinary messages without changing existing content (41.3861ms)
+✔ real authenticated HTTP state enforces ownership, rejects client entitlement fields and cross-origin mutations (137.7543ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3021.3807

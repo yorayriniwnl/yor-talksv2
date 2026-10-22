@@ -29,7 +29,7 @@ export const USER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-cyan-300 via-blue-500 to-indigo-600 border-cyan-400 text-cyan-300',
     price: 450.00,
     inrPrice: 37500,
-    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-1.svg',
     floatVal: 'Lv.7 Max'
   },
   {
@@ -40,7 +40,7 @@ export const USER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-fuchsia-500 to-purple-600 border-fuchsia-500 text-fuchsia-300',
     price: 120.00,
     inrPrice: 9999,
-    imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-2.svg',
   },
   {
     id: 'item-3',
@@ -50,7 +50,7 @@ export const USER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-amber-400 to-red-500 border-amber-400 text-amber-300',
     price: 3450.00,
     inrPrice: 285000,
-    imageUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-3.svg',
     floatVal: '0.0142'
   },
   {
@@ -61,7 +61,7 @@ export const USER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-pink-500 to-rose-500 border-pink-500 text-pink-300',
     price: 1890.00,
     inrPrice: 156000,
-    imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-4.svg',
     floatVal: '0.0089'
   }
 ];
@@ -75,7 +75,7 @@ export const PARTNER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-purple-400 to-pink-600 border-purple-400 text-purple-300',
     price: 380.00,
     inrPrice: 31500,
-    imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-5.svg',
   },
   {
     id: 'p-item-2',
@@ -85,7 +85,7 @@ export const PARTNER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-amber-300 to-yellow-500 border-amber-400 text-amber-300',
     price: 75.00,
     inrPrice: 6200,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-6.svg',
   },
   {
     id: 'p-item-3',
@@ -95,7 +95,7 @@ export const PARTNER_INVENTORY: SteamItem[] = [
     rarityColor: 'from-emerald-400 to-teal-600 border-emerald-400 text-emerald-300',
     price: 4200.00,
     inrPrice: 348000,
-    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/images/demo-preview-1.svg',
     floatVal: '0.0031'
   }
 ];
@@ -108,7 +108,7 @@ interface SteamTradeModalProps {
 
 export function SteamTradeModal({
   partnerName = 'Valkyrie_Zero',
-  partnerAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+  partnerAvatar = '',
   trigger
 }: SteamTradeModalProps) {
   const [open, setOpen] = useState(false);
@@ -169,12 +169,12 @@ export function SteamTradeModal({
             </div>
             <div>
               <DialogTitle className="font-display font-bold text-lg text-white flex items-center gap-2">
-                YOR Gear Vault & Trade
+                Gear trade preview
                 <span className="text-[0.62rem] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  <Info className="w-2.5 h-2.5 inline mr-1" /> Trade Preview
+                  <Info className="w-2.5 h-2.5 inline mr-1" /> Local demo
                 </span>
               </DialogTitle>
-              <p className="text-xs text-zinc-400 font-mono">Peer-to-Peer Trading with {partnerName}</p>
+              <p className="text-xs text-zinc-400 font-mono">Sample preview with {partnerName}; no linked game account.</p>
             </div>
           </div>
 

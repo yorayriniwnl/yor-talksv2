@@ -1,5 +1,6 @@
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 import { useState, useRef, ReactNode } from 'react';
-import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 interface ProfileTiltCardProps {
   children: ReactNode;
@@ -8,7 +9,7 @@ interface ProfileTiltCardProps {
 
 export function ProfileTiltCard({ children, className = '' }: ProfileTiltCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useAppReducedMotion();
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);

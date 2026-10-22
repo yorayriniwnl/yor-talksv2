@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState, type AudioHTMLAttributes, type ImgHTMLAttributes, type VideoHTMLAttributes } from 'react';
+import { createElement, useCallback, useEffect, useRef, useState, type AudioHTMLAttributes, type ImgHTMLAttributes, type VideoHTMLAttributes } from 'react';
 import { getStoredTokens, onStoredTokensChange } from './api-client';
 
 const mediaPath = /^\/api\/media\/[0-9a-f-]{36}\/content$/i;
@@ -38,24 +38,29 @@ export function useProtectedMediaSource(sourceUrl: string | null | undefined, on
   const [resolved, setResolved] = useState<{ source: string; value: string } | undefined>();
   useEffect(() => {
     let active = true;
+    let generation = 0;
     let controller: AbortController | undefined;
     let current: { objectUrl: string; dispose(): void } | undefined;
     const load = () => {
+      const requestGeneration = ++generation;
       controller?.abort();
+      controller = undefined;
       current?.dispose();
       current = undefined;
       if (!sourceUrl) { setResolved(undefined); return; }
       if (!protectedMediaUrl(sourceUrl)) {
-        if (isGovernedMediaReference(sourceUrl)) { setResolved(undefined); return; }
+        if (isGovernedMediaReference(sourceUrl)) { setResolved(undefined); onError?.(); return; }
         setResolved({ source: sourceUrl, value: sourceUrl }); return;
       }
       setResolved(undefined);
-      controller = new AbortController();
-      void fetchProtectedMedia(sourceUrl, controller.signal).then(result => {
-        if (!active) { result.dispose(); return; }
+      const requestController = new AbortController();
+      controller = requestController;
+      const isCurrent = () => active && generation === requestGeneration && !requestController.signal.aborted;
+      void fetchProtectedMedia(sourceUrl, requestController.signal).then(result => {
+        if (!isCurrent()) { result.dispose(); return; }
         current = result;
         setResolved({ source: sourceUrl, value: result.objectUrl });
-      }).catch(() => { if (active) { setResolved(undefined); onError?.(); } });
+      }).catch(() => { if (isCurrent()) { setResolved(undefined); onError?.(); } });
     };
     load();
     const unsubscribe = onStoredTokensChange(load);
@@ -66,18 +71,29 @@ export function useProtectedMediaSource(sourceUrl: string | null | undefined, on
   return resolved?.source === sourceUrl ? resolved.value : undefined;
 }
 
+// Use the element's existing React error handler for failed authenticated fetches.
+// A stable callback prevents inline onError props from restarting media requests.
+function useMediaFailureEvent<T extends HTMLElement>() {
+  const element = useRef<T>(null);
+  const onError = useCallback(() => element.current?.dispatchEvent(new Event('error')), []);
+  return { element, onError };
+}
+
 export function ProtectedMediaImage(props: ImgHTMLAttributes<HTMLImageElement>) {
-  const src = useProtectedMediaSource(props.src);
-  return createElement('img', { ...props, src });
+  const { element, onError } = useMediaFailureEvent<HTMLImageElement>();
+  const src = useProtectedMediaSource(props.src, onError);
+  return createElement('img', { ...props, src, ref: element });
 }
 
 export function ProtectedMediaAudio(props: AudioHTMLAttributes<HTMLAudioElement>) {
-  const src = useProtectedMediaSource(props.src);
-  return createElement('audio', { ...props, src });
+  const { element, onError } = useMediaFailureEvent<HTMLAudioElement>();
+  const src = useProtectedMediaSource(props.src, onError);
+  return createElement('audio', { ...props, src, ref: element });
 }
 
 export function ProtectedMediaVideo(props: VideoHTMLAttributes<HTMLVideoElement>) {
-  const src = useProtectedMediaSource(props.src);
-  const poster = useProtectedMediaSource(props.poster);
-  return createElement('video', { ...props, src, poster });
+  const { element, onError } = useMediaFailureEvent<HTMLVideoElement>();
+  const src = useProtectedMediaSource(props.src, onError);
+  const poster = useProtectedMediaSource(props.poster, onError);
+  return createElement('video', { ...props, src, poster, ref: element });
 }

@@ -1,22 +1,31 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  ShieldCheck, AlertTriangle, FileText, CheckCircle2, Clock, 
-  Search, Mail, Building, Scale, ArrowRight, Loader2 
+  AlertTriangle, FileText, CheckCircle2,
+  Search, Building, Scale, ArrowRight, Loader2, Bell, ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api-client';
+import { api, type ModerationNotice } from '@/lib/api-client';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
-import { publicBetaConfig } from '@/lib/public-beta-config';
+import { legalConfigReady, publicBetaConfig } from '@/lib/public-beta-config';
 
 type GrievanceField = 'reporterName' | 'reporterEmail' | 'reportedUrl' | 'description';
 type GrievanceErrors = Partial<Record<GrievanceField, string>>;
 
 export default function GrievancePortal() {
-  const [activeTab, setActiveTab] = useState<'file' | 'track'>('file');
+  const [activeTab, setActiveTab] = useState<'file' | 'track' | 'notices'>('file');
+  const currentUser = useAppStore((state) => state.currentUser);
+
+  // Notices & Appeals state
+  const [notices, setNotices] = useState<ModerationNotice[]>([]);
+  const [loadingNotices, setLoadingNotices] = useState(false);
+  const [appealNoticeId, setAppealNoticeId] = useState<string | null>(null);
+  const [appealStatement, setAppealStatement] = useState('');
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   
   // Form State
   const [category, setCategory] = useState<'copyright' | 'hate_speech' | 'harassment' | 'impersonation' | 'privacy_violation' | 'other'>('harassment');
@@ -29,12 +38,15 @@ export default function GrievancePortal() {
   const [formErrors, setFormErrors] = useState<GrievanceErrors>({});
   const [formError, setFormError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
+  const submissionPending = useRef(false);
 
   // Track State
   const [trackTicketId, setTrackTicketId] = useState('');
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackedTicket, setTrackedTicket] = useState<any>(null);
   const [trackError, setTrackError] = useState('');
+  const trackInput = useRef<HTMLInputElement>(null);
+  const lookupPending = useRef(false);
 
   const clearFieldError = (field: GrievanceField) => {
     setFormErrors((current) => {
@@ -48,13 +60,15 @@ export default function GrievancePortal() {
 
   const handleFileGrievance = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submissionPending.current) return;
     const nextErrors: GrievanceErrors = {};
-    if (!reporterName.trim()) nextErrors.reporterName = 'Enter the name a reviewer can use to contact you.';
-    if (!reporterEmail.trim()) nextErrors.reporterEmail = 'Add an email address for ticket updates.';
+    if (reporterName.trim().length < 2) nextErrors.reporterName = 'Enter at least 2 characters for the name a reviewer can use to contact you.';
+    if (!reporterEmail.trim()) nextErrors.reporterEmail = 'Add an email address a reviewer can use to contact you.';
     else if (!/^\S+@\S+\.\S+$/.test(reporterEmail.trim())) nextErrors.reporterEmail = 'Check the email format and try again.';
-    if (!reportedUrl.trim()) nextErrors.reportedUrl = 'Add the post, Reel, profile, or username you are reporting.';
+    if (reportedUrl.trim().length < 2) nextErrors.reportedUrl = 'Add the post, Reel, profile, or username you are reporting.';
+    else if (reportedUrl.trim().length > 500) nextErrors.reportedUrl = 'Keep the reported link or username within 500 characters.';
     if (!description.trim()) nextErrors.description = 'Add a short explanation and any useful evidence.';
-    else if (description.trim().length < 20) nextErrors.description = 'Give the reviewer a little more context (at least 20 characters).';
+    else if (description.trim().length < 10) nextErrors.description = 'Give the reviewer a little more context (at least 10 characters).';
 
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors);
@@ -64,6 +78,7 @@ export default function GrievancePortal() {
       return;
     }
 
+    submissionPending.current = true;
     setSubmitting(true);
     setFormErrors({});
     setFormError('');
@@ -72,7 +87,7 @@ export default function GrievancePortal() {
     try {
       const res = await api.request<any>('/reports/grievance', {
         method: 'POST',
-        body: JSON.stringify({ category, reportedUrl, reporterName, reporterEmail, description }),
+        body: JSON.stringify({ category, reportedUrl: reportedUrl.trim(), reporterName: reporterName.trim(), reporterEmail: reporterEmail.trim(), description: description.trim() }),
       });
       const ticket = res;
 
@@ -82,34 +97,83 @@ export default function GrievancePortal() {
       toast.success(`Grievance ticket ${ticket.ticketId} received.`);
     } catch (err: any) {
       const message = err instanceof Error && err.message ? err.message : 'We could not submit this report right now.';
-      setFormError(`${message} Your draft is still here, so you can retry safely.`);
+      setFormError(`${message} Your draft is still here. If no receipt was returned, delivery could not be confirmed.`);
       toast.error('We could not submit this report. Your draft is still here.');
     } finally {
+      submissionPending.current = false;
       setSubmitting(false);
     }
   };
 
   const handleTrackTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trackTicketId.trim()) {
-      setTrackError('Enter the ticket ID from your submission receipt.');
+    if (lookupPending.current) return;
+    const ticketId = trackTicketId.trim().toUpperCase();
+    if (!/^YT-GRV-[A-Z0-9]{10}$/.test(ticketId)) {
+      setTrackError('Enter the ticket ID from your submission receipt, such as YT-GRV-849201ABCD.');
+      trackInput.current?.focus();
       toast.error('Add a ticket ID to begin tracking.');
       return;
     }
 
+    lookupPending.current = true;
     setTrackingLoading(true);
     setTrackError('');
     setTrackedTicket(null);
     sounds.playPop();
 
     try {
-      const ticket = await api.request<any>(`/reports/grievance/${encodeURIComponent(trackTicketId.trim())}`);
+      const ticket = await api.request<any>(`/reports/grievance/${encodeURIComponent(ticketId)}`);
       setTrackedTicket(ticket);
     } catch (error) {
       setTrackError('We could not find that ticket right now. Check the ID or try again in a moment.');
       toast.error('Ticket lookup needs another try.');
     } finally {
+      lookupPending.current = false;
       setTrackingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'notices' && currentUser) {
+      setLoadingNotices(true);
+      api.getModerationNotices()
+        .then(data => setNotices(data))
+        .catch(() => toast.error('Could not load decision notices'))
+        .finally(() => setLoadingNotices(false));
+    }
+  }, [activeTab, currentUser]);
+
+  const handleAcknowledge = async (noticeId: string) => {
+    setAcknowledgingId(noticeId);
+    try {
+      await api.acknowledgeModerationNotice(noticeId);
+      setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedAt: new Date().toISOString() } : n));
+      toast.success('Notice acknowledged');
+    } catch {
+      toast.error('Could not acknowledge notice');
+    } finally {
+      setAcknowledgingId(null);
+    }
+  };
+
+  const handleSubmitAppeal = async (decisionId: string) => {
+    if (appealStatement.trim().length < 10) {
+      toast.error('Appeal statement must be at least 10 characters long');
+      return;
+    }
+    setSubmittingAppeal(true);
+    try {
+      await api.submitModerationAppeal({ decisionId, statement: appealStatement });
+      toast.success('Appeal submitted successfully for staff review');
+      setAppealNoticeId(null);
+      setAppealStatement('');
+      const updated = await api.getModerationNotices();
+      setNotices(updated);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit appeal');
+    } finally {
+      setSubmittingAppeal(false);
     }
   };
 
@@ -124,7 +188,7 @@ export default function GrievancePortal() {
           <span id="grievance-title">Trust & Safety Report Portal</span>
         </h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-2">
-          Submit a report to the Yor Talks trust queue. You will receive a ticket ID, status updates, and a human-review path.
+          Submit a report to the Yor Talks trust queue. Keep the ticket ID private to check its recorded status; email updates are not sent automatically. For emergencies, contact local emergency services.
         </p>
 
         {/* Tab Switcher */}
@@ -144,6 +208,14 @@ export default function GrievancePortal() {
             className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
           >
             <Search className="w-4 h-4 mr-1.5" /> Track Existing Ticket
+          </Button>
+          <Button
+            variant={activeTab === 'notices' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('notices')}
+            aria-pressed={activeTab === 'notices'}
+            className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
+          >
+            <Bell className="w-4 h-4 mr-1.5" /> Decision Notices & Appeals
           </Button>
         </div>
       </div>
@@ -173,10 +245,6 @@ export default function GrievancePortal() {
                 <span className="text-muted-foreground">Status:</span>
                 <span className="font-bold text-emerald-400 uppercase">{submittedTicket.status}</span>
               </div>
-              {submittedTicket.slaDeadline && <div className="flex justify-between">
-                <span className="text-muted-foreground">Operational review target:</span>
-                <span className="text-foreground">{new Date(submittedTicket.slaDeadline).toLocaleDateString()}</span>
-              </div>}
             </div>
 
             <Button
@@ -206,7 +274,7 @@ export default function GrievancePortal() {
                   aria-invalid={Boolean(formErrors.reporterName)}
                   aria-describedby={formErrors.reporterName ? 'reporterName-error' : undefined}
                   maxLength={120}
-                  placeholder="e.g. Ayush Roy"
+                  placeholder="Your name"
                   className="rounded-xl surface-2 border-border/40 text-xs h-10"
                 />
                 {formErrors.reporterName && <p id="reporterName-error" className="operator-grievance-field__error">{formErrors.reporterName}</p>}
@@ -223,7 +291,7 @@ export default function GrievancePortal() {
                   onChange={(e) => { setReporterEmail(e.target.value); clearFieldError('reporterEmail'); }}
                   aria-invalid={Boolean(formErrors.reporterEmail)}
                   aria-describedby={formErrors.reporterEmail ? 'reporterEmail-error' : undefined}
-                  maxLength={254}
+                  maxLength={320}
                   placeholder="name@example.com"
                   className="rounded-xl surface-2 border-border/40 text-xs h-10"
                 />
@@ -244,7 +312,7 @@ export default function GrievancePortal() {
                 <option value="impersonation">Identity Impersonation / Fake Profile</option>
                 <option value="copyright">Copyright & Intellectual Property Infringement</option>
                 <option value="privacy_violation">Privacy Violation / Non-Consensual Media</option>
-                <option value="other">Other Statutory Violation</option>
+                <option value="other">Other concern</option>
               </select>
             </div>
 
@@ -257,7 +325,7 @@ export default function GrievancePortal() {
                 onChange={(e) => { setReportedUrl(e.target.value); clearFieldError('reportedUrl'); }}
                 aria-invalid={Boolean(formErrors.reportedUrl)}
                 aria-describedby={formErrors.reportedUrl ? 'reportedUrl-error' : undefined}
-                maxLength={2048}
+                maxLength={500}
                 placeholder="https://yortalks.in/p/... or @username"
                 className="rounded-xl surface-2 border-border/40 text-xs h-10"
               />
@@ -274,20 +342,21 @@ export default function GrievancePortal() {
                 onChange={(e) => { setDescription(e.target.value); clearFieldError('description'); }}
                 aria-invalid={Boolean(formErrors.description)}
                 aria-describedby={formErrors.description ? 'description-error' : undefined}
-                maxLength={5000}
+                maxLength={10000}
                 placeholder="Please describe the grievance in detail with specific timestamps or contextual evidence..."
                 className="w-full rounded-xl surface-2 border border-border/40 p-3 text-xs text-foreground outline-none resize-none"
               />
-              <div className="operator-grievance-field__meta"><span>{formErrors.description ? <span id="description-error" className="operator-grievance-field__error">{formErrors.description}</span> : 'Include context, timestamps, and evidence where possible.'}</span><span>{description.length}/5000</span></div>
+              <div className="operator-grievance-field__meta"><span>{formErrors.description ? <span id="description-error" className="operator-grievance-field__error">{formErrors.description}</span> : 'Include relevant context and timestamps. Do not send passwords, authenticator codes, or unnecessary identity documents.'}</span><span>{description.length}/10000</span></div>
             </div>
 
+            <p className="text-xs leading-5 text-muted-foreground">Your contact details and report are used to investigate this request and contact you if needed. This portal does not send automatic email updates. Read the <a href="/privacy" className="font-semibold text-primary underline">Privacy Notice</a> for details.</p>
             <Button
               type="submit"
               disabled={submitting}
               aria-busy={submitting}
               className="w-full rounded-2xl font-display font-extrabold text-xs h-11 bg-primary text-primary-foreground glow-neon-primary cursor-pointer"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit Grievance to Redressal Officer <ArrowRight className="w-4 h-4 ml-1.5" /></>}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Submit report <ArrowRight className="w-4 h-4 ml-1.5" /></>}
             </Button>
           </form>
         )
@@ -299,11 +368,13 @@ export default function GrievancePortal() {
             <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 id="trackTicketId"
+                ref={trackInput}
                 value={trackTicketId}
                 onChange={(e) => { setTrackTicketId(e.target.value); setTrackError(''); }}
                 aria-invalid={Boolean(trackError)}
                 aria-describedby={trackError ? 'trackTicketId-error' : undefined}
                 autoComplete="off"
+                maxLength={17}
                 placeholder="e.g. YT-GRV-849201ABCD"
                 className="min-w-0 flex-1 rounded-2xl surface-2 border-border/50 text-xs h-11"
               />
@@ -334,7 +405,6 @@ export default function GrievancePortal() {
               <p className="text-xs text-muted-foreground">Use this receipt to follow your ticket status. Case evidence and reviewer notes remain private.</p>
               <div className="text-[0.68rem] font-mono text-muted-foreground pt-2 border-t border-border/30 flex justify-between">
                 <span>Received: {new Date(trackedTicket.createdAt).toLocaleDateString()}</span>
-                {trackedTicket.slaDeadline && <span>Operational review target: {new Date(trackedTicket.slaDeadline).toLocaleDateString()}</span>}
               </div>
             </motion.div>
           )}
@@ -346,10 +416,11 @@ export default function GrievancePortal() {
         <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
           <Building className="w-4 h-4 text-primary" /> Trust & Safety Contact
         </h4>
-        <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Development operator (not for public release)'}</p>
-        <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Use the local development support channel.'}</p>
-        <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured in this development build.'}</p>
-        <p><strong>Handling:</strong> Tickets are stored for review and can be tracked with the ticket ID. Do not submit emergencies through Yor.</p>
+        {!legalConfigReady && <p role="status" className="font-semibold text-foreground">Public release is blocked until verified operator and grievance details and reviewed legal notices are configured.</p>}
+        <p><strong>Officer:</strong> {publicBetaConfig.grievanceOfficerName || 'Not designated'}</p>
+        <p><strong>Contact:</strong> {publicBetaConfig.grievanceContactEmail || 'Not configured'}</p>
+        <p><strong>Support:</strong> {publicBetaConfig.supportEmail || 'Not configured'}</p>
+        <p><strong>Handling:</strong> Tickets are stored in the review queue and can be tracked with the ticket ID. This portal does not send email updates. Do not submit emergencies through Yor.</p>
       </div>
     </div>
   );

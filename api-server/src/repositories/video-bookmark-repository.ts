@@ -1,8 +1,18 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { videoBookmarksTable } from "@workspace/db/schema";
+import { videoBookmarksTable, videosTable } from "@workspace/db/schema";
+import type { VideoRecord } from '../types/index.js';
+import { collectionAfter, type CollectionCandidate, type CollectionPosition } from '../utils/saved-collection-page.js';
 
 export class VideoBookmarkRepository {
+  async listPageForUser(userId: string, position: CollectionPosition | undefined, limit: number): Promise<CollectionCandidate<VideoRecord>[]> {
+    const rows = await db.select({ item: videosTable, createdAt: videoBookmarksTable.createdAt, id: videoBookmarksTable.videoId })
+      .from(videoBookmarksTable).innerJoin(videosTable, eq(videoBookmarksTable.videoId, videosTable.id))
+      .where(and(eq(videoBookmarksTable.userId, userId), collectionAfter(videoBookmarksTable.createdAt, videoBookmarksTable.videoId, position)))
+      .orderBy(desc(videoBookmarksTable.createdAt), desc(videoBookmarksTable.videoId)).limit(limit);
+    return rows as CollectionCandidate<VideoRecord>[];
+  }
+
   async listForUser(userId: string): Promise<string[]> {
     const rows = await db.select({ videoId: videoBookmarksTable.videoId })
       .from(videoBookmarksTable)

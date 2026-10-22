@@ -40,7 +40,10 @@ function fixture() {
   const emailService = {
     sendEmailLoginCode: async (_address: string, code: string) => { deliveredCodes.push(code); },
   } as unknown as EmailService;
-  const auth = new AuthService(users, redis, undefined, emailService);
+  // This suite exercises the real Redis OTP boundary with a synthetic identity;
+  // private eligibility is covered by the database-backed acceptance suites.
+  const auth = new AuthService(users, redis, undefined, emailService, undefined, undefined, undefined,
+    { decisionFor: async () => ({ activated: false }) } as never);
   return { auth, email, user, deliveredCodes };
 }
 
@@ -108,7 +111,7 @@ test("OTP issuance and redemption fail closed when Redis is unavailable", async 
   assert.equal(deliveredCodes.length, 0);
 
   const redemptionRedis = Object.create(redis) as RedisRepository;
-  redemptionRedis.getStrict = async () => { throw new Error("injected Redis outage"); };
+  redemptionRedis.claimEmailOtpStrict = async () => { throw new Error("injected Redis outage"); };
   const redemptionService = new AuthService({} as UserRepository, redemptionRedis);
   await assert.rejects(redemptionService.loginWithEmailOtp({ email, code: "123456" }), /injected Redis outage/);
   assert.equal((await redis.scanStrict(`session:${user.id}:*`)).length, 0);

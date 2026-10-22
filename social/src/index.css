@@ -176,7 +176,7 @@
   --muted-foreground: 240 6% 45%;
 
   --accent: 24 94% 56%;
-  --accent-foreground: 24 88% 25%;
+  --accent-foreground: 24 88% 18%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
@@ -539,6 +539,10 @@
   to { --border-angle: 360deg; }
 }
 
+@keyframes rotate-border {
+  to { --border-angle: 360deg; }
+}
+
 @keyframes aurora-drift {
   0%, 100% { background-position: 0% 50%; }
   25%      { background-position: 50% 100%; }
@@ -715,6 +719,22 @@
   background: conic-gradient(from var(--border-angle, 0deg), #e84b4b, #671515, #e84b4b);
   animation: rotate-border 2.5s linear infinite;
   box-shadow: 0 0 20px rgba(232, 75, 75, 0.5);
+}
+
+.steam-frame-holographic {
+  padding: 4px;
+  border-radius: 9999px;
+  background: conic-gradient(from var(--border-angle, 0deg), #ff2d55, #00f2fe, #7928ca, #ff007a, #00f2fe, #ff2d55);
+  animation: rotate-border 3s linear infinite;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.6), 0 0 45px rgba(255, 45, 85, 0.35);
+}
+
+.steam-frame-founder {
+  padding: 4px;
+  border-radius: 9999px;
+  background: conic-gradient(from var(--border-angle, 0deg), #e84b4b, #ffd700, #ff8a7f, #ffd700, #e84b4b);
+  animation: rotate-border 2.2s linear infinite;
+  box-shadow: 0 0 25px rgba(232, 75, 75, 0.7), 0 0 45px rgba(255, 215, 0, 0.5);
 }
 
 .profile-hero-cover::after {

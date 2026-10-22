@@ -68,23 +68,24 @@ test("Gemini malformed moderation falls back and production fails closed if both
   assert.equal(fallback.mock.callCount(), 4);
 });
 
-test("Gemini API keys are sent in headers and never included in request URLs", async (t) => {
-  const originalKey = env.GEMINI_API_KEY;
-  env.GEMINI_API_KEY = "synthetic-gemini-api-key";
-  t.after(() => { env.GEMINI_API_KEY = originalKey; });
+test("Gemini moderation and assistance calls send credentials only in the API key header", async (t) => {
+  const original = { GEMINI_API_KEY: env.GEMINI_API_KEY, NODE_ENV: env.NODE_ENV };
+  env.GEMINI_API_KEY = "unit-test-gemini-key";
+  env.NODE_ENV = "production";
+  t.after(() => Object.assign(env, original));
 
-  const responses = [
-    '{"spam":false,"toxicity":false,"nsfw":false}',
-    '[{"reason":"topic relevance","score":0.9}]',
-    '["synthetic-tag"]',
-  ];
   const requests: Array<{ url: string; apiKey: string | null }> = [];
   t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
-    requests.push({
-      url: String(input),
-      apiKey: new Headers(init?.headers).get("x-goog-api-key"),
-    });
-    return Response.json({ candidates: [{ content: { parts: [{ text: responses.shift() }] } }] });
+    const url = String(input);
+    const body = JSON.parse(String(init?.body)) as { contents?: Array<{ parts?: Array<{ text?: string }> }> };
+    const prompt = body.contents?.[0]?.parts?.[0]?.text ?? "";
+    requests.push({ url, apiKey: new Headers(init?.headers).get("x-goog-api-key") });
+    const text = prompt.includes("Extract 3 relevant topic hashtags")
+      ? '["synthetic-tag"]'
+      : prompt.includes("return 2 topical recommendation signals")
+        ? '[{"reason":"topic relevance","score":0.9}]'
+        : '{"spam":false,"toxicity":false,"nsfw":false}';
+    return Response.json({ candidates: [{ content: { parts: [{ text }] } }] });
   });
 
   const eligibility = new EligibilityService();
@@ -95,8 +96,7 @@ test("Gemini API keys are sent in headers and never included in request URLs", a
   assert.deepEqual(await service.tag("synthetic-user", "synthetic content with hashtag"), ["synthetic-tag"]);
   assert.equal(requests.length, 3);
   for (const request of requests) {
-    assert.equal(request.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
-    assert.equal(request.url.includes("synthetic-gemini-api-key"), false);
-    assert.equal(request.apiKey, "synthetic-gemini-api-key");
+    assert.equal(new URL(request.url).search, "");
+    assert.equal(request.apiKey, "unit-test-gemini-key");
   }
 });

@@ -8,9 +8,10 @@ import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { NotificationDeliveryService } from "../services/notification-delivery-service.js";
 import { NotificationRepository } from "../repositories/notification-repository.js";
-import type { NotificationRecord } from "../types/index.js";
 import { operationalMetrics } from "../services/operational-metrics-service.js";
 import { closeNotificationWorkerHealthDependencies, isNotificationWorkerHealthy, publishNotificationWorkerHeartbeat, setNotificationWorkerHealthy } from "../lib/worker-health.js";
+import { notificationJobOptions } from "../lib/queue-job-retention.js";
+import { deliverNotificationJob } from './notification-job.js';
 
 export type NotificationWorkerHandle = {
   close: () => Promise<void>;
@@ -20,14 +21,6 @@ export type NotificationWorkerHandle = {
 const RETRY_DELAY_MS = 30_000;
 const RECOVERY_INTERVAL_MS = 30_000;
 const RECOVERY_PAGE_SIZE = 250;
-const notificationJobOptions = (notification: Pick<NotificationRecord, "id">) => ({
-  jobId: notification.id,
-  removeOnComplete: { age: 7 * 24 * 60 * 60, count: 1_000 },
-  removeOnFail: { age: 30 * 24 * 60 * 60, count: 5_000 },
-  attempts: 5,
-  backoff: { type: "exponential" as const, delay: 30_000 },
-});
-
 /**
  * Keeps the notification worker recoverable when Redis is temporarily down
  * during process startup. The readiness probe still stays unhealthy until the
@@ -81,10 +74,7 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
               // Not ours — other job types may be added to this queue later.
               return;
             }
-            const notification = job.data as NotificationRecord;
-            const recipient = await userRepository.findById(notification.recipientId);
-            await deliveryService.deliver(notification, recipient);
-            await notificationRepository.markPushDelivered(notification.id);
+            await deliverNotificationJob(job.data, notificationRepository, userRepository, deliveryService);
           },
           { connection: { url: env.REDIS_URL } },
         );
@@ -220,12 +210,12 @@ class NotificationWorkerSupervisor implements NotificationWorkerHandle {
           if (existing) {
             const current = await db.select({ pushDeliveredAt: notificationsTable.pushDeliveredAt })
               .from(notificationsTable).where(eq(notificationsTable.id, notification.id)).limit(1);
-            if (current[0]?.pushDeliveredAt) continue;
+            if (!current[0] || current[0].pushDeliveredAt) continue;
             const state = await existing.getState();
             if (state === "failed" || state === "completed") await existing.remove();
             else continue;
           }
-          await queue.add("notification:deliver", notification, notificationJobOptions(notification));
+          await queue.add("notification:deliver", { notificationId: notification.id }, notificationJobOptions(notification.id));
         }
 
         const last = pending[pending.length - 1];

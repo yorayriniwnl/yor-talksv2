@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Shield, UserPlus, MessageCircle, Sparkles, Check, Gamepad2, ArrowLeftRight, Trophy } from 'lucide-react';
+import { UserPlus, MessageCircle, Check } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
-import { SteamTradeModal } from '@/components/steam/SteamTradeModal';
 import { ProtectedMediaImage } from '@/lib/protected-media';
+import { FounderBadge } from '@/components/system/FounderBadge';
 
 interface MiniProfileCardProps {
   user: User;
@@ -67,18 +67,12 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
               
-              {/* Steam Level Hex Badge */}
-              <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-amber-500/40 text-amber-400 font-mono text-[0.68rem] font-bold shadow-lg">
-                <Shield className="w-3.5 h-3.5 fill-amber-400" />
-                <span>Level {Math.max(12, ((user.followers || 100) % 90) + 10)}</span>
-              </div>
             </div>
 
             {/* Avatar & Main Body */}
             <div className="p-4 pt-0 relative">
               <div className="flex justify-between items-end -mt-9 mb-3">
-                {/* Animated Steam Avatar Border */}
-                <div className="relative p-1 rounded-full bg-gradient-to-tr from-cyan-400 via-primary to-rose-500 animate-[spin_6s_linear_infinite] shadow-xl">
+                <div className="relative p-1 rounded-full bg-gradient-to-tr from-cyan-400 via-primary to-rose-500 shadow-xl">
                   <div className="p-0.5 bg-zinc-950 rounded-full">
                     <Avatar className="w-14 h-14 border-2 border-zinc-950">
                       <AvatarImage src={user.avatarUrl} />
@@ -111,22 +105,13 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
                   {user.verified && (
                     <svg className="w-4 h-4 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
                   )}
+                  <FounderBadge
+                    isFounder={Boolean((user as any).isFounder || (currentUser?.id === user.id && localStorage.getItem('yor:founder:pass:v1')))}
+                    variant="compact"
+                  />
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-zinc-400 font-mono">@{user.username}</span>
-                  <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="text-[0.65rem] font-mono text-emerald-400 font-medium">In-Game</span>
-                </div>
-              </div>
-
-              {/* Steam Rich Presence Banner */}
-              <div className="p-2.5 rounded-2xl bg-zinc-900/90 border border-border/40 mb-3 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
-                  <Gamepad2 className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[0.62rem] font-mono uppercase text-zinc-400">Currently Playing</div>
-                  <div className="text-xs font-bold text-white truncate">Cyberpunk 2077: Phantom Liberty</div>
                 </div>
               </div>
 
@@ -138,21 +123,18 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
               )}
 
               {/* Stats Bar */}
-              <div className="flex items-center justify-between pt-2.5 border-t border-border/40 font-mono text-xs text-zinc-400">
+              <div className="grid grid-cols-2 items-center gap-2 pt-2.5 border-t border-border/40 font-mono text-xs text-zinc-400">
                 <div>
                   <strong className="text-white font-bold">{user.followers?.toLocaleString()}</strong> followers
                 </div>
                 <div>
                   <strong className="text-white font-bold">{user.following?.toLocaleString()}</strong> following
                 </div>
-                <div className="flex items-center gap-1 text-amber-400 font-bold">
-                  <Trophy className="w-3.5 h-3.5" /> 42 Badges
-                </div>
               </div>
 
               {/* Action Buttons */}
               {!isOwnProfile && (
-                <div className="grid grid-cols-2 gap-2 mt-3">
+                <div className="grid grid-cols-1 gap-2 mt-3">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -162,18 +144,6 @@ export function MiniProfileCard({ user, children }: MiniProfileCardProps) {
                     <MessageCircle className="w-3.5 h-3.5 mr-1.5 text-primary" /> Message
                   </Button>
 
-                  <SteamTradeModal
-                    partnerName={user.displayName}
-                    partnerAvatar={user.avatarUrl}
-                    trigger={
-                      <Button
-                        size="sm"
-                        className="rounded-xl h-8 text-xs font-bold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30"
-                      >
-                        <ArrowLeftRight className="w-3.5 h-3.5 mr-1.5" /> Trade Offer
-                      </Button>
-                    }
-                  />
                 </div>
               )}
             </div>

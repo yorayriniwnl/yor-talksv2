@@ -2,10 +2,17 @@ import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 export { mediaAssetsTable, mediaReferencesTable } from "./media";
+export { privateChatIdentitiesTable, privateChatThreadsTable, privateChatEnvelopesTable } from './private-chat';
 export { eligibilityAssessmentsTable, eligibilityChallengesTable, eligibilityEnrollmentsTable,
   guardianAuthorizationsTable, eligibilityRevisionsTable, contentSafetyClassificationsTable,
   contactAuthorizationsTable, contactAuthorizationApprovalsTable,
   conversationInvitationsTable, conversationInvitationApprovalsTable } from './eligibility';
+export {
+  moderationDecisionsTable,
+  moderationEnforcementsTable,
+  moderationDecisionNoticesTable,
+  moderationAppealsTable,
+} from './moderation';
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey(),
@@ -58,7 +65,23 @@ export const usersTable = pgTable("users", {
   accountStatus: text("account_status").default("active"),
   activityStatus: text("activity_status").default("offline"),
   lastActiveTimestamp: timestamp("last_active_timestamp", { mode: "string" }),
+  processingRestricted: boolean("processing_restricted").default(false).notNull(),
+  restrictionReason: text("restriction_reason"),
+  restrictedAt: timestamp("restricted_at", { mode: "string", withTimezone: true }),
 });
+
+/** Versioned terms acknowledgements do not grant optional processing consent. */
+export const userTermsAcceptancesTable = pgTable("user_terms_acceptances", {
+  id: uuid("id").primaryKey(),
+  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  termsVersion: text("terms_version").notNull(),
+  acceptedAt: timestamp("accepted_at", { mode: "string", withTimezone: true }).notNull(),
+  source: text("source").notNull(),
+}, table => ({
+  versionIdx: uniqueIndex("user_terms_acceptances_version_idx").on(table.userId, table.termsVersion),
+  archiveIdx: index("user_terms_acceptances_archive_idx").on(table.userId, table.id),
+  sourceCheck: check("user_terms_acceptances_source_check", sql`${table.source} IN ('registration','reacceptance','legacy_snapshot')`),
+}));
 
 /** Feature-level access is deliberately separate from subscriptions so rollout,
  * experiments, promotions, and future plans do not leak into product logic. */
@@ -216,11 +239,16 @@ export const messagesTable = pgTable("messages", {
   editedAt: timestamp("edited_at", { mode: "string" }),
   deletedAt: timestamp("deleted_at", { mode: "string" }),
   expiresAt: timestamp("expires_at", { mode: "string" }),
+  contentPurgedAt: timestamp("content_purged_at", { withTimezone: true, mode: "string" }),
   pinned: boolean("pinned").default(false),
 }, (table) => ({
   convIdx: index("msg_conv_idx").on(table.conversationId),
   senderIdx: index("msg_sender_idx").on(table.senderId),
   recipientIdx: index("msg_recipient_idx").on(table.recipientId),
+  purgeDeletedIdx: index("messages_purge_deleted_idx").on(table.deletedAt, table.id)
+    .where(sql`${table.contentPurgedAt} IS NULL AND ${table.deletedAt} IS NOT NULL`),
+  purgeExpiredIdx: index("messages_purge_expired_idx").on(table.expiresAt, table.id)
+    .where(sql`${table.contentPurgedAt} IS NULL AND ${table.deletedAt} IS NULL AND ${table.expiresAt} IS NOT NULL`),
 }));
 
 export const notificationsTable = pgTable("notifications", {
@@ -561,6 +589,7 @@ export const videoBookmarksTable = pgTable("video_bookmarks", {
 }, (table) => ({
   pk: primaryKey({ columns: [table.videoId, table.userId] }),
   userIdx: index("video_bookmark_user_idx").on(table.userId, table.createdAt),
+  pageIdx: index('video_bookmark_page_idx').on(table.userId, table.createdAt, table.videoId),
   videoIdx: index("video_bookmark_video_idx").on(table.videoId),
 }));
 
@@ -688,7 +717,8 @@ export const postBookmarksTable = pgTable("post_bookmarks", {
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
 }, (t) => ({
   pk: primaryKey({ columns: [t.postId, t.userId] }),
-  userIdx: index("post_bookmarks_user_idx").on(t.userId)
+  userIdx: index("post_bookmarks_user_idx").on(t.userId),
+  pageIdx: index('post_bookmark_page_idx').on(t.userId, t.createdAt, t.postId),
 }));
 
 /** A first-class repost is distinct from a link share: it is a durable
@@ -1064,9 +1094,26 @@ export const reportsTable = pgTable("reports", {
   reason: text("reason").notNull(), // 'spam', 'harassment', 'nsfw', 'illegal'
   details: text("details"),
   status: text("status").notNull().default("pending"), // 'pending', 'reviewed', 'resolved', 'dismissed'
+  decisionReason: text("decision_reason"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { mode: "string" }),
-});
+}, (table) => ({
+  queueIdx: index('reports_queue_idx').on(table.createdAt, table.id),
+  statusQueueIdx: index('reports_status_queue_idx').on(table.status, table.createdAt, table.id),
+}));
+
+export const reportModerationEventsTable = pgTable("report_moderation_events", {
+  id: uuid("id").primaryKey(),
+  reportId: uuid("report_id").references(() => reportsTable.id, { onDelete: "cascade" }).notNull(),
+  moderatorId: uuid("moderator_id").references(() => usersTable.id, { onDelete: "set null" }),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  decisionReason: text("decision_reason"),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
+}, (table) => ({
+  reportHistoryIdx: index("report_moderation_events_history_idx").on(table.reportId, table.createdAt, table.id),
+  moderatorIdx: index("report_moderation_events_moderator_idx").on(table.moderatorId, table.createdAt),
+}));
 
 export const grievanceTicketsTable = pgTable("grievance_tickets", {
   id: uuid("id").primaryKey(),
@@ -1077,13 +1124,15 @@ export const grievanceTicketsTable = pgTable("grievance_tickets", {
   reporterEmail: text("reporter_email").notNull(),
   description: text("description").notNull(),
   status: text("status").notNull().default("received"),
-  slaDeadline: timestamp("sla_deadline", { mode: "string" }).notNull(),
+  slaDeadline: timestamp("sla_deadline", { mode: "string" }),
   officerNote: text("officer_note"),
   createdAt: timestamp("created_at", { mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string" }).notNull().defaultNow(),
 }, (table) => ({
   ticketIdx: index("grievance_ticket_idx").on(table.ticketId),
   statusIdx: index("grievance_status_idx").on(table.status, table.createdAt),
+  queueIdx: index('grievance_queue_idx').on(table.createdAt, table.id),
+  statusQueueIdx: index('grievance_status_queue_idx').on(table.status, table.createdAt, table.id),
 }));
 
 /**
@@ -1374,3 +1423,101 @@ export type FeatureEntitlement = typeof featureEntitlementsTable.$inferSelect;
 export const insertUserFeatureOverrideSchema = createInsertSchema(userFeatureOverridesTable);
 export type InsertUserFeatureOverride = typeof userFeatureOverridesTable.$inferInsert;
 export type UserFeatureOverride = typeof userFeatureOverridesTable.$inferSelect;
+
+export const preregistrationsTable = pgTable("preregistrations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  username: text("username").notNull().unique(),
+  perks: jsonb("perks").notNull().default([]),
+  referralCode: text("referral_code").unique(),
+  referredBy: text("referred_by"),
+  launchUpdatesConsentedAt: timestamp("launch_updates_consented_at", { mode: "string", withTimezone: true }),
+  unsubscribedAt: timestamp("unsubscribed_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  emailIdx: uniqueIndex("preregistrations_email_casefold_unique_idx").on(sql`lower(${table.email})`),
+  usernameIdx: uniqueIndex("preregistrations_username_casefold_unique_idx").on(sql`lower(${table.username})`),
+  createdIdx: index("preregistrations_created_at_idx").on(table.createdAt),
+}));
+
+export const insertPreregistrationSchema = createInsertSchema(preregistrationsTable);
+export type InsertPreregistration = typeof preregistrationsTable.$inferInsert;
+export type Preregistration = typeof preregistrationsTable.$inferSelect;
+
+export const deletionJournalTable = pgTable("deletion_journal", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: uuid("account_id"), // NULL for verified unbound preregistration/waitlist erasure.
+  stableIdentityDigest: text("stable_identity_digest").notNull(),
+  reason: text("reason").notNull().default("user_request"),
+  status: text("status").notNull().default("erased"),
+  erasedAt: timestamp("erased_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+  replayedAt: timestamp("replayed_at", { mode: "string", withTimezone: true }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  accountIdx: index("deletion_journal_account_id_idx").on(table.accountId),
+  digestIdx: index("deletion_journal_digest_idx").on(table.stableIdentityDigest),
+  erasedIdx: index("deletion_journal_erased_at_idx").on(table.erasedAt),
+}));
+
+export const insertDeletionJournalSchema = createInsertSchema(deletionJournalTable);
+export type InsertDeletionJournal = typeof deletionJournalTable.$inferInsert;
+export type DeletionJournal = typeof deletionJournalTable.$inferSelect;
+
+export const privacyRightsRequestsTable = pgTable("privacy_rights_requests", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestType: text("request_type").notNull(),
+  subjectId: uuid("subject_id").references(() => usersTable.id, { onDelete: "set null" }),
+  emailHash: text("email_hash").notNull(),
+  status: text("status").notNull().default("pending_verification"),
+  verificationTokenHash: text("verification_token_hash"),
+  verificationExpiresAt: timestamp("verification_expires_at", { mode: "string", withTimezone: true }),
+  verifiedAt: timestamp("verified_at", { mode: "string", withTimezone: true }),
+  completedAt: timestamp("completed_at", { mode: "string", withTimezone: true }),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  emailHashIdx: index("privacy_rights_requests_email_hash_idx").on(table.emailHash),
+  tokenUniqueIdx: uniqueIndex("privacy_rights_requests_token_unique_idx").on(table.verificationTokenHash).where(sql`${table.verificationTokenHash} IS NOT NULL`),
+  challengeRateIdx: index("privacy_rights_requests_challenge_rate_idx").on(table.emailHash, table.createdAt),
+  expiryIdx: index("privacy_rights_requests_expiry_idx").on(table.verificationExpiresAt, table.id).where(sql`${table.status}='pending_verification'`),
+  statusIdx: index("privacy_rights_requests_status_idx").on(table.status, table.createdAt),
+}));
+
+export const insertPrivacyRightsRequestSchema = createInsertSchema(privacyRightsRequestsTable);
+export type InsertPrivacyRightsRequest = typeof privacyRightsRequestsTable.$inferInsert;
+export type PrivacyRightsRequest = typeof privacyRightsRequestsTable.$inferSelect;
+
+export const consentRecordsTable = pgTable("consent_records", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  subjectId: uuid("subject_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  subjectDigest: text("subject_digest"),
+  purpose: text("purpose").notNull(),
+  version: text("version").notNull(),
+  granted: boolean("granted").notNull(),
+  grantedAt: timestamp("granted_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+  withdrawnAt: timestamp("withdrawn_at", { mode: "string", withTimezone: true }),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  subjectIdx: index("consent_records_subject_idx").on(table.subjectId, table.purpose),
+  digestIdx: index("consent_records_digest_idx").on(table.subjectDigest, table.purpose),
+}));
+
+export const insertConsentRecordSchema = createInsertSchema(consentRecordsTable);
+export type InsertConsentRecord = typeof consentRecordsTable.$inferInsert;
+export type ConsentRecord = typeof consentRecordsTable.$inferSelect;
+
+export const emailSuppressionsTable = pgTable("email_suppressions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  emailHash: text("email_hash").notNull(),
+  purpose: text("purpose").notNull(),
+  reason: text("reason").notNull(),
+  suppressedAt: timestamp("suppressed_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  hashPurposeIdx: uniqueIndex("email_suppressions_hash_purpose_idx").on(table.emailHash, table.purpose),
+}));
+
+export const insertEmailSuppressionSchema = createInsertSchema(emailSuppressionsTable);
+export type InsertEmailSuppression = typeof emailSuppressionsTable.$inferInsert;
+export type EmailSuppression = typeof emailSuppressionsTable.$inferSelect;
+

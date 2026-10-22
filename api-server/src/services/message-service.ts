@@ -4,7 +4,7 @@ import { UserRepository } from "../repositories/user-repository.js";
 import type { ConversationRecord, MessageRecord, UserRecord } from "../types/index.js";
 import { db, runInDatabaseTransaction } from "@workspace/db";
 import { messageReadsTable, messagesTable } from "@workspace/db/schema";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { FeatureEntitlementService } from "./feature-entitlement-service.js";
@@ -76,10 +76,14 @@ export class MessageService {
     catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
   }
 
-  async authorizeConversationDelivery(conversationId:string,recipientId:string):Promise<void>{
+  async authorizeConversationDelivery(conversationId:string,recipientId:string,messageId?:string):Promise<void>{
     const members=await this.conversationRepository.getMembers(conversationId);
     if(!members.includes(recipientId))throw new UnauthorizedError('You are not a member of this conversation');
     await this.requireConversationContacts(members,'deliver',conversationId);
+    if (messageId) {
+      const message = await this.messageRepository.findVisibleById(messageId);
+      if (!message || message.conversationId !== conversationId) throw new UnauthorizedError('Message is unavailable');
+    }
   }
 
   private async assertContactAllowed(senderId: string, recipient: UserRecord): Promise<void> {
@@ -108,7 +112,10 @@ export class MessageService {
       throw new Error("A group must contain between 2 and 100 people");
     }
     if (this.userRepository) {
-      const members = await Promise.all([creatorId, ...uniqueMemberIds].map((id) => this.userRepository!.findById(id)));
+      const memberIds = [creatorId, ...uniqueMemberIds];
+      const memberRecords = await this.userRepository.findByIds(memberIds);
+      const membersById = new Map(memberRecords.map((member) => [member.id, member]));
+      const members = memberIds.map((id) => membersById.get(id));
       if (members.some((member) => !member)) throw new Error("One or more group members do not exist");
       const creator = members[0]!;
       if (members.slice(1).some((member) => member!.blockedUsers?.includes(creatorId) || creator.blockedUsers?.includes(member!.id))) {
@@ -132,7 +139,10 @@ export class MessageService {
     const uniqueInvitees=[...new Set(inviteeIds.filter(id=>id&&id!==inviterId))];
     if(!uniqueInvitees.length||uniqueInvitees.length+members.length>100)throw new Error("Group size must stay between 2 and 100 people");
     if(this.userRepository){
-      const [inviter,...invitees]=await Promise.all([inviterId,...uniqueInvitees].map(id=>this.userRepository!.findById(id)));
+      const userIds=[inviterId,...uniqueInvitees];
+      const userRecords=await this.userRepository.findByIds(userIds);
+      const usersById=new Map(userRecords.map(user=>[user.id,user]));
+      const [inviter,...invitees]=userIds.map(id=>usersById.get(id));
       if(!inviter||invitees.some(user=>!user))throw new Error("One or more group members do not exist");
       if(invitees.some(user=>user!.blockedUsers?.includes(inviterId)||inviter.blockedUsers?.includes(user!.id)))
         throw new MessageBlockedError("A group member has blocked this account");
@@ -257,15 +267,16 @@ export class MessageService {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
         }
-        return isMessageVisible(existing, new Date()) ? existing : toMessageTombstone(existing);
+        return await this.messageRepository.findVisibleById(existing.id) ?? toMessageTombstone(existing);
       }
     }
 
     if (this.userRepository) {
-      const participants = await Promise.all(
-        members.filter((memberId) => memberId !== senderId).map((memberId) => this.userRepository!.findById(memberId)),
-      );
-      const sender = await this.userRepository.findById(senderId);
+      const userIds = [...new Set([senderId, ...members])];
+      const userRecords = await this.userRepository.findByIds(userIds);
+      const usersById = new Map(userRecords.map((user) => [user.id, user]));
+      const participants = members.filter((memberId) => memberId !== senderId).map((memberId) => usersById.get(memberId));
+      const sender = usersById.get(senderId);
       senderProfile = sender;
       if (!sender || participants.some((recipient) => !recipient || recipient.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(recipient.id))) {
         throw new MessageBlockedError("You can't message this user");
@@ -374,8 +385,8 @@ export class MessageService {
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
-    if (!message || !this.isMessageVisible(message)) return undefined;
+    const message = await this.messageRepository.findVisibleById(messageId);
+    if (!message || !isMessageVisible(message, new Date())) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
     try { await this.requireConversationContacts(members,'read',message.conversationId); }
@@ -390,11 +401,14 @@ export class MessageService {
     if ((message.recipientId === userId && message.seenAt !== null) || await this.messageRepository.hasReadReceipt(messageId, userId)) {
       return undefined;
     }
-    const previewedAt = new Date().toISOString();
-    const previewed = await this.messageRepository.recordPreview(messageId, userId, previewedAt);
-    return previewed && this.isMessageVisible(previewed)
-      ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt }
-      : undefined;
+    const boundary = new Date();
+    try {
+      const previewed = await this.messageRepository.recordVisiblePreview(messageId, userId, boundary,
+        ()=>this.lockConversationContacts(members,'read',message.conversationId));
+      return previewed && isMessageVisible(previewed, new Date())
+        ? { ...previewed, messageState: "MESSAGE_PREVIEWED", previewedAt: previewed.previewedAt ?? boundary.toISOString() }
+        : undefined;
+    } catch(error) { if(error instanceof UnauthorizedError)return undefined; throw error; }
   }
 
   async getConversationMemberIds(conversationId: string, userId: string): Promise<string[]> {
@@ -433,21 +447,46 @@ export class MessageService {
       return messages.filter(message => isMessageVisible(message, new Date()))
         .map(message => ({ ...message, seenAt: null }));
     }
-    const receipts = await db.select({ messageId: messageReadsTable.messageId, readAt: sql<string>`min(${messageReadsTable.readAt})` })
+    const receipts = await db.select({ messageId: messageReadsTable.messageId, userId: messageReadsTable.userId, readAt: messageReadsTable.readAt })
       .from(messageReadsTable)
       .innerJoin(messagesTable, eq(messagesTable.id, messageReadsTable.messageId))
       .where(and(
         inArray(messageReadsTable.messageId, messages.map((message) => message.id)),
         or(eq(messageReadsTable.userId, userId), eq(messagesTable.senderId, userId)),
-      )).groupBy(messageReadsTable.messageId);
-    const byId = new Map(receipts.map((receipt) => [receipt.messageId, receipt.readAt]));
+      ));
+    // A retained receipt is not authority to publish it forever. Project each
+    // reader's current eligibility and choice, including the legacy direct
+    // recipient timestamp, before exposing it to the sender on reload.
+    const readerIds = [...new Set([
+      ...receipts.map(receipt => receipt.userId),
+      ...messages.map(message => message.recipientId),
+    ])];
+    let permittedReaders = new Set<string>();
+    try {
+      const [decisions, users] = await Promise.all([
+        this.eligibilityService.decisionForMany(readerIds),
+        (this.userRepository ?? new UserRepository()).findByIds(readerIds),
+      ]);
+      permittedReaders = new Set(users.filter(user => {
+        const decision = decisions.get(user.id);
+        return (user.accountStatus ?? 'active') === 'active' && decision?.activated
+          && decision.experience === 'adult_18_plus' && user.settings.readReceiptsEnabled !== false;
+      }).map(user => user.id));
+    } catch { /* Receipt authority is optional; unavailable readers stay private. */ }
+    const byId = new Map<string, string>();
+    for (const receipt of receipts) {
+      if (!permittedReaders.has(receipt.userId)) continue;
+      const previous = byId.get(receipt.messageId);
+      if (!previous || receipt.readAt < previous) byId.set(receipt.messageId, receipt.readAt);
+    }
     const boundary = new Date();
     return messages.filter(message => isMessageVisible(message, boundary))
-      .map((message) => ({ ...message, seenAt: byId.get(message.id) ?? message.seenAt }));
+      .map((message) => ({ ...message, seenAt: byId.get(message.id)
+        ?? (permittedReaders.has(message.recipientId) ? message.seenAt : null) }));
   }
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const candidate=await this.messageRepository.findById(messageId);
+    const candidate=await this.messageRepository.findVisibleById(messageId);
     if(!candidate||!isMessageVisible(candidate,new Date()))return undefined;
     const members=await this.conversationRepository.getMembers(candidate.conversationId);
     if(!members.includes(userId))return undefined;
@@ -491,16 +530,21 @@ export class MessageService {
     try {
       const decision = await this.eligibilityService.decisionFor(userId);
       if (!decision.activated || decision.experience !== "adult_18_plus") return false;
-      const user = await this.userRepository?.findById(userId);
-      return user?.settings.readReceiptsEnabled !== false;
+      const user = await (this.userRepository ?? new UserRepository()).findById(userId);
+      return Boolean(user && (user.accountStatus ?? 'active') === 'active' && user.settings.readReceiptsEnabled !== false);
     } catch {
       return false;
     }
   }
 
+  /** Recheck the reader's current choice at delivery, including retained timestamps. */
+  async canPublishReadReceipt(message: Pick<MessageRecord, 'senderId' | 'seenAt'>, readerId: string): Promise<boolean> {
+    return message.senderId !== readerId && Boolean(message.seenAt) && await this.readReceiptsEnabled(readerId);
+  }
+
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const normalizedContent = normalizeMessageContent(content);
-    const message = await this.messageRepository.findById(messageId);
+    const message = await this.messageRepository.findVisibleById(messageId);
     if (!message || !isMessageVisible(message, new Date()) || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
@@ -537,7 +581,7 @@ export class MessageService {
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
-    const message = await this.messageRepository.findById(messageId);
+    const message = await this.messageRepository.findVisibleById(messageId);
     if (!message || !isMessageVisible(message, new Date())) {
       throw new Error("Message not found");
     }
@@ -551,7 +595,10 @@ export class MessageService {
 
   async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
     const message = await this.assertParticipant(messageId, userId);
-    return this.messageRepository.addReaction(messageId, userId, reaction);
+    return this.messageRepository.addVisibleReaction(messageId, userId, reaction, async()=>{
+      const members=await this.conversationRepository.getMembers(message.conversationId);
+      await this.lockConversationContacts(members,'send',message.conversationId);
+    });
   }
 
   async pinMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {

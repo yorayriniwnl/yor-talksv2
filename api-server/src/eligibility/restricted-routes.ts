@@ -9,6 +9,10 @@ const parameter = (method: string, before: string, after = ""): RouteRule => ({
 });
 
 const restrictedRoutes: RouteRule[] = [
+  exact("GET", "/moderation/notices"),
+  parameter("POST", "/moderation/notices", "/acknowledge"),
+  exact("POST", "/moderation/appeals"),
+  exact("GET", "/moderation/appeals/mine"),
   exact("GET", "/users/me"),
   exact("POST", "/users/me/consent"),
   exact("GET", "/users/me/eligibility"),
@@ -26,14 +30,24 @@ const restrictedRoutes: RouteRule[] = [
   parameter("POST", "/auth/2fa/challenges", "/deny"),
   exact("GET", "/users/me/export"),
   exact("DELETE", "/users/me"),
+  exact("POST", "/users/me/restriction"),
+  exact("DELETE", "/users/me/restriction"),
+  exact("POST", "/users/me/consent-withdrawal"),
   exact("POST", "/auth/logout"),
   exact("POST", "/auth/logout-all"),
 ];
 
 const restrictedRightsRoutes: RouteRule[] = [
+  exact("GET", "/moderation/notices"),
+  parameter("POST", "/moderation/notices", "/acknowledge"),
+  exact("POST", "/moderation/appeals"),
+  exact("GET", "/moderation/appeals/mine"),
   exact("GET", "/users/me"),
   exact("GET", "/users/me/export"),
   exact("DELETE", "/users/me"),
+  exact("POST", "/users/me/restriction"),
+  exact("DELETE", "/users/me/restriction"),
+  exact("POST", "/users/me/consent-withdrawal"),
   exact("POST", "/auth/logout"),
   exact("POST", "/auth/logout-all"),
   exact("POST", "/auth/verify-email/resend"),

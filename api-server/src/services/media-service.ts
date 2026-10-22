@@ -183,8 +183,11 @@ export class MediaService {
     // Expired Stories kept in a Highlight retain their media. Soft-deleted and
     // expired messages release media through the same last-reference trigger.
     await pool.query(`DELETE FROM media_references r USING messages m WHERE r.entity_type='messages' AND r.entity_id=m.id
-      AND (m.deleted_at IS NOT NULL OR m.expires_at<=now())`);
-    await pool.query(`DELETE FROM media_references r USING stories s WHERE r.entity_type='stories' AND r.entity_id=s.id AND s.expires_at<=now()
+      AND (m.deleted_at IS NOT NULL OR (CASE WHEN pg_typeof(m.expires_at)='timestamp without time zone'::regtype
+        THEN (m.expires_at::timestamp AT TIME ZONE 'UTC') ELSE m.expires_at::timestamptz END)<=clock_timestamp())`);
+    await pool.query(`DELETE FROM media_references r USING stories s WHERE r.entity_type='stories' AND r.entity_id=s.id
+      AND (CASE WHEN pg_typeof(s.expires_at)='timestamp without time zone'::regtype
+        THEN (s.expires_at::timestamp AT TIME ZONE 'UTC') ELSE s.expires_at::timestamptz END)<=clock_timestamp()
       AND NOT s.is_highlight AND s.highlight_id IS NULL AND NOT EXISTS(SELECT 1 FROM highlight_items h WHERE h.story_id=s.id)`);
     const claimed=await runInDatabaseTransaction(async tx=>{
       const candidates=await tx.execute(sql`SELECT * FROM media_assets WHERE cleanup_at<=now()

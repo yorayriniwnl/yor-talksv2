@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-19",
+  "source_files_checked": 250,
+  "remaining_http_literals": [
+    {
+      "source": "social/src/pages/videos.tsx",
+      "url": "https://\u2026/video.mp4",
+      "classification": "non-fetching example/base URL"
+    },
+    {
+      "source": "social/src/pages/grievance.tsx",
+      "url": "https://yortalks.in/p/...",
+      "classification": "non-fetching example/base URL"
+    },
+    {
+      "source": "social/src/pages/auth.tsx",
+      "url": "https://accounts.google.com/gsi/client",
+      "classification": "explicit provider SDK URL, not image/music"
+    },
+    {
+      "source": "social/src/pages/auth.tsx",
+      "url": "https://accounts.google.com/gsi/client",
+      "classification": "explicit provider SDK URL, not image/music"
+    },
+    {
+      "source": "social/src/index.css",
+      "url": "http://www.w3.org/2000/svg",
+      "classification": "SVG XML namespace identifier, not fetchable media"
+    },
+    {
+      "source": "social/src/lib/safe-redirect.ts",
+      "url": "https://yor.invalid",
+      "classification": "non-fetching example/base URL"
+    },
+    {
+      "source": "social/src/lib/safe-redirect.ts",
+      "url": "https://yor.invalid",
+      "classification": "non-fetching example/base URL"
+    },
+    {
+      "source": "social/src/lib/razorpay-checkout.ts",
+      "url": "https://checkout.razorpay.com/v1/checkout.js",
+      "classification": "explicit provider SDK URL, not image/music"
+    },
+    {
+      "source": "social/src/components/ui/NoiseOverlay.tsx",
+      "url": "http://www.w3.org/2000/svg",
+      "classification": "SVG XML namespace identifier, not fetchable media"
+    }
+  ],
+  "hardcoded_external_image_or_music_literals": [],
+  "protocol_relative_media_literals": [],
+  "dynamic_user_media_logic_changed": false,
+  "reviewed_media_delivery_files_unchanged": [
+    "social/src/lib/protected-media.ts",
+    "social/src/lib/media-upload.ts",
+    "social/src/lib/store.ts"
+  ],
+  "original_inventory_scope_correction": "Eight distinct fixed GIPHY media URLs in unrendered picker were absent from initial40-URL inventory; separately documented and removed.",
+  "note": "Static review complements browser network/decode checks. Existing provider scripts and CSP allowlists are retained; no restriction added to actual server-provided media."
+}

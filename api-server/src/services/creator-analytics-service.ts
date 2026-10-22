@@ -9,6 +9,9 @@ import {
   videosTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
+import { EligibilityService } from "./eligibility-service.js";
+import { EligibilityCapabilityError } from "./eligibility-service.js";
+import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
 
 function dayWindow(date = new Date()) {
   const start = new Date(date);
@@ -19,8 +22,23 @@ function dayWindow(date = new Date()) {
 }
 
 export class CreatorAnalyticsService {
+  constructor(private readonly eligibilityService = new EligibilityService()) {}
+
   async recordProfileView(creatorId: string, viewerId: string): Promise<void> {
     if (creatorId === viewerId) return;
+    if (isEligibilityEnforcementEnabled()) {
+      try {
+        const [creator, viewer] = await Promise.all([
+          this.eligibilityService.decisionFor(creatorId),
+          this.eligibilityService.decisionFor(viewerId),
+        ]);
+        if (!creator.activated || creator.experience !== "adult_18_plus" || !creator.capabilities.analytics
+          || !creator.capabilities.profiling || !viewer.activated || viewer.experience !== "adult_18_plus"
+          || !viewer.capabilities.profiling) return;
+      } catch {
+        return;
+      }
+    }
     const { date } = dayWindow();
     try {
       await db.transaction(async (tx) => {
@@ -48,6 +66,10 @@ export class CreatorAnalyticsService {
   }
 
   async getRecent(creatorId: string) {
+    if (isEligibilityEnforcementEnabled()) {
+      const decision = await this.eligibilityService.decisionFor(creatorId);
+      if (!decision.activated || !decision.capabilities.analytics) throw new EligibilityCapabilityError(decision);
+    }
     const { date, nextDate } = dayWindow();
     const [postTotals, videoTotals, followerTotals, earnings, current] = await Promise.all([
       db.select({
@@ -67,7 +89,6 @@ export class CreatorAnalyticsService {
         eq(ledgerTransactionsTable.creditAccountId, creatorId),
         eq(ledgerTransactionsTable.currency, "INR"),
         eq(ledgerTransactionsTable.status, "completed"),
-        eq(ledgerTransactionsTable.currency, "INR"),
         gte(ledgerTransactionsTable.createdAt, date),
         lt(ledgerTransactionsTable.createdAt, nextDate),
       )),

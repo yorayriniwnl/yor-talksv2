@@ -14,6 +14,8 @@ import { apiRateLimiter } from "./middlewares/rate-limit.js";
 import { recordOperationalMetrics } from "./middlewares/operational-metrics.js";
 import { mediaResponse } from "./services/media-response.js";
 import { skipAssuranceCallbackParser } from './middlewares/assurance-body.js';
+import { capturePaymentWebhookBody } from './middlewares/payment-webhook-body.js';
+import { createRecoveryGate } from './middlewares/recovery-gate.js';
 
 const app: Express = express();
 // The API is normally behind Vercel/Nginx. Trust exactly one proxy hop so
@@ -59,12 +61,16 @@ app.use(
 // Apply Redis-backed rate limiting to all requests. Sensitive route groups add
 // stricter limiters in their own routers.
 app.use(apiRateLimiter);
+app.use(createRecoveryGate());
+
+// Encrypted direct-chat attachments are bounded independently of other JSON
+// endpoints. No request body is included in application request logs.
+app.use(/^\/api(?:\/v1)?\/private-messages\/threads\/[0-9a-f-]+\/messages$/i,
+  express.json({ limit: '2300kb', type: 'application/json' }));
 
 app.use(skipAssuranceCallbackParser(express.json({
   limit: "1mb",
-  verify(req, _res, buffer) {
-    (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
-  },
+  verify: capturePaymentWebhookBody,
 })));
 app.use(skipAssuranceCallbackParser(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 1000 })));
 app.use(cookieParser());

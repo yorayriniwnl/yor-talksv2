@@ -104,6 +104,7 @@ function createLimiter(prefix: string, windowMs: number, max: number, keyGenerat
 
 export const apiRateLimiter = createLimiter("yor:rate:api:", 15 * 60 * 1000, 300);
 export const authRateLimiter = createLimiter("yor:rate:auth:", 15 * 60 * 1000, 40);
+export const preregistrationRateLimiter = createLimiter("yor:rate:preregistration:", 15 * 60 * 1000, 40);
 export const scopedAuthRateLimiter: RequestHandler = (req, res, next) => {
   if (!req.path.startsWith('/auth/') || (req.method === 'GET' && /^\/auth\/2fa\/challenges(?:\/|$)/.test(req.path))) return next();
   return authRateLimiter(req, res, next);
@@ -121,6 +122,7 @@ export const telemetryRateLimiter = createLimiter("yor:rate:telemetry:", 15 * 60
 export const storyReactionRateLimiter = createLimiter("yor:rate:story-reaction:", 60 * 1000, 60);
 const eligibilitySubjectKey = (req: Request) => req.user?.id
   ? createHash('sha256').update(req.user.id).digest('hex') : ipKeyGenerator(req.ip || 'unknown');
+export const accountExportRateLimiter = createLimiter('yor:rate:account-export:',60*60*1000,4,eligibilitySubjectKey);
 export const assuranceStartIpLimiter = createLimiter('yor:rate:assurance-start-ip:',60*60*1000,20);
 export const assuranceStartSubjectLimiter = createLimiter('yor:rate:assurance-start-subject:',60*60*1000,6,eligibilitySubjectKey);
 export const assurancePollLimiter = createLimiter('yor:rate:assurance-poll:',15*60*1000,120,eligibilitySubjectKey);

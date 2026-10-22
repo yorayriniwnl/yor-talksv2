@@ -22,7 +22,7 @@ export class BroadcastChannelService {
 
   async listChannels(viewerId: string): Promise<BroadcastChannelRecord[]> {
     const channels = await this.repository.list(viewerId);
-    return this.contentSafetyService.filterVisible(channels, viewerId);
+    return this.contentSafetyService.filterVisibleByAuthor(channels, viewerId, channel => channel.ownerId);
   }
 
   async createChannel(input: {
@@ -55,7 +55,7 @@ export class BroadcastChannelService {
   async joinChannel(channelId: string, userId: string): Promise<BroadcastChannelRecord | undefined> {
     const channel = await this.repository.findById(channelId, userId);
     if (!channel) return undefined;
-    if (!channel.isOwner && (await this.contentSafetyService.filterVisible([channel], userId)).length === 0) return undefined;
+    if (!(await this.contentSafetyService.isVisible(channel, userId, channel.ownerId))) return undefined;
     await this.repository.join(channelId, userId);
     return this.repository.findById(channelId, userId);
   }
@@ -75,9 +75,11 @@ export class BroadcastChannelService {
   }
 
   async listMessages(channelId: string, userId: string): Promise<BroadcastChannelMessageRecord[] | undefined> {
+    const channel = await this.repository.findById(channelId, userId);
+    if (!channel || !(await this.contentSafetyService.isVisible(channel, userId, channel.ownerId))) return undefined;
     const messages = await this.repository.listMessages(channelId, userId);
     if (!messages) return undefined;
-    return this.contentSafetyService.filterVisible(messages, userId);
+    return this.contentSafetyService.filterVisibleByAuthor(messages, userId, message => message.authorId);
   }
 
   async createMessage(input: {
@@ -109,12 +111,12 @@ export class BroadcastChannelService {
         recipientId,
         type: "broadcast_channel",
         title: `${channel.name} posted an update`,
-        message: content.slice(0, 180),
+        message: "A new channel update is available.",
         relatedId: channel.id,
         createdAt: message.createdAt,
         readAt: null,
         channel: "in_app",
-        metadata: { channelId: channel.id, messageId: message.id },
+        metadata: { actorId: input.authorId, channelId: channel.id, messageId: message.id },
       });
       await this.queueService?.enqueue("notification:deliver", notification);
       emitToUser(recipientId, "notification:new", notification);
@@ -123,6 +125,10 @@ export class BroadcastChannelService {
   }
 
   async reactToMessage(channelId: string, messageId: string, userId: string, reaction: string): Promise<BroadcastChannelMessageRecord | undefined> {
-    return this.repository.reactToMessage(channelId, messageId, userId, reaction.slice(0, 16));
+    return this.repository.reactToMessage(channelId, messageId, userId, reaction.slice(0, 16), async message => {
+      const channel = await this.repository.findById(channelId, userId);
+      return Boolean(channel && await this.contentSafetyService.isVisible(channel, userId, channel.ownerId)
+        && await this.contentSafetyService.isVisible(message, userId, message.authorId));
+    });
   }
 }

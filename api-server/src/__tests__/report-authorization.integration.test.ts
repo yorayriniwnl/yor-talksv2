@@ -61,7 +61,7 @@ async function submitPrivateGrievance(): Promise<Record<string, unknown>> {
 
 test("public grievance submission returns only the safe receipt fields", async () => {
   const receipt = await submitPrivateGrievance();
-  assert.deepEqual(Object.keys(receipt).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(receipt).sort(), ["createdAt", "status", "ticketId"]);
   assert.doesNotMatch(JSON.stringify(receipt), /Private Reporter|private-reporter|private-reported-content|Private complaint/);
 });
 
@@ -90,7 +90,7 @@ test("public grievance tracking hides identity and officer notes while moderator
   const tracked = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
   assert.equal(tracked.status, 200);
   const trackedPayload = await tracked.json() as { data: Record<string, unknown> };
-  assert.deepEqual(Object.keys(trackedPayload.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(trackedPayload.data).sort(), ["createdAt", "status", "ticketId"]);
   assert.equal(trackedPayload.data.status, "under_review");
   assert.doesNotMatch(JSON.stringify(trackedPayload.data), /Private Reporter|private-reporter|private-reported-content|Private complaint|Internal officer/);
 });
@@ -135,14 +135,14 @@ test("public grievance intake and status responses expose only the allowlisted f
   });
   assert.equal(submitted.status, 201);
   const created = await submitted.json() as { data: Record<string, unknown> };
-  assert.deepEqual(Object.keys(created.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(created.data).sort(), ["createdAt", "status", "ticketId"]);
   const ticketId = String(created.data.ticketId);
   grievanceTicketIds.push(ticketId);
 
   const status = await fetch(`${baseUrl}/reports/grievance/${ticketId}`);
   assert.equal(status.status, 200);
   const loaded = await status.json() as { data: Record<string, unknown> };
-  assert.deepEqual(Object.keys(loaded.data).sort(), ["createdAt", "slaDeadline", "status", "ticketId"]);
+  assert.deepEqual(Object.keys(loaded.data).sort(), ["createdAt", "status", "ticketId"]);
   assert.equal(JSON.stringify(loaded).includes("private-reporter@example.test"), false);
   assert.equal(JSON.stringify(loaded).includes("Private details"), false);
   assert.equal(JSON.stringify(loaded).includes("private.example"), false);

@@ -1,4 +1,4 @@
-# Production readiness review: 2026-10-07
+﻿# Production readiness review: 2026-10-07
 
 This review is a staged acceptance record, not a launch approval. Local repository checks can reduce risk but do not establish public production validity.
 

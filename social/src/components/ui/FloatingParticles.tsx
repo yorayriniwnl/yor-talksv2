@@ -1,7 +1,7 @@
-import { useReducedMotion } from 'framer-motion';
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 
 export function FloatingParticles() {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useAppReducedMotion();
 
   if (reduceMotion) return null;
 

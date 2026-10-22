@@ -1,0 +1,1854 @@
+{
+  "generatedAt": "2026-10-18T21:57:24.181Z",
+  "scanCount": 24,
+  "violationCount": 0,
+  "chromiumAXSnapshots": 20,
+  "nativeZoom": [
+    {
+      "scheme": "light",
+      "browserZoomFactor": 2,
+      "method": "chrome.tabs.setZoom and getZoom",
+      "cssZoomUsed": false,
+      "pinchZoomUsed": false
+    },
+    {
+      "scheme": "dark",
+      "browserZoomFactor": 2,
+      "method": "chrome.tabs.setZoom and getZoom",
+      "cssZoomUsed": false,
+      "pinchZoomUsed": false
+    }
+  ],
+  "nativeAssistiveTechnologyInventory": {
+    "inspectedOn": "2026-10-19",
+    "narrator": {
+      "executablePresent": true,
+      "running": false,
+      "productVersion": "10.0.26100.8972",
+      "executable": "C:\\Windows\\System32\\Narrator.exe"
+    },
+    "nvda": {
+      "programFilesX86Present": false,
+      "running": false,
+      "commandAvailable": false,
+      "programFilesPresent": false
+    },
+    "desktopAssistiveTechnologyLaunched": false,
+    "limitation": "Read-only inventory. Browser AX-tree inspection and keyboard tests are separate from native screen-reader speech/UIA verification."
+  },
+  "note": "Browser AX trees, keyboard and rendered screenshot inspection are separate from native screen-reader speech acceptance. Incomplete rules remain human-review items; five sample targets retained per rule.",
+  "scans": [
+    {
+      "artifact": "accent-amber-dark.json",
+      "dimensions": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 33,
+        "region": 9,
+        "link": 14,
+        "complementary": 3,
+        "list": 1,
+        "StaticText": 104,
+        "button": 42,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "listitem": 1,
+        "InlineTextBox": 108,
+        "paragraph": 14,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 4,
+        "group": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 88,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "accent-amber-light.json",
+      "dimensions": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 33,
+        "region": 9,
+        "link": 14,
+        "complementary": 3,
+        "list": 1,
+        "StaticText": 104,
+        "button": 42,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "listitem": 1,
+        "InlineTextBox": 108,
+        "paragraph": 14,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 4,
+        "group": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 89,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "accent-lilac-dark.json",
+      "dimensions": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 33,
+        "region": 9,
+        "link": 14,
+        "complementary": 3,
+        "list": 1,
+        "StaticText": 104,
+        "button": 42,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "listitem": 1,
+        "InlineTextBox": 108,
+        "paragraph": 14,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 4,
+        "group": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 88,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "accent-lilac-light.json",
+      "dimensions": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 33,
+        "region": 9,
+        "link": 14,
+        "complementary": 3,
+        "list": 1,
+        "StaticText": 104,
+        "button": 42,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "listitem": 1,
+        "InlineTextBox": 108,
+        "paragraph": 14,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 4,
+        "group": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 89,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "accent-midnight-dark.json",
+      "dimensions": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 33,
+        "region": 9,
+        "link": 14,
+        "complementary": 3,
+        "list": 1,
+        "StaticText": 104,
+        "button": 42,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "listitem": 1,
+        "InlineTextBox": 108,
+        "paragraph": 14,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 4,
+        "group": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 88,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "accent-midnight-light.json",
+      "dimensions": {
+        "width": 1440,
+        "documentWidth": 1440,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 33,
+        "region": 9,
+        "link": 14,
+        "complementary": 3,
+        "list": 1,
+        "StaticText": 104,
+        "button": 42,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "listitem": 1,
+        "InlineTextBox": 108,
+        "paragraph": 14,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 4,
+        "group": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 89,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "companion-dark.json",
+      "dimensions": {
+        "width": 320,
+        "documentWidth": 320,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 21,
+        "region": 6,
+        "dialog": 1,
+        "link": 8,
+        "navigation": 1,
+        "complementary": 1,
+        "paragraph": 7,
+        "button": 26,
+        "StaticText": 48,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 59,
+        "heading": 2,
+        "LabelText": 1,
+        "slider": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "strong": 4,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1,
+        "image": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "aria-valid-attr-value",
+          "impact": "critical",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".yor-companion__trigger"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 30,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "companion-light.json",
+      "dimensions": {
+        "width": 320,
+        "documentWidth": 320,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 21,
+        "region": 6,
+        "dialog": 1,
+        "link": 8,
+        "navigation": 1,
+        "complementary": 1,
+        "paragraph": 7,
+        "button": 26,
+        "StaticText": 48,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 59,
+        "heading": 2,
+        "LabelText": 1,
+        "slider": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "strong": 4,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1,
+        "image": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "aria-valid-attr-value",
+          "impact": "critical",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".yor-companion__trigger"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 30,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "forced-colors-dark.json",
+      "dimensions": {
+        "width": 390,
+        "documentWidth": 390,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": true
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 8,
+        "dialog": 1,
+        "region": 2,
+        "heading": 1,
+        "paragraph": 2,
+        "link": 1,
+        "StaticText": 15,
+        "textbox": 1,
+        "LabelText": 4,
+        "button": 5,
+        "strong": 1,
+        "InlineTextBox": 15,
+        "combobox": 4,
+        "MenuListPopup": 4,
+        "option": 19
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.flex[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 22,
+          "sampleTargets": [
+            [
+              ".premium-topbar__mobile-mark > span"
+            ],
+            [
+              "h1"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "forced-colors-light.json",
+      "dimensions": {
+        "width": 390,
+        "documentWidth": 390,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": true
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 8,
+        "dialog": 1,
+        "region": 2,
+        "heading": 1,
+        "paragraph": 2,
+        "link": 1,
+        "StaticText": 15,
+        "textbox": 1,
+        "LabelText": 4,
+        "button": 5,
+        "strong": 1,
+        "InlineTextBox": 15,
+        "combobox": 4,
+        "MenuListPopup": 4,
+        "option": 19
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.flex[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 22,
+          "sampleTargets": [
+            [
+              ".premium-topbar__mobile-mark > span"
+            ],
+            [
+              "h1"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "native-zoom-200-companion-dark.json",
+      "dimensions": {
+        "width": 640,
+        "documentWidth": 640,
+        "height": 450,
+        "devicePixelRatio": 2,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 20,
+        "region": 6,
+        "dialog": 1,
+        "link": 8,
+        "navigation": 1,
+        "complementary": 1,
+        "paragraph": 7,
+        "button": 26,
+        "StaticText": 49,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 51,
+        "heading": 2,
+        "LabelText": 1,
+        "slider": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "strong": 4,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1,
+        "image": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "aria-valid-attr-value",
+          "impact": "critical",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".yor-companion__trigger"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 41,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "native-zoom-200-companion-light.json",
+      "dimensions": {
+        "width": 640,
+        "documentWidth": 640,
+        "height": 450,
+        "devicePixelRatio": 2,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 20,
+        "region": 6,
+        "dialog": 1,
+        "link": 8,
+        "navigation": 1,
+        "complementary": 1,
+        "paragraph": 7,
+        "button": 26,
+        "StaticText": 49,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 51,
+        "heading": 2,
+        "LabelText": 1,
+        "slider": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "strong": 4,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1,
+        "image": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "aria-valid-attr-value",
+          "impact": "critical",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".yor-companion__trigger"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 41,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "native-zoom-200-composer-dark.json",
+      "dimensions": {
+        "width": 640,
+        "documentWidth": 640,
+        "height": 450,
+        "devicePixelRatio": 2,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 8,
+        "dialog": 1,
+        "region": 2,
+        "heading": 1,
+        "paragraph": 2,
+        "link": 1,
+        "StaticText": 15,
+        "textbox": 1,
+        "LabelText": 4,
+        "button": 5,
+        "strong": 1,
+        "InlineTextBox": 15,
+        "combobox": 4,
+        "MenuListPopup": 4,
+        "option": 19
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.flex[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 37,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "native-zoom-200-composer-light.json",
+      "dimensions": {
+        "width": 640,
+        "documentWidth": 640,
+        "height": 450,
+        "devicePixelRatio": 2,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 8,
+        "dialog": 1,
+        "region": 2,
+        "heading": 1,
+        "paragraph": 2,
+        "link": 1,
+        "StaticText": 15,
+        "textbox": 1,
+        "LabelText": 4,
+        "button": 5,
+        "strong": 1,
+        "InlineTextBox": 15,
+        "combobox": 4,
+        "MenuListPopup": 4,
+        "option": 19
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.flex[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 37,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "native-zoom-200-home-dark.json",
+      "dimensions": {
+        "width": 640,
+        "documentWidth": 640,
+        "height": 450,
+        "devicePixelRatio": 2,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 16,
+        "region": 6,
+        "link": 8,
+        "navigation": 1,
+        "complementary": 1,
+        "StaticText": 42,
+        "banner": 1,
+        "main": 1,
+        "button": 21,
+        "InlineTextBox": 46,
+        "heading": 2,
+        "paragraph": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "strong": 4,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1,
+        "image": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "native-zoom-200-home-light.json",
+      "dimensions": {
+        "width": 640,
+        "documentWidth": 640,
+        "height": 450,
+        "devicePixelRatio": 2,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 16,
+        "region": 6,
+        "link": 8,
+        "navigation": 1,
+        "complementary": 1,
+        "StaticText": 42,
+        "banner": 1,
+        "main": 1,
+        "button": 21,
+        "InlineTextBox": 46,
+        "heading": 2,
+        "paragraph": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "sectionheader": 1,
+        "tablist": 1,
+        "strong": 4,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1,
+        "image": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 35,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "post-menu-dark.json",
+      "dimensions": {
+        "width": 1280,
+        "documentWidth": 1280,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 34,
+        "region": 6,
+        "menu": 1,
+        "link": 14,
+        "complementary": 3,
+        "menuitem": 2,
+        "StaticText": 91,
+        "button": 26,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 95,
+        "paragraph": 11,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 2,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "aria-valid-attr-value",
+          "impact": "critical",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              "#radix-«rr»"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 73,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "post-menu-light.json",
+      "dimensions": {
+        "width": 1280,
+        "documentWidth": 1280,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 34,
+        "region": 6,
+        "menu": 1,
+        "link": 14,
+        "complementary": 3,
+        "menuitem": 2,
+        "StaticText": 91,
+        "button": 26,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 95,
+        "paragraph": 11,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 2,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "aria-valid-attr-value",
+          "impact": "critical",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              "#radix-«rr»"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 74,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "story-description-dark.json",
+      "scope": "builder",
+      "scheme": "dark",
+      "existingContract": "POST /stories textContent with type=image",
+      "uploadCount": 1,
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 29,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "story-description-dark.json",
+      "scope": "viewer",
+      "scheme": "dark",
+      "existingContract": "POST /stories textContent with type=image",
+      "uploadCount": 1,
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 42,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.w-full"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "story-description-light.json",
+      "scope": "builder",
+      "scheme": "light",
+      "existingContract": "POST /stories textContent with type=image",
+      "uploadCount": 1,
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 29,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.justify-center"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "story-description-light.json",
+      "scope": "viewer",
+      "scheme": "light",
+      "existingContract": "POST /stories textContent with type=image",
+      "uploadCount": 1,
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=playwright",
+          "nodeCount": 9,
+          "sampleTargets": [
+            [
+              "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+            ],
+            [
+              ".skip-link"
+            ],
+            [
+              ".premium-topbar"
+            ],
+            [
+              "#main-content"
+            ],
+            [
+              ".gap-3.items-center[data-aria-hidden=\"true\"]:nth-child(1)"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 42,
+          "sampleTargets": [
+            [
+              "h1"
+            ],
+            [
+              ".home-identity__avatar > .bg-muted.h-full.w-full"
+            ],
+            [
+              ".operator-signal-label"
+            ],
+            [
+              ".home-identity > div > h2"
+            ],
+            [
+              "em"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "volume-dark.json",
+      "dimensions": {
+        "width": 1280,
+        "documentWidth": 1280,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 31,
+        "region": 6,
+        "link": 14,
+        "complementary": 3,
+        "StaticText": 89,
+        "button": 26,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 93,
+        "paragraph": 11,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 2,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 73,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "volume-light.json",
+      "dimensions": {
+        "width": 1280,
+        "documentWidth": 1280,
+        "height": 900,
+        "devicePixelRatio": 1,
+        "visualScale": 1,
+        "forcedColors": false
+      },
+      "exposedRoleCounts": {
+        "RootWebArea": 1,
+        "generic": 31,
+        "region": 6,
+        "link": 14,
+        "complementary": 3,
+        "StaticText": 89,
+        "button": 26,
+        "navigation": 1,
+        "banner": 1,
+        "main": 1,
+        "InlineTextBox": 93,
+        "paragraph": 11,
+        "heading": 5,
+        "LabelText": 1,
+        "slider": 1,
+        "strong": 10,
+        "image": 2,
+        "sectionheader": 1,
+        "tablist": 1,
+        "tabpanel": 1,
+        "emphasis": 1,
+        "tab": 4,
+        "article": 1,
+        "textbox": 1
+      },
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=playwright",
+          "nodeCount": 1,
+          "sampleTargets": [
+            [
+              ".home-notes-row"
+            ]
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+          "nodeCount": 74,
+          "sampleTargets": [
+            [
+              ".operator-brand-mark > span"
+            ],
+            [
+              ".font-serif"
+            ],
+            [
+              ".mt-1"
+            ],
+            [
+              ".shell-nav-label"
+            ],
+            [
+              "button[data-active=\"true\"] > span"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

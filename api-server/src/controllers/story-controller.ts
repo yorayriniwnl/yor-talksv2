@@ -34,7 +34,7 @@ export class StoryController {
       return res.status(201).json(createResponse("Highlight created", highlight));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not create Highlight", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not create Highlight", null, {}, ["Check your request and try again"]));
     }
   };
 

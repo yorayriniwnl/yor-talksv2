@@ -21,12 +21,12 @@ interface MapItem {
 }
 
 const ESPORTS_MAPS: MapItem[] = [
-  { id: 'm1', name: 'Erangel 2.0', game: 'BGMI', imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop' },
-  { id: 'm2', name: 'Miramar Desert', game: 'BGMI', imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop' },
-  { id: 'm3', name: 'Sanhok Jungle', game: 'BGMI', imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop' },
-  { id: 'm4', name: 'Ascent (Venice)', game: 'Valorant', imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop' },
-  { id: 'm5', name: 'Bind (Morocco)', game: 'Valorant', imageUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=600&auto=format&fit=crop' },
-  { id: 'm6', name: 'Haven (Bhutan)', game: 'Valorant', imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop' },
+  { id: 'm1', name: 'Erangel 2.0', game: 'BGMI', imageUrl: '/images/demo-preview-1.svg' },
+  { id: 'm2', name: 'Miramar Desert', game: 'BGMI', imageUrl: '/images/demo-preview-2.svg' },
+  { id: 'm3', name: 'Sanhok Jungle', game: 'BGMI', imageUrl: '/images/demo-preview-3.svg' },
+  { id: 'm4', name: 'Ascent (Venice)', game: 'Valorant', imageUrl: '/images/demo-preview-4.svg' },
+  { id: 'm5', name: 'Bind (Morocco)', game: 'Valorant', imageUrl: '/images/demo-preview-5.svg' },
+  { id: 'm6', name: 'Haven (Bhutan)', game: 'Valorant', imageUrl: '/images/demo-preview-6.svg' },
 ];
 
 export default function Scrims() {
@@ -74,7 +74,6 @@ export default function Scrims() {
         <div className="surface-1 rounded-3xl p-6 border border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
           <div className="flex items-center gap-3">
             <Avatar className="w-12 h-12 border-2 border-primary">
-              <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop" />
               <AvatarFallback>A</AvatarFallback>
             </Avatar>
             <div>
@@ -94,7 +93,6 @@ export default function Scrims() {
               <h4 className="font-display font-bold text-foreground text-sm">Soul Gaming Clan</h4>
             </div>
             <Avatar className="w-12 h-12 border-2 border-rose-500">
-              <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop" />
               <AvatarFallback>B</AvatarFallback>
             </Avatar>
           </div>

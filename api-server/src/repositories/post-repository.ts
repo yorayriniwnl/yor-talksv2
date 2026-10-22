@@ -18,6 +18,7 @@ import { sql } from "drizzle-orm";
 import type { ContentRating } from "../utils/content-safety.js";
 import { CONTENT_CLASSIFICATION_POLICY_VERSION } from "../eligibility/content-policy.js";
 import { isEligibilityEnforcementEnabled } from "../eligibility/enforcement.js";
+import { collectionAfter, type CollectionCandidate, type CollectionPosition } from '../utils/saved-collection-page.js';
 
 type PostCursor = { createdAt: string; id: string };
 type TrendingCursor = { score: number; createdAt: string; id: string };
@@ -26,6 +27,9 @@ export class ProfilePinLimitError extends Error {}
 export class ProfilePinOrderError extends Error {}
 
 function addContentRatingFilters(filters: any[], contentFilter?: ContentRating): void {
+  filters.push(sql`not exists (select 1 from moderation_enforcements me
+    where me.target_type = 'post' and me.target_id = ${postsTable.id}::text
+      and (me.expires_at is null or me.expires_at > clock_timestamp()))`);
   if (contentFilter === "child_safe") {
     filters.push(eq(postsTable.contentRating, "child_safe"));
     if (isEligibilityEnforcementEnabled()) filters.push(sql`exists(select 1 from content_safety_classifications c
@@ -208,6 +212,16 @@ export class PostRepository {
       .orderBy(desc(postBookmarksTable.createdAt), desc(postsTable.createdAt))
       .limit(Math.min(100, Math.max(1, limit)));
     return rows.map(({ post }) => post as PostRecord);
+  }
+
+  async listBookmarkedPage(userId: string, position: CollectionPosition | undefined, limit: number, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<CollectionCandidate<PostRecord>[]> {
+    const filters: any[] = [eq(postBookmarksTable.userId, userId), collectionAfter(postBookmarksTable.createdAt, postBookmarksTable.postId, position)];
+    if (excludedAuthorIds.length > 0) filters.push(notInArray(postsTable.authorId, excludedAuthorIds));
+    addContentRatingFilters(filters, contentFilter);
+    const rows = await db.select({ item: postsTable, createdAt: postBookmarksTable.createdAt, id: postBookmarksTable.postId })
+      .from(postBookmarksTable).innerJoin(postsTable, eq(postBookmarksTable.postId, postsTable.id))
+      .where(and(...filters)).orderBy(desc(postBookmarksTable.createdAt), desc(postBookmarksTable.postId)).limit(limit);
+    return rows as CollectionCandidate<PostRecord>[];
   }
 
   async listLiked(userId: string, limit = 100, excludedAuthorIds: string[] = [], contentFilter?: ContentRating): Promise<PostRecord[]> {

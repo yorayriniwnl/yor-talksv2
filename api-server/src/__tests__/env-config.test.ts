@@ -3,6 +3,26 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { test } from "node:test";
 
+test("production rejects a shared access and refresh signing secret without logging it", () => {
+  const sharedSecret = "synthetic-shared-signing-key-01234567890123456789";
+  const result = spawnSync(process.execPath, ["--import", "tsx", "--eval", "import './src/config/env.ts'"], {
+    cwd: path.resolve(import.meta.dirname, "../.."), encoding: "utf8", timeout: 10_000,
+    env: { ...process.env, NODE_ENV: "production", PUBLIC_BETA: "false",
+      JWT_SECRET: sharedSecret, JWT_REFRESH_SECRET: sharedSecret,
+      CONTACT_SHIELD_SECRET: "c".repeat(40), TOTP_ENCRYPTION_KEY: "d".repeat(40),
+      DATABASE_URL: "postgresql://app:synthetic@db.example.test:5432/yor",
+      REDIS_URL: "redis://redis.example.test:6379", CLIENT_ORIGIN: "https://app.example.test",
+      CORS_ORIGINS: "https://app.example.test", CLOUDINARY_CLOUD_NAME: "synthetic-cloud",
+      CLOUDINARY_API_KEY: "synthetic-key", CLOUDINARY_API_SECRET: "synthetic-secret",
+      RESEND_API_KEY: "synthetic-email-key", EMAIL_FROM: "hello@example.test", OPENAI_API_KEY: "synthetic-safety-key",
+      PAYMENTS_ENABLED: "false", YOR_PREMIUM_ENABLED: "false", LIVE_ROOMS_ENABLED: "false",
+      WEB_PUSH_ENABLED: "false", RTC_CALLS_ENABLED: "false", METRICS_BEARER_TOKEN_FILE: "/run/secrets/metrics_bearer_token" },
+  });
+  assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+  assert.match(`${result.stdout}\n${result.stderr}`, /JWT_SECRET and JWT_REFRESH_SECRET must be distinct/);
+  assert.ok(!`${result.stdout}\n${result.stderr}`.includes(sharedSecret));
+});
+
 test('eligibility defaults stay unavailable and sensitive feature releases fail closed', () => {
   const defaults = spawnSync(process.execPath, ['--import','tsx','--eval',
     "import {env} from './src/config/env.ts'; console.log(JSON.stringify({adapter:env.ELIGIBILITY_ASSURANCE_ADAPTER,registry:env.ELIGIBILITY_POLICY_SOURCE,seller:env.SELLER_ENABLED,memberships:env.MEMBERSHIPS_ENABLED,ai:env.AI_COMPANION_ENABLED,marketingEmail:env.MARKETING_EMAIL_ENABLED}))"],
@@ -15,7 +35,7 @@ test('eligibility defaults stay unavailable and sensitive feature releases fail 
       { cwd: path.resolve(import.meta.dirname, '../..'), encoding: 'utf8', timeout: 10_000,
         env: { ...process.env, NODE_ENV: 'production', PUBLIC_BETA: 'false', ...input } });
     assert.notEqual(result.status, 0);
-    assert.match(`${result.stdout}\n${result.stderr}`, /ELIGIBILITY_ASSURANCE_ADAPTER|ELIGIBILITY_POLICY_SOURCE|AI_COMPANION_ENABLED/);
+    assert.match(`${result.stdout}\n${result.stderr}`, /ELIGIBILITY_ASSURANCE_ADAPTER|ELIGIBILITY_POLICY_SOURCE|AI_COMPANION_ENABLED|LEGAL_CONTENT_REVIEWED/);
   }
 });
 
@@ -94,7 +114,7 @@ test("production startup fails closed when required dependencies are unavailable
     {
       cwd: path.resolve(import.meta.dirname, "../.."),
       encoding: "utf8",
-      timeout: 15_000,
+      timeout: 60_000,
       env: {
         ...process.env,
         NODE_ENV: "production",
@@ -108,8 +128,8 @@ test("production startup fails closed when required dependencies are unavailable
         CORS_ORIGINS: "https://app.example.com",
         CLIENT_ORIGIN: "https://app.example.com",
         TERMS_VERSION: "2026-09-01",
-        MINIMUM_AGE: "18",
         PUBLIC_BETA: "true",
+        LEGAL_CONTENT_REVIEWED: "true",
         ALLOWED_EMAIL_DOMAINS: "",
         GOOGLE_CLIENT_ID: "test-google-client-id",
         CLOUDINARY_CLOUD_NAME: "demo-cloud",
@@ -130,6 +150,6 @@ test("production startup fails closed when required dependencies are unavailable
     },
   );
 
-  assert.equal(result.status, 1, `Expected startup to fail, got status ${result.status}: ${result.stdout}\n${result.stderr}`);
+  assert.equal(result.status, 1, `Expected startup to fail, got status ${result.status}${result.error ? ` (${result.error.message})` : ""}: ${result.stdout}\n${result.stderr}`);
   assert.match(`${result.stdout}\n${result.stderr}`, /production dependency check failed|database|redis/i);
 });

@@ -85,12 +85,12 @@ function PurchaseDialog({ product, onCompleted }: { product: Product; onComplete
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button size="sm" disabled={product.availability !== 'active'} onClick={() => setOpen(true)} className="rounded-xl text-xs font-bold">
-        {product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy securely'}
+        {product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Buy now'}
       </Button>
       <DialogContent className="rounded-3xl border border-border/60 glass-heavy">
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-bold">Buy {product.title}</DialogTitle>
-          <DialogDescription>Payment is verified on the server before this listing becomes sold. Shipping details are shared with the seller only for fulfillment.</DialogDescription>
+          <DialogDescription>Payment is verified on the server before this listing becomes sold. Shipping details are shared with the seller for fulfillment.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <a href="/billing" className="text-sm text-primary underline">Payment history and recovery</a>
@@ -132,6 +132,24 @@ export default function CreatorStore() {
     return (category === 'All' || product.category === category) && text.includes(query.toLowerCase());
   }), [category, products, query]);
 
+  if (!publicBetaConfig.paymentsEnabled) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background px-4 pb-24 pt-12 font-sans sm:px-6">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-amber-400/30 bg-amber-400/10 p-6">
+            <h1 className="font-display text-2xl font-bold">Creator commerce is paused</h1>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Checkout, seller listings, and settlement are disabled for this beta. You can browse community listings in the marketplace; prices are shown in INR and are not payable.
+            </p>
+            <Button asChild variant="outline" className="mt-5 rounded-xl text-xs font-bold">
+              <a href="/marketplace">Browse community listings</a>
+            </Button>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background pb-24 font-sans">
@@ -141,11 +159,11 @@ export default function CreatorStore() {
         </div>
 
         <div className="mx-auto max-w-6xl space-y-6 px-4 pt-6 sm:px-6">
-          <div className="grid gap-4 rounded-3xl border border-primary/20 bg-primary/5 p-5 md:grid-cols-[1fr_auto] md:items-center"><div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary"><ShieldCheck className="h-4 w-4" /> Verified commerce</div><h2 className="mt-2 font-display text-2xl font-black">Buy from people building the world.</h2><p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every order reserves inventory, verifies payment server-side, and records the seller settlement. No demo purchases, fake stock, or client-only confirmations.</p></div><div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-xs font-semibold text-muted-foreground"><PackageCheck className="h-4 w-4 text-emerald-400" /> INR checkout</div></div>
+          <div className="grid gap-4 rounded-3xl border border-primary/20 bg-primary/5 p-5 md:grid-cols-[1fr_auto] md:items-center"><div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-primary"><ShieldCheck className="h-4 w-4" /> Verified commerce</div><h2 className="mt-2 font-display text-2xl font-black">Buy from people building the world.</h2><p className="mt-1 max-w-2xl text-sm text-muted-foreground">Orders reserve the listing and require server payment verification. Seller fulfillment and payment status are recorded separately.</p></div><div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-xs font-semibold text-muted-foreground"><PackageCheck className="h-4 w-4 text-emerald-400" /> INR checkout</div></div>
 
           <div className="flex flex-col gap-3 sm:flex-row"><div className="relative max-w-md flex-1"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search creator goods…" className="rounded-2xl pl-10" /></div><div className="flex gap-2 overflow-x-auto pb-1">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={cn('whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all', category === item ? 'border-primary bg-primary text-primary-foreground' : 'border-border/50 text-muted-foreground hover:text-foreground')}>{item}</button>)}</div></div>
 
-          {loading ? <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : filtered.length === 0 ? <div className="rounded-3xl border border-dashed border-border/50 px-6 py-16 text-center"><ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground/40" /><h3 className="mt-3 font-display text-lg font-bold">No live listings yet</h3><p className="mt-1 text-sm text-muted-foreground">Creators can publish a listing from the marketplace manager.</p><Button asChild variant="outline" className="mt-4 rounded-xl text-xs font-bold"><a href="/marketplace">Open marketplace</a></Button></div> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((product) => { const seller = users[product.sellerId]; const image = product.images[0] || `https://picsum.photos/seed/${encodeURIComponent(product.id)}/800/800`; return <article key={product.id} className="surface-1 flex flex-col overflow-hidden rounded-3xl border border-border/40 shadow-xl transition-all hover:border-primary/50"><div className="aspect-square overflow-hidden bg-muted/30"><ProtectedMediaImage src={image} alt={product.title} className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" /></div><div className="flex flex-1 flex-col gap-4 p-5"><div className="min-w-0"><p className="text-[0.65rem] font-mono font-bold uppercase tracking-[0.14em] text-primary">{product.category}</p><h3 className="mt-1 line-clamp-2 font-display text-lg font-bold">{product.title}</h3><p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">{product.description}</p></div><div className="mt-auto flex items-end justify-between gap-3 border-t border-border/30 pt-4"><div><p className="text-[0.62rem] text-muted-foreground">Seller</p><p className="max-w-36 truncate text-xs font-bold">{seller?.displayName || seller?.username || 'Yor creator'}</p><p className="mt-1 text-lg font-black text-emerald-400">₹{Number(product.price).toLocaleString('en-IN')}</p></div><PurchaseDialog product={product} onCompleted={() => void loadProducts()} /></div></div></article>; })}</div>}
+          {loading ? <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div> : filtered.length === 0 ? <div className="rounded-3xl border border-dashed border-border/50 px-6 py-16 text-center"><ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground/40" /><h3 className="mt-3 font-display text-lg font-bold">No live listings yet</h3><p className="mt-1 text-sm text-muted-foreground">Creators can publish a listing from the marketplace manager.</p><Button asChild variant="outline" className="mt-4 rounded-xl text-xs font-bold"><a href="/marketplace">Open marketplace</a></Button></div> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((product) => { const seller = users[product.sellerId]; const image = product.images[0]; return <article key={product.id} className="surface-1 flex flex-col overflow-hidden rounded-3xl border border-border/40 shadow-xl transition-all hover:border-primary/50"><div className="aspect-square overflow-hidden bg-muted/30">{image ? <ProtectedMediaImage src={image} alt={product.title} className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" /> : <div className="flex h-full items-center justify-center gap-2 p-6 text-sm text-muted-foreground"><ShoppingBag className="h-5 w-5" aria-hidden="true" />No product photo supplied</div>}</div><div className="flex flex-1 flex-col gap-4 p-5"><div className="min-w-0"><p className="text-[0.65rem] font-mono font-bold uppercase tracking-[0.14em] text-primary">{product.category}</p><h3 className="mt-1 line-clamp-2 font-display text-lg font-bold">{product.title}</h3><p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">{product.description}</p></div><div className="mt-auto flex items-end justify-between gap-3 border-t border-border/30 pt-4"><div><p className="text-[0.62rem] text-muted-foreground">Seller</p><p className="max-w-36 truncate text-xs font-bold">{seller?.displayName || seller?.username || 'Yor creator'}</p><p className="mt-1 text-lg font-black text-emerald-400">₹{Number(product.price).toLocaleString('en-IN')}</p></div><PurchaseDialog product={product} onCompleted={() => void loadProducts()} /></div></div></article>; })}</div>}
         </div>
       </div>
     </PageTransition>

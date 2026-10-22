@@ -878,6 +878,24 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/launch/unsubscribe",
+    "operationId": "getLaunchUnsubscribe",
+    "tag": "launch",
+    "summary": "Get /launch/unsubscribe",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/launch/unsubscribe",
+    "operationId": "postLaunchUnsubscribe",
+    "tag": "launch",
+    "summary": "Post /launch/unsubscribe",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/livez",
     "operationId": "getLivez",
     "tag": "livez",
@@ -1018,6 +1036,102 @@ export const apiRouteCatalog = [
     "tag": "metrics",
     "summary": "Get /metrics",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/moderation/appeals",
+    "operationId": "getModerationAppeals",
+    "tag": "moderation",
+    "summary": "Get /moderation/appeals",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/moderation/appeals",
+    "operationId": "postModerationAppeals",
+    "tag": "moderation",
+    "summary": "Post /moderation/appeals",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "patch",
+    "path": "/moderation/appeals/{appealId}/review",
+    "operationId": "patchModerationAppealsByAppealIdReview",
+    "tag": "moderation",
+    "summary": "Patch /moderation/appeals/{appealId}/review",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/moderation/appeals/mine",
+    "operationId": "getModerationAppealsMine",
+    "tag": "moderation",
+    "summary": "Get /moderation/appeals/mine",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/moderation/decisions",
+    "operationId": "getModerationDecisions",
+    "tag": "moderation",
+    "summary": "Get /moderation/decisions",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/moderation/decisions",
+    "operationId": "postModerationDecisions",
+    "tag": "moderation",
+    "summary": "Post /moderation/decisions",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/moderation/enforcements/{targetType}/{targetId}",
+    "operationId": "getModerationEnforcementsByTargetTypeByTargetId",
+    "tag": "moderation",
+    "summary": "Get /moderation/enforcements/{targetType}/{targetId}",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/moderation/notices",
+    "operationId": "getModerationNotices",
+    "tag": "moderation",
+    "summary": "Get /moderation/notices",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/moderation/notices/{noticeId}/acknowledge",
+    "operationId": "postModerationNoticesByNoticeIdAcknowledge",
+    "tag": "moderation",
+    "summary": "Post /moderation/notices/{noticeId}/acknowledge",
+    "authenticated": true,
     "roles": []
   },
   {
@@ -1387,6 +1501,114 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/preregister",
+    "operationId": "postPreregister",
+    "tag": "preregister",
+    "summary": "Post /preregister",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/preregister/stats",
+    "operationId": "getPreregisterStats",
+    "tag": "preregister",
+    "summary": "Get /preregister/stats",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/privacy/challenge",
+    "operationId": "postPrivacyChallenge",
+    "tag": "privacy",
+    "summary": "Post /privacy/challenge",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/privacy/request",
+    "operationId": "postPrivacyRequest",
+    "tag": "privacy",
+    "summary": "Post /privacy/request",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/privacy/verify",
+    "operationId": "postPrivacyVerify",
+    "tag": "privacy",
+    "summary": "Post /privacy/verify",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/identity",
+    "operationId": "getPrivateMessagesIdentity",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/identity",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "put",
+    "path": "/private-messages/identity",
+    "operationId": "putPrivateMessagesIdentity",
+    "tag": "private-messages",
+    "summary": "Put /private-messages/identity",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/threads",
+    "operationId": "getPrivateMessagesThreads",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/threads",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/private-messages/threads",
+    "operationId": "postPrivateMessagesThreads",
+    "tag": "private-messages",
+    "summary": "Post /private-messages/threads",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/threads/{threadId}",
+    "operationId": "getPrivateMessagesThreadsByThreadId",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/threads/{threadId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/threads/{threadId}/messages",
+    "operationId": "getPrivateMessagesThreadsByThreadIdMessages",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/threads/{threadId}/messages",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/private-messages/threads/{threadId}/messages",
+    "operationId": "postPrivateMessagesThreadsByThreadIdMessages",
+    "tag": "private-messages",
+    "summary": "Post /private-messages/threads/{threadId}/messages",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/products",
     "operationId": "getProducts",
@@ -1538,6 +1760,18 @@ export const apiRouteCatalog = [
     "summary": "Post /reports",
     "authenticated": true,
     "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/reports/{reportId}/history",
+    "operationId": "getReportsByReportIdHistory",
+    "tag": "reports",
+    "summary": "Get /reports/{reportId}/history",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
   },
   {
     "method": "patch",
@@ -2041,6 +2275,15 @@ export const apiRouteCatalog = [
     "roles": []
   },
   {
+    "method": "post",
+    "path": "/users/me/consent-withdrawal",
+    "operationId": "postUsersMeConsentWithdrawal",
+    "tag": "users",
+    "summary": "Post /users/me/consent-withdrawal",
+    "authenticated": true,
+    "roles": []
+  },
+  {
     "method": "get",
     "path": "/users/me/contact-shields",
     "operationId": "getUsersMeContactShields",
@@ -2190,6 +2433,24 @@ export const apiRouteCatalog = [
     "operationId": "putUsersMePrivacy",
     "tag": "users",
     "summary": "Put /users/me/privacy",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/users/me/restriction",
+    "operationId": "postUsersMeRestriction",
+    "tag": "users",
+    "summary": "Post /users/me/restriction",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "delete",
+    "path": "/users/me/restriction",
+    "operationId": "deleteUsersMeRestriction",
+    "tag": "users",
+    "summary": "Delete /users/me/restriction",
     "authenticated": true,
     "roles": []
   },

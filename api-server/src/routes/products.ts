@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 import { requireTrustedOrigin } from '../middlewares/trusted-origin.js';
 import { authRateLimiter } from '../middlewares/rate-limit.js';
 import { CheckoutRequestError } from '../services/checkout-intent-service.js';
@@ -26,7 +27,7 @@ router.get("/products/orders", authenticate, async (req, res) => {
   try {
     return res.status(200).json(createResponse("Marketplace orders loaded", await marketplaceService.listOrders(req.user!.id)));
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Marketplace orders could not be loaded", null, {}, ["Internal server error"]));
   }
 });
@@ -38,7 +39,7 @@ router.post("/products/:id/order", authenticate, requireTrustedOrigin, authRateL
     if (error instanceof PaymentsNotConfiguredError) return res.status(503).json(createResponse("Marketplace payments are unavailable", null, {}, [error.message]));
     if (error instanceof PaymentProviderError) return res.status(502).json(createResponse("Payment provider rejected the marketplace order", null, {}, [error.message]));
     if (error instanceof MarketplaceRequestError || error instanceof CheckoutRequestError) return res.status(400).json(createResponse("Marketplace order could not be created", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Marketplace order could not be created", null, {}, ["Internal server error"]));
   }
 });
@@ -52,7 +53,7 @@ router.post("/products/orders/:orderId/verify", authenticate, requireTrustedOrig
     if (error instanceof MarketplaceOrderNotFoundError) return res.status(404).json(createResponse("Marketplace payment order not found", null, {}, [error.message]));
     if (error instanceof MarketplaceOrderForbiddenError) return res.status(403).json(createResponse("Marketplace payment is not yours", null, {}, [error.message]));
     if (error instanceof MarketplaceRequestError || error instanceof CheckoutRequestError) return res.status(400).json(createResponse("Marketplace payment verification failed", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Marketplace payment verification failed", null, {}, ["Internal server error"]));
   }
 });
@@ -62,7 +63,7 @@ router.post("/products/orders/:orderId/cancel", authenticate, requireTrustedOrig
     return res.status(200).json(createResponse("Marketplace order cancelled", order));
   } catch (error) {
     if (error instanceof MarketplaceRequestError || error instanceof CheckoutRequestError) return res.status(400).json(createResponse("Marketplace order could not be cancelled", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Marketplace order could not be cancelled", null, {}, ["Internal server error"]));
   }
 });
@@ -72,7 +73,7 @@ router.post("/products/orders/:orderId/fulfill", authenticate, requireTrustedOri
     return res.status(200).json(createResponse("Marketplace order marked fulfilled", order));
   } catch (error) {
     if (error instanceof MarketplaceRequestError || error instanceof CheckoutRequestError) return res.status(400).json(createResponse("Marketplace order could not be fulfilled", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Marketplace order could not be fulfilled", null, {}, ["Internal server error"]));
   }
 });

@@ -3,6 +3,8 @@
 **Review date:** 2026-09-11  
 **Scope:** repository-level technical review of the web app, API, database schema, contracts, configuration, assets and existing tests. This is not legal advice and does not certify compliance.
 
+> **Historical review.** This document records the 11 September source and launch assumptions, including the then-proposed India launch. The current launch decision is the EU; its Member State, operating entity and entity size remain undecided. Use the [current readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](PRODUCTION_LAUNCH.md) for subsequent repairs, verification and open release gates. Statements below about age restrictions, providers, test availability and legal requirements describe that historical review and are not current launch approval.
+
 ## Remaining P0/P1 risks
 
 1. **P0: Public launch must remain blocked until live identity, security and provider configuration is verified.** Production configuration rejects placeholder secrets and missing required providers, but this review did not run a deployed environment. Complete TLS, DNS, CORS, cookie, OAuth, email, upload, moderation, backup/restore, monitoring and incident-response tests.

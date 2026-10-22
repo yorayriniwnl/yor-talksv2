@@ -1,0 +1,351 @@
+Run: https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39161664450/job/117776062907
+Head: 0b99a15175d3254b9b4256611109c113928a6bcb
+Actual result: 104 executed, 97 passed, 7 failed.
+2026-10-18T20:14:35.6960713Z   1) [chromium] › e2e/core-social.spec.ts:2631:1 › Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams
+2026-10-18T20:14:35.6961900Z
+2026-10-18T20:14:35.6962220Z     Error: expect(locator).toBeEnabled() failed
+2026-10-18T20:14:35.6962607Z
+2026-10-18T20:14:35.6963095Z     Locator: getByRole('button', { name: 'Record video', exact: true })
+2026-10-18T20:14:35.6963993Z     Expected: enabled
+2026-10-18T20:14:35.6964378Z     Timeout: 5000ms
+2026-10-18T20:14:35.6965123Z     Error: element(s) not found
+2026-10-18T20:14:35.6965333Z
+2026-10-18T20:14:35.6965431Z     Call log:
+2026-10-18T20:14:35.6965720Z       - Expect "toBeEnabled" with timeout 5000ms
+2026-10-18T20:14:35.6966196Z       - waiting for getByRole('button', { name: 'Record video', exact: true })
+2026-10-18T20:14:35.6968463Z         5 × locator resolved to <button disabled aria-label="Record video" class="w-18 h-18 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all cursor-pointer border-white bg-white/20 hover:bg-white/30 backdrop-blur-md hover:scale-105">…</button>
+2026-10-18T20:14:35.6970077Z           - unexpected value "disabled"
+2026-10-18T20:14:35.6970279Z
+2026-10-18T20:14:35.6970286Z
+2026-10-18T20:14:35.6970466Z       2676 |   await expect(stickerTrigger).toBeFocused();
+2026-10-18T20:14:35.6971108Z       2677 |   await expect(studio).toBeVisible();
+2026-10-18T20:14:35.6971458Z     > 2678 |   await expect(record).toBeEnabled();
+2026-10-18T20:14:35.6971773Z            |                        ^
+2026-10-18T20:14:35.6972099Z       2679 |   await record.evaluate(button => {
+2026-10-18T20:14:35.6972556Z       2680 |     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+2026-10-18T20:14:35.6973096Z       2681 |     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+2026-10-18T20:14:35.6974105Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2678:24
+2026-10-18T20:14:35.6974632Z
+2026-10-18T20:14:35.6975420Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:14:35.6976796Z     test-results/core-social-Studio-camera--ec39e-ses-late-permission-streams-chromium/test-failed-1.png
+2026-10-18T20:14:35.6978417Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:35.6978966Z
+2026-10-18T20:14:35.6979949Z     attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:14:35.6981311Z     test-results/core-social-Studio-camera--ec39e-ses-late-permission-streams-chromium/video.webm
+2026-10-18T20:14:35.6982847Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:35.6983415Z
+2026-10-18T20:14:35.6984537Z     Error Context: test-results/core-social-Studio-camera--ec39e-ses-late-permission-streams-chromium/error-context.md
+2026-10-18T20:14:35.6985145Z
+2026-10-18T20:14:35.6985790Z     attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:14:35.6986555Z     test-results/core-social-Studio-camera--ec39e-ses-late-permission-streams-chromium/trace.zip
+2026-10-18T20:14:35.6987068Z     Usage:
+2026-10-18T20:14:35.6987180Z
+2026-10-18T20:14:35.6987705Z         pnpm exec playwright show-trace test-results/core-social-Studio-camera--ec39e-ses-late-permission-streams-chromium/trace.zip
+2026-10-18T20:14:35.6988283Z
+2026-10-18T20:14:35.6988857Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:35.6989161Z
+2026-10-18T20:14:35.6989167Z
+2026-10-18T20:14:36.4269124Z [92/104] [chromium] › e2e/core-social.spec.ts:2702:1 › account deletion supports keyboard cancellation, field feedback, and a retained failed draft before one synthetic retry
+2026-10-18T20:14:39.4981815Z [93/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 320px in light mode
+2026-10-18T20:14:46.0250622Z [94/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 390px in light mode
+2026-10-18T20:14:49.4160247Z   2) [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 390px in light mode
+2026-10-18T20:14:49.4162056Z
+2026-10-18T20:14:49.4162534Z     Error: expect(locator).toBeVisible() failed
+2026-10-18T20:14:49.4163073Z
+2026-10-18T20:14:49.4163957Z     Locator: getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:14:49.4164780Z     Expected: visible
+2026-10-18T20:14:49.4166303Z     Error: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:
+2026-10-18T20:14:49.4168439Z         1) <h1 class="premium-topbar__heading">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:14:49.4170864Z         2) <h1 class="text-xl font-bold font-display text-foreground">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:14:49.4172105Z
+2026-10-18T20:14:49.4172305Z     Call log:
+2026-10-18T20:14:49.4172875Z       - Expect "toBeVisible" with timeout 5000ms
+2026-10-18T20:14:49.4174198Z       - waiting for getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:14:49.4174953Z
+2026-10-18T20:14:49.4174964Z
+2026-10-18T20:14:49.4175143Z       2780 |       ]) {
+2026-10-18T20:14:49.4175663Z       2781 |         await page.goto(path);
+2026-10-18T20:14:49.4176726Z     > 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+2026-10-18T20:14:49.4177720Z            |                                                                                 ^
+2026-10-18T20:14:49.4178409Z       2783 |         if (path === '/') {
+2026-10-18T20:14:49.4179065Z       2784 |           await expect(page.getByRole('article')).toBeVisible();
+2026-10-18T20:14:49.4179550Z       2785 |           await page.keyboard.press('Tab');
+2026-10-18T20:14:49.4180081Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2782:81
+2026-10-18T20:14:49.4180473Z
+2026-10-18T20:14:49.4181031Z     attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4181923Z     test-results/core-social-compliance-sur-f438d-yout-at-390px-in-light-mode-chromium/test-failed-1.png
+2026-10-18T20:14:49.4182764Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4183054Z
+2026-10-18T20:14:49.4183437Z     attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4184481Z     test-results/core-social-compliance-sur-f438d-yout-at-390px-in-light-mode-chromium/video-1.webm
+2026-10-18T20:14:49.4185285Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4185573Z
+2026-10-18T20:14:49.4185950Z     attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4186652Z     test-results/core-social-compliance-sur-f438d-yout-at-390px-in-light-mode-chromium/video.webm
+2026-10-18T20:14:49.4187409Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4187928Z
+2026-10-18T20:14:49.4188555Z     Error Context: test-results/core-social-compliance-sur-f438d-yout-at-390px-in-light-mode-chromium/error-context.md
+2026-10-18T20:14:49.4189056Z
+2026-10-18T20:14:49.4189458Z     attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4190170Z     test-results/core-social-compliance-sur-f438d-yout-at-390px-in-light-mode-chromium/trace.zip
+2026-10-18T20:14:49.4190662Z     Usage:
+2026-10-18T20:14:49.4190768Z
+2026-10-18T20:14:49.4191269Z         pnpm exec playwright show-trace test-results/core-social-compliance-sur-f438d-yout-at-390px-in-light-mode-chromium/trace.zip
+2026-10-18T20:14:49.4191871Z
+2026-10-18T20:14:49.4192242Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:49.4192528Z
+2026-10-18T20:14:49.4192534Z
+2026-10-18T20:14:49.9628558Z [95/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 768px in light mode
+2026-10-18T20:14:53.9002678Z   3) [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 768px in light mode
+2026-10-18T20:14:53.9004723Z
+2026-10-18T20:14:53.9005174Z     Error: expect(locator).toBeVisible() failed
+2026-10-18T20:14:53.9005710Z
+2026-10-18T20:14:53.9006317Z     Locator: getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:14:53.9007433Z     Expected: visible
+2026-10-18T20:14:53.9009089Z     Error: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:
+2026-10-18T20:14:53.9011385Z         1) <h1 class="premium-topbar__heading">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:14:53.9013917Z         2) <h1 class="text-xl font-bold font-display text-foreground">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:14:53.9015318Z
+2026-10-18T20:14:53.9015507Z     Call log:
+2026-10-18T20:14:53.9016089Z       - Expect "toBeVisible" with timeout 5000ms
+2026-10-18T20:14:53.9017190Z       - waiting for getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:14:53.9017918Z
+2026-10-18T20:14:53.9017927Z
+2026-10-18T20:14:53.9038984Z       2780 |       ]) {
+2026-10-18T20:14:53.9039511Z       2781 |         await page.goto(path);
+2026-10-18T20:14:53.9040412Z     > 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+2026-10-18T20:14:53.9041355Z            |                                                                                 ^
+2026-10-18T20:14:53.9041938Z       2783 |         if (path === '/') {
+2026-10-18T20:14:53.9042598Z       2784 |           await expect(page.getByRole('article')).toBeVisible();
+2026-10-18T20:14:53.9043283Z       2785 |           await page.keyboard.press('Tab');
+2026-10-18T20:14:53.9044270Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2782:81
+2026-10-18T20:14:53.9044792Z
+2026-10-18T20:14:53.9045956Z     attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9047139Z     test-results/core-social-compliance-sur-58a7a-yout-at-768px-in-light-mode-chromium/test-failed-1.png
+2026-10-18T20:14:53.9048516Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9049024Z
+2026-10-18T20:14:53.9049684Z     attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9050869Z     test-results/core-social-compliance-sur-58a7a-yout-at-768px-in-light-mode-chromium/video.webm
+2026-10-18T20:14:53.9052191Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9052684Z
+2026-10-18T20:14:53.9053823Z     attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9055039Z     test-results/core-social-compliance-sur-58a7a-yout-at-768px-in-light-mode-chromium/video-1.webm
+2026-10-18T20:14:53.9056386Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9056890Z
+2026-10-18T20:14:53.9057673Z     Error Context: test-results/core-social-compliance-sur-58a7a-yout-at-768px-in-light-mode-chromium/error-context.md
+2026-10-18T20:14:53.9058504Z
+2026-10-18T20:14:53.9059225Z     attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9060432Z     test-results/core-social-compliance-sur-58a7a-yout-at-768px-in-light-mode-chromium/trace.zip
+2026-10-18T20:14:53.9061275Z     Usage:
+2026-10-18T20:14:53.9061456Z
+2026-10-18T20:14:53.9062339Z         pnpm exec playwright show-trace test-results/core-social-compliance-sur-58a7a-yout-at-768px-in-light-mode-chromium/trace.zip
+2026-10-18T20:14:53.9063226Z
+2026-10-18T20:14:53.9064102Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:14:53.9064570Z
+2026-10-18T20:14:53.9064600Z
+2026-10-18T20:14:54.4273082Z [96/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1024px in light mode
+2026-10-18T20:15:01.7840654Z [97/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1440px in light mode
+2026-10-18T20:15:05.5430263Z   4) [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1440px in light mode
+2026-10-18T20:15:05.5432138Z
+2026-10-18T20:15:05.5432711Z     Error: expect(locator).toBeVisible() failed
+2026-10-18T20:15:05.5433213Z
+2026-10-18T20:15:05.5434167Z     Locator: getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:05.5434963Z     Expected: visible
+2026-10-18T20:15:05.5436040Z     Error: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:
+2026-10-18T20:15:05.5438123Z         1) <h1 class="premium-topbar__heading">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:05.5440336Z         2) <h1 class="text-xl font-bold font-display text-foreground">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:05.5441353Z
+2026-10-18T20:15:05.5441582Z     Call log:
+2026-10-18T20:15:05.5442259Z       - Expect "toBeVisible" with timeout 5000ms
+2026-10-18T20:15:05.5443620Z       - waiting for getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:05.5444403Z
+2026-10-18T20:15:05.5444413Z
+2026-10-18T20:15:05.5444610Z       2780 |       ]) {
+2026-10-18T20:15:05.5445086Z       2781 |         await page.goto(path);
+2026-10-18T20:15:05.5445983Z     > 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+2026-10-18T20:15:05.5447150Z            |                                                                                 ^
+2026-10-18T20:15:05.5447749Z       2783 |         if (path === '/') {
+2026-10-18T20:15:05.5448383Z       2784 |           await expect(page.getByRole('article')).toBeVisible();
+2026-10-18T20:15:05.5449089Z       2785 |           await page.keyboard.press('Tab');
+2026-10-18T20:15:05.5449692Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2782:81
+2026-10-18T20:15:05.5450075Z
+2026-10-18T20:15:05.5450657Z     attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5451647Z     test-results/core-social-compliance-sur-3f527-out-at-1440px-in-light-mode-chromium/test-failed-1.png
+2026-10-18T20:15:05.5452663Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5453036Z
+2026-10-18T20:15:05.5453894Z     attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5455266Z     test-results/core-social-compliance-sur-3f527-out-at-1440px-in-light-mode-chromium/video-1.webm
+2026-10-18T20:15:05.5456294Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5456654Z
+2026-10-18T20:15:05.5457120Z     attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5458002Z     test-results/core-social-compliance-sur-3f527-out-at-1440px-in-light-mode-chromium/video.webm
+2026-10-18T20:15:05.5458948Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5459293Z
+2026-10-18T20:15:05.5459826Z     Error Context: test-results/core-social-compliance-sur-3f527-out-at-1440px-in-light-mode-chromium/error-context.md
+2026-10-18T20:15:05.5460413Z
+2026-10-18T20:15:05.5460862Z     attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5461875Z     test-results/core-social-compliance-sur-3f527-out-at-1440px-in-light-mode-chromium/trace.zip
+2026-10-18T20:15:05.5462453Z     Usage:
+2026-10-18T20:15:05.5462571Z
+2026-10-18T20:15:05.5463157Z         pnpm exec playwright show-trace test-results/core-social-compliance-sur-3f527-out-at-1440px-in-light-mode-chromium/trace.zip
+2026-10-18T20:15:05.5464051Z
+2026-10-18T20:15:05.5464476Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:05.5464809Z
+2026-10-18T20:15:05.5464815Z
+2026-10-18T20:15:06.0828752Z [98/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 320px in dark mode
+2026-10-18T20:15:09.9632524Z   5) [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 320px in dark mode
+2026-10-18T20:15:09.9635896Z
+2026-10-18T20:15:09.9636201Z     Error: expect(locator).toBeVisible() failed
+2026-10-18T20:15:09.9636633Z
+2026-10-18T20:15:09.9637027Z     Locator: getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:09.9637500Z     Expected: visible
+2026-10-18T20:15:09.9638071Z     Error: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:
+2026-10-18T20:15:09.9638981Z         1) <h1 class="premium-topbar__heading">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:09.9640055Z         2) <h1 class="text-xl font-bold font-display text-foreground">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:09.9640648Z
+2026-10-18T20:15:09.9640740Z     Call log:
+2026-10-18T20:15:09.9641016Z       - Expect "toBeVisible" with timeout 5000ms
+2026-10-18T20:15:09.9641485Z       - waiting for getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:09.9641805Z
+2026-10-18T20:15:09.9641811Z
+2026-10-18T20:15:09.9641904Z       2780 |       ]) {
+2026-10-18T20:15:09.9642183Z       2781 |         await page.goto(path);
+2026-10-18T20:15:09.9642966Z     > 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+2026-10-18T20:15:09.9644252Z            |                                                                                 ^
+2026-10-18T20:15:09.9644946Z       2783 |         if (path === '/') {
+2026-10-18T20:15:09.9645391Z       2784 |           await expect(page.getByRole('article')).toBeVisible();
+2026-10-18T20:15:09.9645900Z       2785 |           await page.keyboard.press('Tab');
+2026-10-18T20:15:09.9646392Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2782:81
+2026-10-18T20:15:09.9646728Z
+2026-10-18T20:15:09.9647205Z     attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9648005Z     test-results/core-social-compliance-sur-45dba-ayout-at-320px-in-dark-mode-chromium/test-failed-1.png
+2026-10-18T20:15:09.9649052Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9649359Z
+2026-10-18T20:15:09.9649757Z     attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9650472Z     test-results/core-social-compliance-sur-45dba-ayout-at-320px-in-dark-mode-chromium/video.webm
+2026-10-18T20:15:09.9651252Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9651549Z
+2026-10-18T20:15:09.9651933Z     attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9652641Z     test-results/core-social-compliance-sur-45dba-ayout-at-320px-in-dark-mode-chromium/video-1.webm
+2026-10-18T20:15:09.9653404Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9654525Z
+2026-10-18T20:15:09.9655101Z     Error Context: test-results/core-social-compliance-sur-45dba-ayout-at-320px-in-dark-mode-chromium/error-context.md
+2026-10-18T20:15:09.9655847Z
+2026-10-18T20:15:09.9656305Z     attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9657046Z     test-results/core-social-compliance-sur-45dba-ayout-at-320px-in-dark-mode-chromium/trace.zip
+2026-10-18T20:15:09.9657546Z     Usage:
+2026-10-18T20:15:09.9657660Z
+2026-10-18T20:15:09.9658181Z         pnpm exec playwright show-trace test-results/core-social-compliance-sur-45dba-ayout-at-320px-in-dark-mode-chromium/trace.zip
+2026-10-18T20:15:09.9658723Z
+2026-10-18T20:15:09.9659080Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:09.9659371Z
+2026-10-18T20:15:09.9659376Z
+2026-10-18T20:15:10.4942559Z [99/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 390px in dark mode
+2026-10-18T20:15:17.5320830Z [100/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 768px in dark mode
+2026-10-18T20:15:25.5904721Z [101/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1024px in dark mode
+2026-10-18T20:15:29.6252108Z   6) [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1024px in dark mode
+2026-10-18T20:15:29.6255404Z
+2026-10-18T20:15:29.6265878Z     Error: expect(locator).toBeVisible() failed
+2026-10-18T20:15:29.6266569Z
+2026-10-18T20:15:29.6267903Z     Locator: getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:29.6268566Z     Expected: visible
+2026-10-18T20:15:29.6269855Z     Error: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:
+2026-10-18T20:15:29.6272115Z         1) <h1 class="premium-topbar__heading">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:29.6284802Z         2) <h1 class="text-xl font-bold font-display text-foreground">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:29.6285613Z
+2026-10-18T20:15:29.6285743Z     Call log:
+2026-10-18T20:15:29.6286118Z       - Expect "toBeVisible" with timeout 5000ms
+2026-10-18T20:15:29.6286723Z       - waiting for getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:29.6287115Z
+2026-10-18T20:15:29.6287122Z
+2026-10-18T20:15:29.6287230Z       2780 |       ]) {
+2026-10-18T20:15:29.6287577Z       2781 |         await page.goto(path);
+2026-10-18T20:15:29.6288281Z     > 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+2026-10-18T20:15:29.6289038Z            |                                                                                 ^
+2026-10-18T20:15:29.6289723Z       2783 |         if (path === '/') {
+2026-10-18T20:15:29.6290245Z       2784 |           await expect(page.getByRole('article')).toBeVisible();
+2026-10-18T20:15:29.6290818Z       2785 |           await page.keyboard.press('Tab');
+2026-10-18T20:15:29.6291462Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2782:81
+2026-10-18T20:15:29.6291879Z
+2026-10-18T20:15:29.6292653Z     attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6294114Z     test-results/core-social-compliance-sur-7aa7d-yout-at-1024px-in-dark-mode-chromium/test-failed-1.png
+2026-10-18T20:15:29.6295780Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6296415Z
+2026-10-18T20:15:29.6297237Z     attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6298815Z     test-results/core-social-compliance-sur-7aa7d-yout-at-1024px-in-dark-mode-chromium/video.webm
+2026-10-18T20:15:29.6300561Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6301259Z
+2026-10-18T20:15:29.6301979Z     attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6303161Z     test-results/core-social-compliance-sur-7aa7d-yout-at-1024px-in-dark-mode-chromium/video-1.webm
+2026-10-18T20:15:29.6304771Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6305279Z
+2026-10-18T20:15:29.6306070Z     Error Context: test-results/core-social-compliance-sur-7aa7d-yout-at-1024px-in-dark-mode-chromium/error-context.md
+2026-10-18T20:15:29.6306902Z
+2026-10-18T20:15:29.6307681Z     attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6308900Z     test-results/core-social-compliance-sur-7aa7d-yout-at-1024px-in-dark-mode-chromium/trace.zip
+2026-10-18T20:15:29.6309787Z     Usage:
+2026-10-18T20:15:29.6309978Z
+2026-10-18T20:15:29.6311111Z         pnpm exec playwright show-trace test-results/core-social-compliance-sur-7aa7d-yout-at-1024px-in-dark-mode-chromium/trace.zip
+2026-10-18T20:15:29.6312030Z
+2026-10-18T20:15:29.6312653Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:29.6313119Z
+2026-10-18T20:15:29.6313127Z
+2026-10-18T20:15:30.1942989Z [102/104] [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1440px in dark mode
+2026-10-18T20:15:34.6917876Z   7) [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1440px in dark mode
+2026-10-18T20:15:34.6919070Z
+2026-10-18T20:15:34.6919685Z     Error: expect(locator).toBeVisible() failed
+2026-10-18T20:15:34.6922446Z
+2026-10-18T20:15:34.6922908Z     Locator: getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:34.6923893Z     Expected: visible
+2026-10-18T20:15:34.6924795Z     Error: strict mode violation: getByRole('heading', { name: 'Settings', exact: true }) resolved to 2 elements:
+2026-10-18T20:15:34.6926183Z         1) <h1 class="premium-topbar__heading">Settings</h1> aka getByRole('banner').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:34.6927331Z         2) <h1 class="text-xl font-bold font-display text-foreground">Settings</h1> aka locator('#main-content').getByRole('heading', { name: 'Settings' })
+2026-10-18T20:15:34.6927886Z
+2026-10-18T20:15:34.6927978Z     Call log:
+2026-10-18T20:15:34.6928259Z       - Expect "toBeVisible" with timeout 5000ms
+2026-10-18T20:15:34.6928743Z       - waiting for getByRole('heading', { name: 'Settings', exact: true })
+2026-10-18T20:15:34.6929037Z
+2026-10-18T20:15:34.6929043Z
+2026-10-18T20:15:34.6929146Z       2780 |       ]) {
+2026-10-18T20:15:34.6929418Z       2781 |         await page.goto(path);
+2026-10-18T20:15:34.6929951Z     > 2782 |         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+2026-10-18T20:15:34.6930521Z            |                                                                                 ^
+2026-10-18T20:15:34.6930884Z       2783 |         if (path === '/') {
+2026-10-18T20:15:34.6931276Z       2784 |           await expect(page.getByRole('article')).toBeVisible();
+2026-10-18T20:15:34.6931704Z       2785 |           await page.keyboard.press('Tab');
+2026-10-18T20:15:34.6932193Z         at /home/runner/work/yor-talksv2/yor-talksv2/e2e/core-social.spec.ts:2782:81
+2026-10-18T20:15:34.6932503Z
+2026-10-18T20:15:34.6933268Z     attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6934578Z     test-results/core-social-compliance-sur-46167-yout-at-1440px-in-dark-mode-chromium/test-failed-1.png
+2026-10-18T20:15:34.6935446Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6935748Z
+2026-10-18T20:15:34.6936152Z     attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6936877Z     test-results/core-social-compliance-sur-46167-yout-at-1440px-in-dark-mode-chromium/video-1.webm
+2026-10-18T20:15:34.6937648Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6937935Z
+2026-10-18T20:15:34.6938307Z     attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6939034Z     test-results/core-social-compliance-sur-46167-yout-at-1440px-in-dark-mode-chromium/video.webm
+2026-10-18T20:15:34.6939810Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6940108Z
+2026-10-18T20:15:34.6940826Z     Error Context: test-results/core-social-compliance-sur-46167-yout-at-1440px-in-dark-mode-chromium/error-context.md
+2026-10-18T20:15:34.6941322Z
+2026-10-18T20:15:34.6941884Z     attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6942605Z     test-results/core-social-compliance-sur-46167-yout-at-1440px-in-dark-mode-chromium/trace.zip
+2026-10-18T20:15:34.6943104Z     Usage:
+2026-10-18T20:15:34.6943212Z
+2026-10-18T20:15:34.6944347Z         pnpm exec playwright show-trace test-results/core-social-compliance-sur-46167-yout-at-1440px-in-dark-mode-chromium/trace.zip
+2026-10-18T20:15:34.6945312Z
+2026-10-18T20:15:34.6946139Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-18T20:15:34.6946665Z
+2026-10-18T20:15:34.6946671Z
+2026-10-18T20:15:35.2491436Z [103/104] [chromium] › e2e/core-social.spec.ts:2807:3 › public registration and legal pages expose accessible forms in light mode
+2026-10-18T20:15:40.4867375Z [104/104] [chromium] › e2e/core-social.spec.ts:2807:3 › public registration and legal pages expose accessible forms in dark mode
+2026-10-18T20:15:45.7698542Z   7 failed
+2026-10-18T20:15:45.7700350Z     [chromium] › e2e/core-social.spec.ts:2631:1 › Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams
+2026-10-18T20:15:45.7702156Z     [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 390px in light mode
+2026-10-18T20:15:45.7705173Z     [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 768px in light mode
+2026-10-18T20:15:45.7707568Z     [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1440px in light mode
+2026-10-18T20:15:45.7709378Z     [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 320px in dark mode
+2026-10-18T20:15:45.7711191Z     [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1024px in dark mode
+2026-10-18T20:15:45.7712976Z     [chromium] › e2e/core-social.spec.ts:2760:5 › compliance surfaces preserve contrast, accessible names, and layout at 1440px in dark mode
+2026-10-18T20:15:45.7714323Z   97 passed (4.9m)

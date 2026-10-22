@@ -25,7 +25,9 @@ test('a child-safe approval applies only to its exact content revision and hash'
     maximumContentRating: 'child_safe', policyVersions: ['fixture:1'], revision: 'content-fixture', reason: null,
     publicBrowsingAllowed: true,
   };
+  const adultAuthorDecision: EligibilityDecision = { ...decision, experience: 'adult_18_plus', maximumContentRating: 'mature' };
   t.mock.method(EligibilityService.prototype, 'decisionFor', async () => decision);
+  t.mock.method(EligibilityService.prototype, 'decisionForMany', async (ids: string[]) => new Map(ids.map(id => [id,adultAuthorDecision])));
   const users = new UserRepository(), posts = new PostRepository();
   const author = await createTestUser(users), viewer = await createTestUser(users);
   const ownedPostIds: string[] = [];

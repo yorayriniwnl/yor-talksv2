@@ -4,4 +4,5 @@ export { OperatorPanel } from './OperatorPanel';
 export { SectionHeader } from './SectionHeader';
 export { SignalLabel } from './SignalLabel';
 export { StatusBadge } from './StatusBadge';
+export { FounderBadge } from './FounderBadge';
 export type { OperatorStatus } from './StatusBadge';

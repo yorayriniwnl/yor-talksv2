@@ -160,7 +160,7 @@ The complete graph has **37 advisories: 11 critical, 18 high, 6 moderate, 2 low*
 
 ### F15 — P1: There is no single verified release candidate
 
-The active branch and main are divergent. The newer hardening branch contains fixes missing here, while this branch contains Premium work absent there. A wholesale branch replacement would discard features. GitHub lists no open PRs, and the [CI run for the audited HEAD](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/35132745716) has no executed steps: its annotation states the account is locked due to billing.
+The active branch and main are divergent. The newer hardening branch contains fixes missing here, while this branch contains Premium work absent there. A wholesale branch replacement would discard features. GitHub lists no open PRs, and the [CI run for the audited HEAD](https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/35132745716) has no executed steps: its annotation states the account is locked due to billing.
 
 **Required closure:** select the release base, integrate intentionally in an isolated checkout, resolve the actual conflicts, preserve unfinished pin work, and run one complete matrix on the resulting SHA. Restore functioning CI or an equivalent reproducible release gate, identify the deployed SHA, and demonstrate rollback. No assertion is made that main already contains the newer fixes.
 

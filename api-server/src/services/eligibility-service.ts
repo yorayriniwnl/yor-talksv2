@@ -13,6 +13,12 @@ interface EligibilityServiceOptions {
   policies?: () => ApprovedTerritoryPolicy[]; operatorPolicyIds?: string[]; currentTermsVersion?: string;
   releaseFlags?: ReleaseFlags; clock?: () => Date;
 }
+export type ContactRules = {
+  decision: EligibilityDecision;
+  guardianContactsRequired: boolean;
+  guardianPolicyVersions: Record<string, string>;
+  guardianNoticeVersions: Record<string, string>;
+};
 export class EligibilityService {
   constructor(private readonly repository: EligibilityRepository = new EligibilityRepository(), private readonly options: EligibilityServiceOptions = {}) {}
   private registry(userId?: string) {
@@ -42,27 +48,36 @@ export class EligibilityService {
     const facts = await this.repository.readFacts(userId);
     return evaluateEligibility(this.withServerContext(facts,userId), this.registry(userId), (this.options.clock ?? (() => new Date()))());
   }
+  async decisionForMany(userIds: string[]): Promise<Map<string,EligibilityDecision>> {
+    const ids = [...new Set(userIds)];
+    const facts = await this.repository.readFactsMany(ids);
+    const now = (this.options.clock ?? (() => new Date()))();
+    return new Map(ids.map(userId => [userId,evaluateEligibility(this.withServerContext(facts.get(userId),userId),this.registry(userId),now)]));
+  }
   /** Contact rules come only from the same active, approved territory intersection as activation. */
-  async contactRulesFor(userId: string): Promise<{
-    decision: EligibilityDecision;
-    guardianContactsRequired: boolean;
-    guardianPolicyVersions: Record<string, string>;
-    guardianNoticeVersions: Record<string, string>;
-  }> {
-    const policies = this.registry(userId), now = (this.options.clock ?? (() => new Date()))();
-    const facts = await this.repository.readFacts(userId);
-    const serverFacts = this.withServerContext(facts,userId);
-    const decision = evaluateEligibility(serverFacts, policies, now);
-    const resolved = serverFacts?.territoryContext;
-    const relevant = applicablePolicies(resolved, policies, now);
-    return {
-      decision,
-      guardianContactsRequired: relevant ? relevant.some(policy => policy.guardianContactsRequired) : true,
-      guardianPolicyVersions: Object.fromEntries((relevant ?? []).map(policy => [policy.id, policy.version])),
-      guardianNoticeVersions: Object.fromEntries((relevant ?? [])
-        .filter(policy => policy.requiredGuardianPurposes.includes('social_contact'))
-        .map(policy => [policy.id, policy.guardianNoticeVersions.social_contact ?? ''])),
-    };
+  async contactRulesFor(userId: string): Promise<ContactRules> {
+    return (await this.contactRulesForMany([userId])).get(userId)!;
+  }
+  async contactRulesForMany(userIds: string[]): Promise<Map<string, ContactRules>> {
+    const ids = [...new Set(userIds)];
+    const factsById = await this.repository.readFactsMany(ids);
+    const now = (this.options.clock ?? (() => new Date()))();
+    const result = new Map<string, ContactRules>();
+    for (const userId of ids) {
+      const policies = this.registry(userId);
+      const serverFacts = this.withServerContext(factsById.get(userId),userId);
+      const decision = evaluateEligibility(serverFacts, policies, now);
+      const relevant = applicablePolicies(serverFacts?.territoryContext, policies, now);
+      result.set(userId, {
+        decision,
+        guardianContactsRequired: relevant ? relevant.some(policy => policy.guardianContactsRequired) : true,
+        guardianPolicyVersions: Object.fromEntries((relevant ?? []).map(policy => [policy.id, policy.version])),
+        guardianNoticeVersions: Object.fromEntries((relevant ?? [])
+          .filter(policy => policy.requiredGuardianPurposes.includes('social_contact'))
+          .map(policy => [policy.id, policy.guardianNoticeVersions.social_contact ?? ''])),
+      });
+    }
+    return result;
   }
   async publicDecision(context: TerritoryContext): Promise<EligibilityDecision> {
     const registry = this.registry(); const now = (this.options.clock ?? (() => new Date()))();
