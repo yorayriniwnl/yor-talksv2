@@ -1,248 +1,56 @@
-import { useState, useEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+﻿import { useState, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import { useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, X,
-  Activity, Compass, Film, Globe2, MessageCircle, Bell, User, Users, FileText, Orbit, WandSparkles,
-  Video, Radio, Megaphone, Scissors,
-  Trophy, Swords, Gamepad2, Target, Award, Medal, Calendar,
-  BarChart3, Store, ShoppingCart, Briefcase, Shirt, Layers,
-  ShoppingBag, Coins, Ticket, Shield, Building2, HandCoins,
-  Crown, Star, Brain,
-  LayoutDashboard, Settings, Headphones, Mic2, Key, Gauge
-} from 'lucide-react';
-import { api } from '@/lib/api-client';
-import { BrainCircuit, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Search, Loader2, FileText } from 'lucide-react';
+import { api, type BackendUser } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { sounds } from '@/lib/sound';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { navigationGroups, OPEN_SEARCH_EVENT } from '@/components/layout/navigation';
+
+type SearchProfile = { id: string; username: string; displayName: string; avatarUrl?: string };
+type SearchPost = { id: string; content: string };
+type SearchResult = { users: BackendUser[]; posts: SearchPost[] };
+const optionId = (key: string) => 'yor-search-' + encodeURIComponent(key);
 
 export function CommandPalette() {
   const [, setLocation] = useLocation();
-  const [isOpen, setIsOpen] = useState(false);
+  const knownUsers = useAppStore(state => state.users);
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const userList = Object.values(useAppStore((s) => s.users));
-
-  const [smartResults, setSmartResults] = useState<{ id: string; content: string }[]>([]);
-  const [searchingSmart, setSearchingSmart] = useState(false);
-  const [smartSearchFailed, setSmartSearchFailed] = useState(false);
+  const [result, setResult] = useState<{ query: string; users: SearchProfile[]; posts: SearchPost[] } | null>(null);
+  const [error, setError] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [revision, setRevision] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
-  const paletteRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const restoreFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (query.length > 3) {
-      const delay = setTimeout(async () => {
-        setSearchingSmart(true);
-        setSmartSearchFailed(false);
-        try {
-          const res = await api.request<{ posts?: Array<{ id: string; content: string }> }>(`/search?q=${encodeURIComponent(query)}`);
-          if (active) setSmartResults((res?.posts ?? []).slice(0, 4));
-        } catch {
-          if (active) {
-            setSmartResults([]);
-            setSmartSearchFailed(true);
-          }
-        } finally {
-          if (active) setSearchingSmart(false);
-        }
-      }, 500);
-      return () => { active = false; clearTimeout(delay); };
-    } else {
-      setSmartResults([]);
-      setSearchingSmart(false);
-      setSmartSearchFailed(false);
-    }
-    return () => { active = false; };
-  }, [query]);
-
-
-  const closePalette = () => {
-    setIsOpen(false);
-    setQuery('');
+  const [browseAll, setBrowseAll] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const restoreFocus = useRef<HTMLElement | null>(null);
+  const navigating = useRef(false);
+  const term = query.trim();
+  const show = () => {
+    restoreFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    navigating.current = false;
+    setOpen(true);
   };
-
+  const changeOpen = (next: boolean) => {
+    setOpen(next);
+    if (!next) { setQuery(''); setResult(null); setError(false); setBrowseAll(false); }
+  };
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKey = (event: globalThis.KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        if (!open && document.querySelector('[role="dialog"][data-state="open"]')) return;
         event.preventDefault();
-        if (isOpen) {
-          closePalette();
-        } else {
-          restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          setIsOpen(true);
-        }
-      }
-      if (event.key === 'Escape' && isOpen) {
-        event.preventDefault();
-        closePalette();
+        if (open) changeOpen(false); else show();
       }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => searchInputRef.current?.focus());
-
-    const handleTab = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab' || !paletteRef.current) return;
-      const focusable = Array.from(paletteRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-      )).filter((element) => !element.hasAttribute('aria-hidden'));
-      if (focusable.length === 0) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleTab);
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener(OPEN_SEARCH_EVENT, show);
     return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', handleTab);
-      document.body.style.overflow = previousOverflow;
-      const restoreTarget = restoreFocusRef.current;
-      restoreFocusRef.current = null;
-      if (restoreTarget) window.requestAnimationFrame(() => restoreTarget.focus());
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener(OPEN_SEARCH_EVENT, show);
     };
-  }, [isOpen]);
-
-  const handleNavigate = (path: string) => {
-    sounds.playSwoosh();
-    setLocation(path);
-    closePalette();
-  };
-
-  const filteredUsers = query
-    ? userList.filter((u) => 
-        (u.displayName || u.username || '').toLowerCase().includes(query.toLowerCase()) || 
-        (u.username || '').toLowerCase().includes(query.toLowerCase())
-      )
-    : userList.slice(0, 4);
-
-  const navigationGroups = useMemo(() => [
-    {
-      label: 'Living internet',
-      items: [
-        { icon: Orbit, label: 'Orbit', path: '/' },
-        { icon: Activity, label: 'Pulse', path: '/pulse' },
-        { icon: Globe2, label: 'Worlds', path: '/worlds' },
-        { icon: WandSparkles, label: 'Dream Engine', path: '/dream' },
-        { icon: MessageCircle, label: 'Inbox', path: '/messages' },
-      ]
-    },
-    {
-      label: 'Discover & create',
-      items: [
-        { icon: Compass, label: 'Explore', path: '/explore' },
-        { icon: Film, label: 'Reels & Videos', path: '/videos' },
-        { icon: Bell, label: 'Notifications', path: '/notifications' },
-        { icon: Users, label: 'Legacy Communities', path: '/communities' },
-        { icon: FileText, label: 'Articles', path: '/articles' },
-        { icon: Radio, label: 'Live', path: '/live' },
-        { icon: Megaphone, label: 'Broadcast Channels', path: '/channels' },
-        { icon: Calendar, label: 'Events', path: '/events' },
-      ]
-    },
-    {
-      label: 'Gaming & Esports',
-      items: [
-        { icon: Trophy, label: 'Tournaments', path: '/tournaments' },
-        { icon: Swords, label: 'Scrims', path: '/scrims' },
-        { icon: Shield, label: 'Clans', path: '/clans' },
-        { icon: Gamepad2, label: 'Arcade', path: '/arcade' },
-        { icon: Target, label: 'Predictions', path: '/predictions' },
-        { icon: Star, label: 'Achievements', path: '/achievements' },
-        { icon: Award, label: 'Power Rankings', path: '/rankings' },
-        { icon: Medal, label: 'Trophy Room', path: '/trophies' },
-        { icon: Calendar, label: 'Esports Calendar', path: '/calendar' },
-      ]
-    },
-    {
-      label: 'Creator Tools',
-      items: [
-        { icon: Video, label: 'Creator Studio', path: '/studio' },
-        { icon: Gauge, label: 'Control Room', path: '/control-room' },
-        { icon: Shield, label: 'Moderation Command', path: '/moderation' },
-        { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-        { icon: ShoppingCart, label: 'Creator Store', path: '/store' },
-        { icon: Scissors, label: 'Clip Studio', path: '/clips' },
-        { icon: Briefcase, label: 'Media Kit', path: '/media-kit' },
-        { icon: Shirt, label: 'Merch Studio', path: '/merch' },
-        { icon: Layers, label: 'Overlay Studio', path: '/overlays' },
-      ]
-    },
-    {
-      label: 'Economy',
-      items: [
-        { icon: Store, label: 'Marketplace', path: '/marketplace' },
-        { icon: ShoppingBag, label: 'Game Bazaar', path: '/bazaar' },
-        { icon: HandCoins, label: 'Bounties', path: '/bounties' },
-        { icon: Building2, label: 'Clan Treasury', path: '/treasury' },
-        { icon: Coins, label: 'Points Shop', path: '/points-shop' },
-        { icon: Ticket, label: 'Battle Pass', path: '/pass' },
-      ]
-    },
-    {
-      label: 'Social & Tools',
-      items: [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-        { icon: Brain, label: 'AI Assistant', path: '/ai' },
-        { icon: Headphones, label: 'Lounge', path: '/lounge' },
-        { icon: Crown, label: 'Fan Club', path: '/fanclub' },
-        { icon: Mic2, label: 'Squad Comms', path: '/comms' },
-        { icon: Key, label: 'Custom Rooms', path: '/rooms' },
-        { icon: Radio, label: 'Podcasts', path: '/podcasts' },
-        { icon: Settings, label: 'Settings', path: '/settings' },
-      ]
-    },
-  ], []);
-
-  const matchingNavigationGroups = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return navigationGroups;
-    return navigationGroups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) => item.label.toLowerCase().includes(normalizedQuery)),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [navigationGroups, query]);
-
-  const visibleNavigationGroups = useMemo(() => {
-    if (query.trim()) return matchingNavigationGroups;
-    const quickPaths = new Set(['/', '/explore', '/messages', '/notifications', '/settings']);
-    const items = navigationGroups.flatMap((group) => group.items).filter((item) => quickPaths.has(item.path));
-    return items.length > 0 ? [{ label: 'Quick jump', items }] : [];
-  }, [matchingNavigationGroups, navigationGroups, query]);
-
-  const paletteTargets = useMemo(() => [
-    ...smartResults.map((result) => ({ key: `post:${result.id}`, path: `/post/${result.id}` })),
-    ...filteredUsers.map((user) => ({ key: `user:${user.id}`, path: `/profile/${user.id}` })),
-    ...visibleNavigationGroups.flatMap((group) => group.items.map((item) => ({ key: `route:${item.path}`, path: item.path }))),
-  ], [filteredUsers, smartResults, visibleNavigationGroups]);
-
-  const activeTargetKey = paletteTargets[activeIndex]?.key;
-  const activeTargetId = activeTargetKey
-    ? `palette-${activeTargetKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`
-    : undefined;
-
+  }, [open]);
   useEffect(() => {
     if (isOpen && activeTargetId) document.getElementById(activeTargetId)?.scrollIntoView({ block: 'nearest' });
   }, [isOpen, activeTargetId]);
@@ -254,16 +62,9 @@ export function CommandPalette() {
   const handlePaletteKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((index) => paletteTargets.length ? (index + 1) % paletteTargets.length : 0);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setActiveIndex((index) => paletteTargets.length ? (index - 1 + paletteTargets.length) % paletteTargets.length : 0);
-    } else if (event.key === 'Enter') {
-      const target = paletteTargets[activeIndex];
-      if (target) {
-        event.preventDefault();
-        handleNavigate(target.path);
-      }
+      setActiveIndex(index => targets.length ? (index + (event.key === 'ArrowDown' ? 1 : -1) + targets.length) % targets.length : 0);
+    } else if (event.key === 'Enter' && targets[activeIndex]) {
+      event.preventDefault(); navigate(targets[activeIndex].path);
     }
   };
 
@@ -305,7 +106,7 @@ export function CommandPalette() {
                   aria-controls="yor-command-palette-results"
                   aria-expanded="true"
                   aria-activedescendant={activeTargetId}
-                  placeholder="Search people, routes, or features…"
+                  placeholder="Search people, routes, or featuresâ€¦"
                   className="w-full bg-transparent outline-none text-base text-foreground placeholder:text-muted-foreground font-serif"
                 />
                 <button type="button" onClick={closePalette} aria-label="Close search" className="rounded-full p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground">

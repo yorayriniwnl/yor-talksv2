@@ -5,7 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./account-erasure": {
+      "types": "./runtime/account-erasure.d.mts",
+      "default": "./runtime/account-erasure.mjs"
+    }
   },
   "scripts": {
     "build": "tsc -b",

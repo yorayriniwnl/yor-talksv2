@@ -76,10 +76,14 @@ export class MessageService {
     catch(error) { if(error instanceof ContactAuthorizationDeniedError) throw new UnauthorizedError(error.message); throw error; }
   }
 
-  async authorizeConversationDelivery(conversationId:string,recipientId:string):Promise<void>{
+  async authorizeConversationDelivery(conversationId:string,recipientId:string,messageId?:string):Promise<void>{
     const members=await this.conversationRepository.getMembers(conversationId);
     if(!members.includes(recipientId))throw new UnauthorizedError('You are not a member of this conversation');
     await this.requireConversationContacts(members,'deliver',conversationId);
+    if (messageId) {
+      const message = await this.messageRepository.findVisibleById(messageId);
+      if (!message || message.conversationId !== conversationId) throw new UnauthorizedError('Message is unavailable');
+    }
   }
 
   private async assertContactAllowed(senderId: string, recipient: UserRecord): Promise<void> {
@@ -263,7 +267,7 @@ export class MessageService {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
         }
-        return isMessageVisible(existing, new Date()) ? existing : toMessageTombstone(existing);
+        return await this.messageRepository.findVisibleById(existing.id) ?? toMessageTombstone(existing);
       }
     }
 
@@ -381,7 +385,7 @@ export class MessageService {
   }
 
   async previewMessage(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const message = await this.messageRepository.findById(messageId);
+    const message = await this.messageRepository.findVisibleById(messageId);
     if (!message || !isMessageVisible(message, new Date())) return undefined;
     const members = await this.conversationRepository.getMembers(message.conversationId);
     if (!members.includes(userId)) return undefined;
@@ -482,7 +486,7 @@ export class MessageService {
   }
 
   async markSeen(messageId: string, userId: string): Promise<MessageRecord | undefined> {
-    const candidate=await this.messageRepository.findById(messageId);
+    const candidate=await this.messageRepository.findVisibleById(messageId);
     if(!candidate||!isMessageVisible(candidate,new Date()))return undefined;
     const members=await this.conversationRepository.getMembers(candidate.conversationId);
     if(!members.includes(userId))return undefined;
@@ -540,7 +544,7 @@ export class MessageService {
 
   async editMessage(messageId: string, userId: string, content: string): Promise<MessageRecord | undefined> {
     const normalizedContent = normalizeMessageContent(content);
-    const message = await this.messageRepository.findById(messageId);
+    const message = await this.messageRepository.findVisibleById(messageId);
     if (!message || !isMessageVisible(message, new Date()) || message.senderId !== userId) {
       return undefined; // Only sender can edit
     }
@@ -577,7 +581,7 @@ export class MessageService {
   }
 
   private async assertParticipant(messageId: string, userId: string): Promise<MessageRecord> {
-    const message = await this.messageRepository.findById(messageId);
+    const message = await this.messageRepository.findVisibleById(messageId);
     if (!message || !isMessageVisible(message, new Date())) {
       throw new Error("Message not found");
     }

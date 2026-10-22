@@ -2061,6 +2061,201 @@ export const GetMetricsResponse = zod.object({
 
 
 /**
+ * @summary Get /moderation/appeals
+ */
+export const GetModerationAppealsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /moderation/appeals
+ */
+export const postModerationAppealsBodyStatementMin = 10;
+export const postModerationAppealsBodyStatementMax = 5000;
+
+
+
+export const PostModerationAppealsBody = zod.object({
+  "decisionId": zod.string().uuid(),
+  "statement": zod.string().min(postModerationAppealsBodyStatementMin).max(postModerationAppealsBodyStatementMax),
+  "relationship": zod.enum(['author', 'reporter', 'affected_party']).optional().describe('If supplied, must match the private notice already issued to this account. It cannot establish authority.')
+})
+
+export const PostModerationAppealsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "id": zod.string().uuid(),
+  "decisionId": zod.string().uuid(),
+  "relationship": zod.enum(['author', 'reporter', 'affected_party']),
+  "statement": zod.string(),
+  "status": zod.enum(['pending', 'under_review', 'upheld', 'reversed', 'rejected']),
+  "rationale": zod.string().nullable(),
+  "outcomeDecisionId": zod.string().uuid().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+}))
+
+
+/**
+ * @summary Patch /moderation/appeals/{appealId}/review
+ */
+export const PatchModerationAppealsByAppealIdReviewParams = zod.object({
+  "appealId": zod.coerce.string()
+})
+
+export const patchModerationAppealsByAppealIdReviewBodyReviewerNotesMin = 10;
+export const patchModerationAppealsByAppealIdReviewBodyReviewerNotesMax = 5000;
+
+export const patchModerationAppealsByAppealIdReviewBodyRationaleMin = 10;
+export const patchModerationAppealsByAppealIdReviewBodyRationaleMax = 5000;
+
+
+
+export const PatchModerationAppealsByAppealIdReviewBody = zod.object({
+  "outcome": zod.enum(['upheld', 'reversed', 'rejected']),
+  "action": zod.enum(['restore', 'restrict', 'remove']).optional().describe('Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict\/remove action.'),
+  "reviewerNotes": zod.string().min(patchModerationAppealsByAppealIdReviewBodyReviewerNotesMin).max(patchModerationAppealsByAppealIdReviewBodyReviewerNotesMax).describe('Staff-only review evidence.'),
+  "rationale": zod.string().min(patchModerationAppealsByAppealIdReviewBodyRationaleMin).max(patchModerationAppealsByAppealIdReviewBodyRationaleMax).describe('Public review explanation visible only to the affected parties.')
+})
+
+export const PatchModerationAppealsByAppealIdReviewResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /moderation/appeals/mine
+ */
+export const GetModerationAppealsMineResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "decisionId": zod.string().uuid(),
+  "relationship": zod.enum(['author', 'reporter', 'affected_party']),
+  "statement": zod.string(),
+  "status": zod.enum(['pending', 'under_review', 'upheld', 'reversed', 'rejected']),
+  "rationale": zod.string().nullable(),
+  "outcomeDecisionId": zod.string().uuid().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+}))
+
+
+/**
+ * @summary Get /moderation/decisions
+ */
+export const GetModerationDecisionsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /moderation/decisions
+ */
+export const postModerationDecisionsBodyScopeDefault = `global`;
+export const postModerationDecisionsBodyRationaleMin = 10;
+export const postModerationDecisionsBodyRationaleMax = 5000;
+
+export const postModerationDecisionsBodyInternalNotesMax = 5000;
+
+
+
+export const PostModerationDecisionsBody = zod.object({
+  "targetType": zod.enum(['post', 'user', 'comment', 'message', 'video']),
+  "targetId": zod.string().uuid(),
+  "action": zod.enum(['no_action', 'restrict', 'remove', 'restore']),
+  "scope": zod.enum(['public', 'direct_only', 'global']).default(postModerationDecisionsBodyScopeDefault).describe('Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner\/follower direct reads.'),
+  "rationale": zod.string().min(postModerationDecisionsBodyRationaleMin).max(postModerationDecisionsBodyRationaleMax).describe('Public explanation shown to the content author. Never include private evidence or reporter identity.'),
+  "internalNotes": zod.string().max(postModerationDecisionsBodyInternalNotesMax).optional(),
+  "expiresAt": zod.coerce.date().optional(),
+  "reportId": zod.string().uuid().optional(),
+  "grievanceTicketId": zod.string().uuid().optional()
+})
+
+export const PostModerationDecisionsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /moderation/enforcements/{targetType}/{targetId}
+ */
+export const GetModerationEnforcementsByTargetTypeByTargetIdParams = zod.object({
+  "targetType": zod.coerce.string(),
+  "targetId": zod.coerce.string()
+})
+
+export const GetModerationEnforcementsByTargetTypeByTargetIdResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /moderation/notices
+ */
+export const GetModerationNoticesResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /moderation/notices/{noticeId}/acknowledge
+ */
+export const PostModerationNoticesByNoticeIdAcknowledgeParams = zod.object({
+  "noticeId": zod.coerce.string()
+})
+
+export const PostModerationNoticesByNoticeIdAcknowledgeBody = zod.record(zod.string(), zod.unknown())
+
+export const PostModerationNoticesByNoticeIdAcknowledgeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
  * @summary Get /notes
  */
 export const GetNotesResponse = zod.object({
@@ -2783,9 +2978,92 @@ export const GetPreregisterStatsResponse = zod.object({
 /**
  * @summary Post /privacy/challenge
  */
-export const PostPrivacyChallengeBody = zod.record(zod.string(), zod.unknown())
+export const postPrivacyChallengeBodyEmailMax = 255;
+
+export const postPrivacyChallengeBodyPurposeDefault = `access`;
+
+export const PostPrivacyChallengeBody = zod.object({
+  "email": zod.string().email().max(postPrivacyChallengeBodyEmailMax),
+  "purpose": zod.enum(['correction', 'restriction', 'objection', 'erasure', 'access']).default(postPrivacyChallengeBodyPurposeDefault)
+})
 
 export const PostPrivacyChallengeResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "initiated": zod.boolean()
+})
+}))
+
+
+/**
+ * @summary Post /privacy/request
+ */
+export const postPrivacyRequestBodyTokenRegExp = new RegExp('^[a-f0-9]{64}$');
+export const postPrivacyRequestBodyDetailsReasonMax = 500;
+
+export const postPrivacyRequestBodyDetailsPreferredUsernameRegExp = new RegExp('^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$');
+
+
+export const PostPrivacyRequestBody = zod.object({
+  "token": zod.string().regex(postPrivacyRequestBodyTokenRegExp).describe('Single-use email challenge, bound to its issued purpose and 15-minute database expiry.'),
+  "requestType": zod.enum(['correction', 'restriction', 'objection', 'erasure', 'access']),
+  "details": zod.object({
+  "reason": zod.string().max(postPrivacyRequestBodyDetailsReasonMax).optional(),
+  "preferredUsername": zod.string().regex(postPrivacyRequestBodyDetailsPreferredUsernameRegExp).optional()
+}).optional()
+})
+
+export const PostPrivacyRequestResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "executed": zod.boolean(),
+  "requestType": zod.enum(['correction', 'restriction', 'objection', 'erasure', 'access']),
+  "message": zod.string(),
+  "recordStatus": zod.string().optional(),
+  "erasedAt": zod.coerce.date().optional(),
+  "details": zod.record(zod.string(), zod.unknown()).optional()
+})
+}))
+
+
+/**
+ * @summary Post /privacy/verify
+ */
+export const postPrivacyVerifyBodyTokenRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const PostPrivacyVerifyBody = zod.object({
+  "token": zod.string().regex(postPrivacyVerifyBodyTokenRegExp).describe('Single-use email challenge, bound to its issued purpose and 15-minute database expiry.')
+})
+
+export const PostPrivacyVerifyResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+}).and(zod.object({
+  "data": zod.object({
+  "valid": zod.boolean(),
+  "purpose": zod.enum(['correction', 'restriction', 'objection', 'erasure', 'access'])
+})
+}))
+
+
+/**
+ * @summary Get /private-messages/identity
+ */
+export const GetPrivateMessagesIdentityResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "data": zod.unknown(),
@@ -2795,11 +3073,87 @@ export const PostPrivacyChallengeResponse = zod.object({
 
 
 /**
- * @summary Post /privacy/request
+ * @summary Put /private-messages/identity
  */
-export const PostPrivacyRequestBody = zod.record(zod.string(), zod.unknown())
+export const PutPrivateMessagesIdentityBody = zod.record(zod.string(), zod.unknown())
 
-export const PostPrivacyRequestResponse = zod.object({
+export const PutPrivateMessagesIdentityResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /private-messages/threads
+ */
+export const GetPrivateMessagesThreadsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /private-messages/threads
+ */
+export const PostPrivateMessagesThreadsBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPrivateMessagesThreadsResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /private-messages/threads/{threadId}
+ */
+export const GetPrivateMessagesThreadsByThreadIdParams = zod.object({
+  "threadId": zod.coerce.string()
+})
+
+export const GetPrivateMessagesThreadsByThreadIdResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Get /private-messages/threads/{threadId}/messages
+ */
+export const GetPrivateMessagesThreadsByThreadIdMessagesParams = zod.object({
+  "threadId": zod.coerce.string()
+})
+
+export const GetPrivateMessagesThreadsByThreadIdMessagesResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "data": zod.unknown(),
+  "errors": zod.array(zod.string()),
+  "meta": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Post /private-messages/threads/{threadId}/messages
+ */
+export const PostPrivateMessagesThreadsByThreadIdMessagesParams = zod.object({
+  "threadId": zod.coerce.string()
+})
+
+export const PostPrivateMessagesThreadsByThreadIdMessagesBody = zod.record(zod.string(), zod.unknown())
+
+export const PostPrivateMessagesThreadsByThreadIdMessagesResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "data": zod.unknown(),

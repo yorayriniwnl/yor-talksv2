@@ -176,7 +176,11 @@ export class MediaAuthorizationService {
   private async ephemeralVisible(entityType: MediaEntityType, entityId: string): Promise<boolean> {
     if (entityType === 'messages') {
       return Boolean((await pool.query(`SELECT 1 FROM messages WHERE id=$1 AND deleted_at IS NULL
-        AND (expires_at IS NULL OR ${unexpired('expires_at')})`, [entityId])).rowCount);
+        AND (expires_at IS NULL OR ${unexpired('expires_at')})
+        AND NOT EXISTS (SELECT 1 FROM moderation_enforcements me
+          WHERE ((me.target_type='message' AND me.target_id=messages.id::text)
+            OR (me.target_type='user' AND me.target_id=messages.sender_id::text))
+          AND (me.expires_at IS NULL OR me.expires_at>clock_timestamp()))`, [entityId])).rowCount);
     }
     if (entityType === 'user_notes') {
       return Boolean((await pool.query(`SELECT 1 FROM user_notes WHERE id=$1

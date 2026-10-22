@@ -27,7 +27,7 @@ function createPreviewService(enabled: boolean, alreadyRead = false, row: Messag
     getMembers: async () => [message.senderId, message.recipientId],
   } as unknown as ConversationRepository;
   const messageRepository = {
-    findById: async () => row,
+    findVisibleById: async () => row,
     hasReadReceipt: async () => alreadyRead,
     recordPreview: async (messageId: string, userId: string) => {
       recordedPreview = { messageId, userId };
@@ -93,7 +93,7 @@ test("message preview rejects an expired message", async () => {
   const service = new MessageService(
     { getMembers: async () => [message.senderId, message.recipientId] } as unknown as ConversationRepository,
     {
-      findById: async () => expired,
+      findVisibleById: async () => expired,
       hasReadReceipt: async () => false,
       recordPreview: async () => { recorded = true; return expired; },
     } as unknown as MessageRepository,

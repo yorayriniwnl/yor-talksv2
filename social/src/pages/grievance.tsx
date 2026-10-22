@@ -1,12 +1,12 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   AlertTriangle, FileText, CheckCircle2,
-  Search, Building, Scale, ArrowRight, Loader2
+  Search, Building, Scale, ArrowRight, Loader2, Bell, ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api-client';
+import { api, type ModerationNotice } from '@/lib/api-client';
 import { sounds } from '@/lib/sound';
 import { triggerConfetti } from '@/components/ui/ConfettiBlast';
 import { toast } from 'sonner';
@@ -16,7 +16,16 @@ type GrievanceField = 'reporterName' | 'reporterEmail' | 'reportedUrl' | 'descri
 type GrievanceErrors = Partial<Record<GrievanceField, string>>;
 
 export default function GrievancePortal() {
-  const [activeTab, setActiveTab] = useState<'file' | 'track'>('file');
+  const [activeTab, setActiveTab] = useState<'file' | 'track' | 'notices'>('file');
+  const currentUser = useAppStore((state) => state.currentUser);
+
+  // Notices & Appeals state
+  const [notices, setNotices] = useState<ModerationNotice[]>([]);
+  const [loadingNotices, setLoadingNotices] = useState(false);
+  const [appealNoticeId, setAppealNoticeId] = useState<string | null>(null);
+  const [appealStatement, setAppealStatement] = useState('');
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   
   // Form State
   const [category, setCategory] = useState<'copyright' | 'hate_speech' | 'harassment' | 'impersonation' | 'privacy_violation' | 'other'>('harassment');
@@ -125,6 +134,49 @@ export default function GrievancePortal() {
     }
   };
 
+  useEffect(() => {
+    if (activeTab === 'notices' && currentUser) {
+      setLoadingNotices(true);
+      api.getModerationNotices()
+        .then(data => setNotices(data))
+        .catch(() => toast.error('Could not load decision notices'))
+        .finally(() => setLoadingNotices(false));
+    }
+  }, [activeTab, currentUser]);
+
+  const handleAcknowledge = async (noticeId: string) => {
+    setAcknowledgingId(noticeId);
+    try {
+      await api.acknowledgeModerationNotice(noticeId);
+      setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedAt: new Date().toISOString() } : n));
+      toast.success('Notice acknowledged');
+    } catch {
+      toast.error('Could not acknowledge notice');
+    } finally {
+      setAcknowledgingId(null);
+    }
+  };
+
+  const handleSubmitAppeal = async (decisionId: string) => {
+    if (appealStatement.trim().length < 10) {
+      toast.error('Appeal statement must be at least 10 characters long');
+      return;
+    }
+    setSubmittingAppeal(true);
+    try {
+      await api.submitModerationAppeal({ decisionId, statement: appealStatement });
+      toast.success('Appeal submitted successfully for staff review');
+      setAppealNoticeId(null);
+      setAppealStatement('');
+      const updated = await api.getModerationNotices();
+      setNotices(updated);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit appeal');
+    } finally {
+      setSubmittingAppeal(false);
+    }
+  };
+
   return (
     <div className="operator-grievance-page w-full max-w-5xl mx-auto p-4 lg:p-8 font-sans">
       {/* Header */}
@@ -156,6 +208,14 @@ export default function GrievancePortal() {
             className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
           >
             <Search className="w-4 h-4 mr-1.5" /> Track Existing Ticket
+          </Button>
+          <Button
+            variant={activeTab === 'notices' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('notices')}
+            aria-pressed={activeTab === 'notices'}
+            className="w-full sm:w-auto rounded-2xl text-xs font-bold px-6 h-10 cursor-pointer"
+          >
+            <Bell className="w-4 h-4 mr-1.5" /> Decision Notices & Appeals
           </Button>
         </div>
       </div>

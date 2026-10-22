@@ -8,13 +8,16 @@ import { z } from "zod";
 const challengeSchema = z.object({
   email: z.string().email().max(255),
   purpose: z.enum(["correction", "restriction", "objection", "erasure", "access"]).optional(),
-});
+}).strict();
 
 const rightsRequestSchema = z.object({
-  token: z.string().min(32).max(256),
+  token: z.string().regex(/^[a-f0-9]{64}$/),
   requestType: z.enum(["correction", "restriction", "objection", "erasure", "access"]),
-  details: z.record(z.unknown()).optional(),
-});
+  details: z.object({
+    reason: z.string().trim().max(500).optional(),
+    preferredUsername: z.string().trim().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$/).optional(),
+  }).strict().optional(),
+}).strict();
 
 const unsubscribeSchema = z.object({
   email: z.string().email(),
@@ -42,7 +45,8 @@ export class PrivacyController {
       );
     }
 
-    await this.service.initiateChallenge(parse.data.email, parse.data.purpose as PrivacyRequestType);
+    try { await this.service.initiateChallenge(parse.data.email, parse.data.purpose as PrivacyRequestType); }
+    catch { return res.status(503).json(createResponse('Privacy requests are temporarily unavailable', null, {}, ['privacy_unavailable'])); }
 
     // Explicit generic response to prevent email enumeration
     return res.status(200).json(
@@ -51,6 +55,16 @@ export class PrivacyController {
         { initiated: true }
       )
     );
+  };
+
+  verifyChallenge = async (req: Request,res: Response) => {
+    const parsed=z.object({token:z.string().regex(/^[a-f0-9]{64}$/)}).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(createResponse('Invalid verification challenge',null,{},['invalid_challenge']));
+    try {
+      const verified=await this.service.verifyChallengeToken(parsed.data.token);
+      if (!verified.valid) return res.status(400).json(createResponse('Invalid or expired verification challenge',{valid:false}));
+      return res.status(200).json(createResponse('Verification challenge is valid',{valid:true,purpose:verified.purpose}));
+    } catch { return res.status(503).json(createResponse('Privacy requests are temporarily unavailable',null,{},['privacy_unavailable'])); }
   };
 
   /**
@@ -65,11 +79,12 @@ export class PrivacyController {
       );
     }
 
-    const result = await this.service.executeRightsRequest({
+    let result;
+    try { result = await this.service.executeRightsRequest({
       token: parse.data.token,
       requestType: parse.data.requestType,
       details: parse.data.details,
-    });
+    }); } catch { return res.status(503).json(createResponse('Privacy requests are temporarily unavailable', null, {}, ['privacy_unavailable'])); }
 
     if (!result.executed && result.recordStatus === "active_account_requires_authenticated_deletion") {
       return res.status(409).json(createResponse(result.message, result, {}, ["authenticated_login_required"]));
@@ -131,7 +146,9 @@ export class PrivacyController {
     const userId = (req as any).user?.id;
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null));
 
-    const reason = typeof req.body?.reason === "string" ? req.body.reason : "user_request";
+    const parsed = z.object({ reason: z.string().trim().max(500).optional() }).strict().safeParse(req.body ?? {});
+    if (!parsed.success) return res.status(400).json(createResponse('Invalid restriction request', null));
+    const reason = parsed.data.reason ?? 'user_request';
     await this.service.restrictAccount(userId, reason);
 
     return res.status(200).json(
@@ -163,14 +180,12 @@ export class PrivacyController {
    */
   withdrawConsent = async (req: Request, res: Response) => {
     const userId = (req as any).user?.id;
-    const userEmail = (req as any).user?.email;
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null));
 
-    const purpose = typeof req.body?.purpose === "string" ? req.body.purpose : "launch_updates";
-    await this.consent.withdrawConsent({ subjectId: userId, email: userEmail, purpose });
-    if (purpose === "launch_updates" || purpose === "all_promotional") {
-      if (userEmail) await this.suppression.suppressEmail(userEmail, purpose, "user_consent_withdrawal");
-    }
+    const parsed = z.object({ purpose: z.string().regex(/^[a-z][a-z0-9_]{0,79}$/).default('launch_updates') }).strict().safeParse(req.body ?? {});
+    if (!parsed.success) return res.status(400).json(createResponse('Invalid consent withdrawal request', null));
+    const purpose = parsed.data.purpose;
+    if (!await this.service.withdrawAccountConsent(userId, purpose)) return res.status(404).json(createResponse('Account is unavailable', null));
 
     return res.status(200).json(
       createResponse(`Consent for ${purpose} has been successfully withdrawn.`, { withdrawn: true, purpose })

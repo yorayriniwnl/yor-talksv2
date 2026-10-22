@@ -89,7 +89,7 @@ export function UpiTipJarModal({ creator, trigger, isOpen, onOpenChange, streamI
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[440px] rounded-3xl font-sans glass-heavy border border-amber-500/30 p-6">
+      <DialogContent overlayClassName="z-[120]" className="z-[120] sm:max-w-[440px] rounded-3xl font-sans glass-heavy border border-amber-500/30 p-6">
         <DialogHeader className="text-center flex flex-col items-center">
           <Avatar className="w-16 h-16 border-2 border-primary shadow-xl ring-4 ring-primary/20">
             <AvatarImage src={creator.avatarUrl} />

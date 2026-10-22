@@ -1,6 +1,9 @@
-import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
+﻿import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { verifyRealtime } from './realtime-smoke.mjs';
+import { verifyPrivateChat } from './private-chat-smoke.mjs';
 
 const baseUrl = (process.env.BASE_URL || 'http://127.0.0.1:4000').replace(/\/$/, '');
 const browserOrigin = process.env.BROWSER_ORIGIN || 'http://localhost:5173';
@@ -221,7 +224,15 @@ async function run() {
   }
 }
 
-run().catch((err) => {
-  console.error('CRITICAL VERIFICATION ERROR:', err);
-  process.exit(1);
-});
+async function main() {
+  try {
+    const config=verificationConfiguration(process.env);
+    let checkout={revision:null,dirty:null};
+    try {checkout={revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim(),
+      dirty:Boolean(execFileSync('git',['status','--porcelain'],{encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim())};} catch { /* Unknown stays unknown. */ }
+    const report=await verifyDeploymentBoundary(config);
+    console.log(JSON.stringify({...report,localCheckout:checkout,scope:'Observed API boundaries only; checkout identity is not deployment provenance.'},null,2));
+    if(report.summary.failed) process.exitCode=1;
+  } catch {console.error('Deployment verification failed: validate the explicit target, configuration and test-account authorization.');process.exitCode=1;}
+}
+if(process.argv[1]&&pathToFileURL(realpathSync(process.argv[1])).href===import.meta.url) await main();

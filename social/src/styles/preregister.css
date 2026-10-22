@@ -403,6 +403,7 @@ to{opacity:1;transform:translateY(0)}
 @media(max-width:600px){.pr-commitments{padding-top:62px}.pr-commitments .pr-section-heading{margin-bottom:30px}.pr-commitments .pr-section-heading h2{font-size:clamp(31px,8.4vw,44px)}.pr-commitment-grid{grid-template-columns:minmax(0,1fr)}.pr-commitment-grid article{padding:28px 24px;border-right:0;border-bottom:1px solid var(--pr-line)}.pr-commitment-grid article:last-child{border-bottom:0}.pr-commitment-top>span{font-size:8px}.pr-commitment-grid h3{font-size:32px;margin-top:28px}.pr-commitment-grid article>p{font-size:12px;margin-bottom:23px}.pr-commitment-link{font-size:11px}.pr-commitment-status{font-size:8px}.pr-privacy-controls{padding-block:22px}.pr-privacy-controls>span{font-size:7px}.pr-privacy-controls p{font-size:10px}.pr-privacy-controls>a{font-size:10px;gap:5px}}
 
 .pr-page .pr-header-cta,.pr-page .pr-back,.pr-page .pr-commitment-link,.pr-page .pr-privacy-controls>a{min-height:44px}
+.pr-page .pr-kicker{font-size:9px}
 .pr-page .pr-launch-date>div>span,.pr-page .pr-countdown>div>span{font-size:9px;line-height:1.5}
 .pr-page .pr-launch-date small{font-size:10px}
 .pr-page .pr-field label{font-size:13px}
@@ -415,3 +416,4 @@ to{opacity:1;transform:translateY(0)}
 .pr-page .pr-faq details p{font-size:13px}
 .pr-page .pr-footer__bottom>div:last-child>a{display:inline-flex;align-items:center;min-height:44px}
 @media(max-width:600px){.pr-page .pr-commitment-top>span{letter-spacing:.5px}.pr-page .pr-privacy-controls>span{font-size:9px}.pr-page .pr-privacy-controls p{font-size:12px}}
+@media(max-width:600px){.pr-page .pr-header-cta{font-size:11px;padding-inline:8px}}

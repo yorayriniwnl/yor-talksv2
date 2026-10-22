@@ -1,4 +1,4 @@
-packages:
+﻿packages:
   - api-server
   - artifacts/*
   - lib/*

@@ -1,41 +1,102 @@
-# Recovery account reconciliation
+# Privacy reconciliation after a historical restore
 
-Keep a restored database isolated from API, worker, and user traffic until all deletion requests after the backup have been reconciled. The backup contains historical data and cannot provide its own authoritative deletion history.
+Keep the restored database, Redis and provider workers isolated until reconciliation
+and the final cutover review finish. Historical backups cannot supply their own
+independent authority for later erasures or withdrawn communications consent.
 
-`verify-restored-deletions.mjs` provides a read-only check for account UUIDs listed as erased in an independently obtained journal. It fails if the manifest, digest, cutoff, database name, database connection, or account absence cannot be verified. It never deletes records, replays `AccountService`, changes grants, or enables traffic.
+## Current recovery format
 
-Create a minimized UTF-8 JSON manifest from the authoritative deletion journal, with these exact fields:
-
-```json
-{
-  "schemaVersion": 1,
-  "journalId": "recovery-review-opaque-id",
-  "through": "2026-10-19T00:00:00Z",
-  "deletedAccountIds": ["00000000-0000-4000-8000-000000000001"]
-}
-```
-
-The manifest is limited to 1 MiB and 10,000 distinct lowercase account UUIDs. An empty list is accepted only as an explicit journal assertion; a missing manifest never passes. Do not add emails, credentials, provider payloads, or notes. Store this pseudonymous journal and its access controls separately from the historical database backups. A larger journal must be split into independently inventoried parts, all of which must pass.
-
-Obtain the required journal cutoff and manifest SHA-256 from the recovery coordinator's independent source of truth. Do not derive the expected cutoff or approved digest from an untrusted restored file. The digest verifies the bytes supplied; it does not authenticate the journal's author or prove that its entries are complete. Those remain recovery process responsibilities.
-
-Run after separately reviewed deletion replay against the isolated target:
+Use `export-privacy-manifest.mjs` against the independently retained source of truth
+with writes quiescent. Set `PRIVACY_JOURNAL_DATABASE_URL` and
+`PRIVACY_JOURNAL_EXPECTED_DATABASE` explicitly, then run:
 
 ```sh
-RESTORE_DATABASE_URL='postgresql://recovery-user@isolated-host/recovery_database' \
-RESTORE_EXPECTED_DATABASE='recovery_database' \
-RESTORE_DELETION_MANIFEST_SHA256='<independently-approved-64-character-lowercase-sha256>' \
-RESTORE_DELETION_JOURNAL_THROUGH='2026-10-19T00:00:00Z' \
-node ops/backup/verify-restored-deletions.mjs /secure/independent-journal.json
+node ops/backup/export-privacy-manifest.mjs /secure/new-privacy-journal.json
 ```
 
-The account lookup runs in one read-only repeatable-read transaction, with a 30-second statement/idle timeout and five-second lock timeout. Output contains the journal ID, cutoff and counts, without account IDs or connection credentials. A passing result proves only that the listed account rows were absent in that snapshot. It does not prove removal of shared legacy references, retained records, Redis state, provider copies, off-host backups, or later deletion requests. Reconcile those domains, verify a complete current journal and keep writes quiescent through the final recovery cutover.
+The exporter opens a read-only repeatable-read transaction and writes a new file
+exclusively with mode 0600. It returns the journal ID, SHA-256 and UTC checkpoint.
+If recent events exceed the whole-second checkpoint, retry after the next second
+with writes still quiescent. It never silently truncates records. Store the
+manifest encrypted with separately protected credentials; securely record its
+digest and checkpoint outside the restored backup. Exporting on the same host
+does not establish off-host durability or zero-loss erasure recovery.
 
-Run portable validation tests with `node --test tests/restore-deletion-verification.test.mjs`. The real PostgreSQL/CLI test requires an explicit loopback disposable administrator URL and creates/drops only a uniquely named `yor_restore_verifier_*` database:
+Version 2 contains exactly:
+
+- `schemaVersion: 2`, opaque `journalId`, and UTC whole-second `through`.
+- `erasures`: original journal `id`, nullable `accountId`, `emailHash`, and
+  original UTC-millisecond `erasedAt`. A null account identifies unbound erasure.
+- `suppressions`: `emailHash`, `purpose`, and `suppressedAt`.
+- `restrictedAccountIds`: current processing-restricted account UUIDs.
+
+The current bounded format accepts at most 1 MiB and 10,000 entries per collection.
+Export fails above those limits. A larger production journal requires a reviewed
+streaming/batched extension before recovery; do not split the file and treat one
+part's completion as complete reconciliation. Digests are pseudonymous identifiers,
+not anonymous data. Raw addresses, usernames, secrets and provider payloads are
+excluded. The external checkpoint's authenticity and completeness remain essential.
+
+## Replay and verify
+
+Apply the current release migrations to the isolated restore. Provide these
+variables through the protected process environment:
+
+```text
+RESTORE_DATABASE_URL=<isolated recovery database connection>
+RESTORE_EXPECTED_DATABASE=<exact recovery database name>
+RESTORE_DELETION_MANIFEST_SHA256=<independently approved SHA-256>
+RESTORE_DELETION_JOURNAL_THROUGH=<independently approved UTC checkpoint>
+```
 
 ```sh
-RESTORE_VERIFICATION_TEST_ADMIN_URL='postgresql://postgres:postgres@localhost:5432/postgres' \
-node --test ops/backup/restore-deletion-database.test.mjs
+node ops/backup/replay-deletions.mjs /secure/independent-privacy-journal.json
+node ops/backup/verify-restored-deletions.mjs /secure/independent-privacy-journal.json
 ```
 
-The isolated encrypted roundtrip in `ci-roundtrip-smoke.sh` archives two synthetic accounts, erases one after the archive, and restores the historical archive into a new database. It proves that the checker rejects the resurrected identity without changing either row, then reconciles only that synthetic identity and proves the retained account survives. This models identity detection and reconciliation; it does not exercise full production account deletion or establish external erasure.
+Replay uses the same parameterized account-erasure implementation as the API. It
+preserves surviving group history and financial references, scrubs legacy actor
+references, schedules provider/session cleanup, restores suppression and processing
+restrictions, and preserves original event IDs/times. Unbound erasure applies only
+to rows created by its original cutoff, protecting later independent registrations.
+It also repairs legacy actor references and re-arms cleanup for already absent
+accounts. Database changes, final reconciliation and completion marker commit
+atomically; failures roll back, and repeating the manifest is safe.
+
+Set `RECOVERY_REPLAY_GATE=true` on the restored API and worker processes together
+with the approved digest/checkpoint. Startup, HTTP access, socket initialization
+and readiness refuse service until that exact manifest has a completion marker.
+An arbitrary older marker or a newer timestamp alone cannot open the gate.
+Version 1 account-only manifests remain readable for legacy identity verification,
+but cannot satisfy this release gate.
+
+Start with fresh Redis when restoring historical PostgreSQL; do not restore old
+sessions or private queue payloads. Drain account/media cleanup and reconcile
+provider copies before cutover. The local database marker does not prove provider
+erasure, backup/key custody, off-host durability or absence of later requests.
+Keep writes quiescent until the final journal checkpoint is reconciled.
+
+## Verification
+
+Portable authority/negative tests:
+
+```sh
+node --test tests/restore-deletion-verification.test.mjs tests/disaster-recovery-erasure-replay.test.mjs
+```
+
+The real full-schema dump/restore test requires explicit loopback
+`RECOVERY_TEST_ADMIN_URL` (administrator database), `RECOVERY_TEST_SCHEMA_URL`
+(read-only access to the fully migrated disposable schema), and optional
+`RECOVERY_TEST_PG_BIN` (PostgreSQL binary directory). It creates and drops only its
+randomly named `yor_recovery_source_*` and `yor_recovery_target_*` databases:
+
+```sh
+node --test ops/backup/privacy-recovery-database.test.mjs
+```
+
+It verifies resurrection detection, deliberate failure rollback, unbound erasure,
+preserved survivor records, preferences, original timestamps and repeat replay.
+CI runs it against PostgreSQL 16 after migration. The separate encrypted transport
+fixture is `ci-roundtrip-smoke.sh`; its local rclone alias does not prove real
+external object-storage durability. `backup-script.test.sh` tests temporary-file
+cleanup and failure behavior with controlled command doubles.

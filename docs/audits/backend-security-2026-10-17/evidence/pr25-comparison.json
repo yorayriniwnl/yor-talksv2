@@ -8,432 +8,432 @@
     "aheadBy":  85,
     "behindBy":  19,
     "totalCommits":  85,
-    "url":  "https://github.com/yorayriniwnl/yor-talksv2/compare/main...release/unified-release-20261009",
+    "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/compare/main...release/unified-release-20261009",
     "commits":  [
                     {
                         "sha":  "55e12429baecde8b3ea07e76b0b7e1f6e824a463",
                         "message":  "Harden authentication, message integrity and production operations\n\nPreserve the verified frontend changes and add regression evidence for OTP concurrency, message visibility, lifecycle fencing, notification retention, ingress, schema bootstrap, monitoring and backup recovery. Correct isolated fixture guards for PostgreSQL service port publishing; root unit checks63/63 and API typecheck pass. Full pre-publication API323/323 and production Chromium69/69 results remain recorded separately from the guard delta. Production rollout retains documented migration/provider/worker gates.",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/55e12429baecde8b3ea07e76b0b7e1f6e824a463"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/55e12429baecde8b3ea07e76b0b7e1f6e824a463"
                     },
                     {
                         "sha":  "9ef28b5ab425b8de45a2ad1b548dde6b9e4c66fb",
                         "message":  "Fix clean CI builds of shared API validation contracts\n\nBuild referenced api-zod declarations before typechecking in CI and both root build entrypoints. Forced contract declaration rebuild and API/web typechecks pass. Record the initial remote failure and refreshed publication manifest, retaining the full pre-publication regression evidence.",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9ef28b5ab425b8de45a2ad1b548dde6b9e4c66fb"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/9ef28b5ab425b8de45a2ad1b548dde6b9e4c66fb"
                     },
                     {
                         "sha":  "8fdd14d7129090fa9375478f0073b4f8526c2ce3",
                         "message":  "Keep backup drill bind-mount files readable by the CI runner\n\nRun Linux backup utility containers as the host numeric UID/GID while preserving private permissions and all encryption, restore and failure guards. Record the protected frontend preview verification and previous exact-head CI outcomes. Runtime application code remains unchanged.",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/8fdd14d7129090fa9375478f0073b4f8526c2ce3"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/8fdd14d7129090fa9375478f0073b4f8526c2ce3"
                     },
                     {
                         "sha":  "990fc062a7661eb8dafc4a33e8f3f252a6fb0715",
                         "message":  "Read complete archive metadata listings during guarded restores\n\nConsume pg_restore output fully when selecting the first archive database name so pipefail does not turn a successful restore preflight into SIGPIPE141. Large-listing proof now exits0 and injected upstream failure23 remains fatal. Preserve isolated-target, encryption, transactional restore and failure guards; record prior CI outcomes and refreshed implementation manifest.",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/990fc062a7661eb8dafc4a33e8f3f252a6fb0715"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/990fc062a7661eb8dafc4a33e8f3f252a6fb0715"
                     },
                     {
                         "sha":  "5b205f7ac953accaf30fe9d8eb3e5aa7fbe987ab",
                         "message":  "security(auth): add conditional Google account linking after verification",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5b205f7ac953accaf30fe9d8eb3e5aa7fbe987ab"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/5b205f7ac953accaf30fe9d8eb3e5aa7fbe987ab"
                     },
                     {
                         "sha":  "b4cd676f54ddb4690f434b7a4e80830a840eef2d",
                         "message":  "security(auth): defer Google identity linking until MFA and reject untrusted external email auto-link",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b4cd676f54ddb4690f434b7a4e80830a840eef2d"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/b4cd676f54ddb4690f434b7a4e80830a840eef2d"
                     },
                     {
                         "sha":  "616e698ef9ef18c6fbe7e7040d08972c1c4fb142",
                         "message":  "fix(auth): provide safe user guidance for untrusted Google email linking",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/616e698ef9ef18c6fbe7e7040d08972c1c4fb142"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/616e698ef9ef18c6fbe7e7040d08972c1c4fb142"
                     },
                     {
                         "sha":  "beac255fa2f29d3e8d562c8b40c45f44c603b306",
                         "message":  "test(auth): cover Google email authority, deferred MFA linking, revocation and races",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/beac255fa2f29d3e8d562c8b40c45f44c603b306"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/beac255fa2f29d3e8d562c8b40c45f44c603b306"
                     },
                     {
                         "sha":  "4358b7aae78c2bf73903356cd03c11b9ad8c0107",
                         "message":  "test(auth): type Google verifier mock request",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4358b7aae78c2bf73903356cd03c11b9ad8c0107"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/4358b7aae78c2bf73903356cd03c11b9ad8c0107"
                     },
                     {
                         "sha":  "23bfdc7678543d797593a731e5f3caa228bba7d9",
                         "message":  "Merge Google sign-in security hardening into media lifecycle branch\n\nSecure Google sign-in account linking and MFA completion",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/23bfdc7678543d797593a731e5f3caa228bba7d9"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/23bfdc7678543d797593a731e5f3caa228bba7d9"
                     },
                     {
                         "sha":  "ae66b25fc2de09d4ddeeaea3cb09fc4940cfc6f7",
                         "message":  "Defer billing validators safely and harden preview packaging",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ae66b25fc2de09d4ddeeaea3cb09fc4940cfc6f7"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/ae66b25fc2de09d4ddeeaea3cb09fc4940cfc6f7"
                     },
                     {
                         "sha":  "e45b10d1734dcd1d59f0eef5c980e8b71f304708",
                         "message":  "Merge remote-tracking branch \u0027origin/codex/media-lifecycle-20261006\u0027 into codex/media-lifecycle-20261006",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/e45b10d1734dcd1d59f0eef5c980e8b71f304708"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/e45b10d1734dcd1d59f0eef5c980e8b71f304708"
                     },
                     {
                         "sha":  "ced51c642cb3318f1bb41435dbfdfbfce7abe173",
                         "message":  "Merge PR #20 into main: media lifecycle, hardened Google auth and global privacy integration",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ced51c642cb3318f1bb41435dbfdfbfce7abe173"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/ced51c642cb3318f1bb41435dbfdfbfce7abe173"
                     },
                     {
                         "sha":  "806c0a9b61fd19277557ef29792c37e6768d40de",
                         "message":  "fix(messaging): remove redundant closing brace in message-repository",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/806c0a9b61fd19277557ef29792c37e6768d40de"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/806c0a9b61fd19277557ef29792c37e6768d40de"
                     },
                     {
                         "sha":  "d5b83bffc0f38dce1dcdbd8c58205e3db5226290",
                         "message":  "security(auth): harden Google OAuth token validation, origin checks, abuse detection, and error resilience\n\n- Add defense-in-depth verification for Google ID token claims (aud, iss, exp, trimmed sub, email_verified, domain)\n\n- Mount requireTrustedOrigin middleware on POST /auth/google for origin and CSRF safety\n\n- Record structured audit log events for failed and successful Google authentication flows\n\n- Enforce abuse detection and rate limiting (429) on repeated Google login failures\n\n- Safely handle database and Redis transient outages (503) without exposing stack traces\n\n- Gracefully resolve concurrent race conditions (23505) when linking Google subjects\n\n- Add comprehensive unit and integration regression test suites covering token validation, competing links, revoked sessions, abandoned MFA, and outage resilience",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d5b83bffc0f38dce1dcdbd8c58205e3db5226290"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/d5b83bffc0f38dce1dcdbd8c58205e3db5226290"
                     },
                     {
                         "sha":  "9be402dca78e3962c1afc5b08a2e282979081874",
                         "message":  "security(deps): patch vulnerabilities in brace-expansion, source-map-js, fast-uri, markdown-it, and fast-copy",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9be402dca78e3962c1afc5b08a2e282979081874"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/9be402dca78e3962c1afc5b08a2e282979081874"
                     },
                     {
                         "sha":  "45c072fa02c711eadea2bbc8d62839caa9a371aa",
                         "message":  "fix(types): harmonize grievance ticket receipt, message preview and tombstone semantics",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/45c072fa02c711eadea2bbc8d62839caa9a371aa"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/45c072fa02c711eadea2bbc8d62839caa9a371aa"
                     },
                     {
                         "sha":  "bb0eac9cc8d6cd3eb5e962aa8ecf7d93d3e40da5",
                         "message":  "fix(e2e): align grievance tracker receipt copy with privacy expectation",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/bb0eac9cc8d6cd3eb5e962aa8ecf7d93d3e40da5"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/bb0eac9cc8d6cd3eb5e962aa8ecf7d93d3e40da5"
                     },
                     {
                         "sha":  "d404a89458decd66c6a1835897a743ce096673a9",
                         "message":  "Merge PR #23: finish and independently verify Google authentication hardening",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d404a89458decd66c6a1835897a743ce096673a9"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/d404a89458decd66c6a1835897a743ce096673a9"
                     },
                     {
                         "sha":  "5402b56bec5fb06e300c0bfca4076b5d1677926c",
                         "message":  "fix(messaging): harmonize vanish mode tombstone, preview entitlement and retry invariants",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5402b56bec5fb06e300c0bfca4076b5d1677926c"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/5402b56bec5fb06e300c0bfca4076b5d1677926c"
                     },
                     {
                         "sha":  "3887cc47aa8d0abb718f44952fbfb33d6233e109",
                         "message":  "fix(messaging): roll back preview event if message expires or is deleted during preview insert",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/3887cc47aa8d0abb718f44952fbfb33d6233e109"
                     },
                     {
                         "sha":  "c8ad4481addef4e65b8361d9a16a7f5abc325189",
                         "message":  "docs: record verified unified release and protected preview",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c8ad4481addef4e65b8361d9a16a7f5abc325189"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/c8ad4481addef4e65b8361d9a16a7f5abc325189"
                     },
                     {
                         "sha":  "4424fae305f03f67d31e9419c1b15bc6741a4b28",
                         "message":  "security(eligibility): add narrow restricted-session route allowlist and path normalization",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4424fae305f03f67d31e9419c1b15bc6741a4b28"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/4424fae305f03f67d31e9419c1b15bc6741a4b28"
                     },
                     {
                         "sha":  "677fc457232c03cad64f3754ac7d9f8f06d503e0",
                         "message":  "security(eligibility): fail closed for unapproved beta sessions on API and optional reads",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/677fc457232c03cad64f3754ac7d9f8f06d503e0"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/677fc457232c03cad64f3754ac7d9f8f06d503e0"
                     },
                     {
                         "sha":  "c2f988be750092606ba997b30027276b0f87a050",
                         "message":  "security(realtime): reject and disconnect restricted beta sessions",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c2f988be750092606ba997b30027276b0f87a050"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/c2f988be750092606ba997b30027276b0f87a050"
                     },
                     {
                         "sha":  "1151c93dd40d299c4d73991cb5f44693d963ffc4",
                         "message":  "privacy(registration): default unverified accounts to private and child-safe",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/1151c93dd40d299c4d73991cb5f44693d963ffc4"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/1151c93dd40d299c4d73991cb5f44693d963ffc4"
                     },
                     {
                         "sha":  "f264e72c68350faf505d66213a82d9a3f5d45734",
                         "message":  "privacy(users): minimize owner profile for restricted eligibility sessions",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f264e72c68350faf505d66213a82d9a3f5d45734"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/f264e72c68350faf505d66213a82d9a3f5d45734"
                     },
                     {
                         "sha":  "4c3ffc84ebbfe84503ba7c2f0e931aebbea447a4",
                         "message":  "privacy(profile): return minimal account view while eligibility restricted",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4c3ffc84ebbfe84503ba7c2f0e931aebbea447a4"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/4c3ffc84ebbfe84503ba7c2f0e931aebbea447a4"
                     },
                     {
                         "sha":  "435b2922c68574fa2ca82c912da313cde990a758",
                         "message":  "test(eligibility): cover strict restricted-session allowlist and traversal attempts",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/435b2922c68574fa2ca82c912da313cde990a758"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/435b2922c68574fa2ca82c912da313cde990a758"
                     },
                     {
                         "sha":  "5dddc9e6668f29b07fa0468f7747ee61ed66a610",
                         "message":  "test(eligibility): enforce unverified account HTTP boundary and preserve recovery routes",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5dddc9e6668f29b07fa0468f7747ee61ed66a610"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/5dddc9e6668f29b07fa0468f7747ee61ed66a610"
                     },
                     {
                         "sha":  "a3cea6b817fe46923dace6106c1911669c119810",
                         "message":  "docs(release): document eligibility enforcement and fail-closed rollout consequences",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/a3cea6b817fe46923dace6106c1911669c119810"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/a3cea6b817fe46923dace6106c1911669c119810"
                     },
                     {
                         "sha":  "171c2f9767d4256d1a3e4366850750bd2d85a5fd",
                         "message":  "test(eligibility): preserve synthetic fixtures while explicitly testing production enforcement",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/171c2f9767d4256d1a3e4366850750bd2d85a5fd"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/171c2f9767d4256d1a3e4366850750bd2d85a5fd"
                     },
                     {
                         "sha":  "7ddc77c681a44c20fc87ded68d3efbf82b27a040",
                         "message":  "test(eligibility): preserve synthetic fixtures while explicitly testing production enforcement",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/7ddc77c681a44c20fc87ded68d3efbf82b27a040"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/7ddc77c681a44c20fc87ded68d3efbf82b27a040"
                     },
                     {
                         "sha":  "f2c0629d7358f450e6705876c02f9eb7e3f2a351",
                         "message":  "test(eligibility): preserve synthetic fixtures while explicitly testing production enforcement",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f2c0629d7358f450e6705876c02f9eb7e3f2a351"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/f2c0629d7358f450e6705876c02f9eb7e3f2a351"
                     },
                     {
                         "sha":  "6afc47049114488ba5f92a89641c6a7cde691447",
                         "message":  "Merge restricted-session enforcement into unified release candidate\n\nsecurity(eligibility): enforce restricted accounts across HTTP and realtime",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/6afc47049114488ba5f92a89641c6a7cde691447"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/6afc47049114488ba5f92a89641c6a7cde691447"
                     },
                     {
                         "sha":  "0ab63aee2fa002317f5c4bd68a606d7a0a1dfd4b",
                         "message":  "feat(ops): add staging target configuration, validation tooling and infrastructure alert rules",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/0ab63aee2fa002317f5c4bd68a606d7a0a1dfd4b"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/0ab63aee2fa002317f5c4bd68a606d7a0a1dfd4b"
                     },
                     {
                         "sha":  "c4806d7c1b444411f04a9b620159ec92cc16185c",
                         "message":  "fix(ops): align deployment-config validator invocation and package script",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c4806d7c1b444411f04a9b620159ec92cc16185c"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/c4806d7c1b444411f04a9b620159ec92cc16185c"
                     },
                     {
                         "sha":  "64f10607f9f4d0c96b0ceb0830635ab6644b520c",
                         "message":  "test(auth): add comprehensive regression suite for identity, recovery, and session boundaries",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/64f10607f9f4d0c96b0ceb0830635ab6644b520c"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/64f10607f9f4d0c96b0ceb0830635ab6644b520c"
                     },
                     {
                         "sha":  "cc54fcc4d8feefbe6d72c304a05e88457d594eaa",
                         "message":  "feat(ops): establish hosting target topology, staging isolation and operational preparation",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/cc54fcc4d8feefbe6d72c304a05e88457d594eaa"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/cc54fcc4d8feefbe6d72c304a05e88457d594eaa"
                     },
                     {
                         "sha":  "9450914beadea0cc5c8d8704fb16a54581a33ee0",
                         "message":  "feat(compliance): align release-scope policy decisions, behavioral guards and verification matrix",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9450914beadea0cc5c8d8704fb16a54581a33ee0"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/9450914beadea0cc5c8d8704fb16a54581a33ee0"
                     },
                     {
                         "sha":  "d1b7eac55268fbfa77832c3b195f4edda8b427d1",
                         "message":  "feat(ops): complete monitoring acceptance, add infrastructure alerts, and update operator runbook",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d1b7eac55268fbfa77832c3b195f4edda8b427d1"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/d1b7eac55268fbfa77832c3b195f4edda8b427d1"
                     },
                     {
                         "sha":  "eaf86d9eaefa6cc4adc60442bab8865cdc2fd08f",
                         "message":  "test(routing): add public routing, proxy trust and ingress verification test suite",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/eaf86d9eaefa6cc4adc60442bab8865cdc2fd08f"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/eaf86d9eaefa6cc4adc60442bab8865cdc2fd08f"
                     },
                     {
                         "sha":  "c885e29900f061c7a33b5263d30da370967ddf0d",
                         "message":  "test(backup): verify actual off-host backup and isolated recovery acceptance",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/c885e29900f061c7a33b5263d30da370967ddf0d"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/c885e29900f061c7a33b5263d30da370967ddf0d"
                     },
                     {
                         "sha":  "9ceaf529f4baf8dda876cd0268a46888fda52081",
                         "message":  "perf(mobile): repair FCP, LCP, and blocking under throttled mobile emulation",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/9ceaf529f4baf8dda876cd0268a46888fda52081"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/9ceaf529f4baf8dda876cd0268a46888fda52081"
                     },
                     {
                         "sha":  "aca6ccbf916f0393562b5b4a6810dd01911ab9c4",
                         "message":  "feat(release): integrate staging hosting target preparation and release-scope verification into unified release candidate",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/aca6ccbf916f0393562b5b4a6810dd01911ab9c4"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/aca6ccbf916f0393562b5b4a6810dd01911ab9c4"
                     },
                     {
                         "sha":  "3c1e824ee6b32590749d650a359aa1ae81c018a4",
                         "message":  "docs(release): record unified release candidate aca6ccb acceptance and operational readiness",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/3c1e824ee6b32590749d650a359aa1ae81c018a4"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/3c1e824ee6b32590749d650a359aa1ae81c018a4"
                     },
                     {
                         "sha":  "da88a7e4076c9a1ab2d2dc1117a29f885206b098",
                         "message":  "fix(e2e): align video publication contract and guard empty poster image render",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/da88a7e4076c9a1ab2d2dc1117a29f885206b098"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/da88a7e4076c9a1ab2d2dc1117a29f885206b098"
                     },
                     {
                         "sha":  "28cd967736e96f4c196995adad1ef94d246a7257",
                         "message":  "fix(ci): pass numeric WEB_PORT to production compose stack smoke test",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/28cd967736e96f4c196995adad1ef94d246a7257"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/28cd967736e96f4c196995adad1ef94d246a7257"
                     },
                     {
                         "sha":  "30fb713cd774d7297de7b8c4f412262675b47f85",
                         "message":  "docs(release): record verified unified release candidate 28cd967 and green CI run 38086946998",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/30fb713cd774d7297de7b8c4f412262675b47f85"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/30fb713cd774d7297de7b8c4f412262675b47f85"
                     },
                     {
                         "sha":  "7eedeecebeed40cdc1cb276c2fb243f69820b1d5",
                         "message":  "docs: correct current mobile release evidence",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/7eedeecebeed40cdc1cb276c2fb243f69820b1d5"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/7eedeecebeed40cdc1cb276c2fb243f69820b1d5"
                     },
                     {
                         "sha":  "f8a0ae7351a65eeb6927478738a12232e2db3d1a",
                         "message":  "docs: refresh verified release candidate evidence",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f8a0ae7351a65eeb6927478738a12232e2db3d1a"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/f8a0ae7351a65eeb6927478738a12232e2db3d1a"
                     },
                     {
                         "sha":  "5e85e497695b347e7dba2a41e7fb4f54c4599445",
                         "message":  "fix(privacy): use neutral grievance submission wording",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5e85e497695b347e7dba2a41e7fb4f54c4599445"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/5e85e497695b347e7dba2a41e7fb4f54c4599445"
                     },
                     {
                         "sha":  "76bd55908ee9f5c063bfb2c38d5865e8076d9509",
                         "message":  "test(privacy): pin export visibility boundary",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/76bd55908ee9f5c063bfb2c38d5865e8076d9509"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/76bd55908ee9f5c063bfb2c38d5865e8076d9509"
                     },
                     {
                         "sha":  "b641905b395b53b320bd133745589650e6020d20",
                         "message":  "fix(privacy): apply captured message export boundary",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b641905b395b53b320bd133745589650e6020d20"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/b641905b395b53b320bd133745589650e6020d20"
                     },
                     {
                         "sha":  "24c056a8e4fe625943807d6a8cf265bff51db235",
                         "message":  "test(privacy): cover export response boundary",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/24c056a8e4fe625943807d6a8cf265bff51db235"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/24c056a8e4fe625943807d6a8cf265bff51db235"
                     },
                     {
                         "sha":  "f801cb1e65292e366319a087018d639458b7bc25",
                         "message":  "fix(privacy): carry export boundary through response checks",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/f801cb1e65292e366319a087018d639458b7bc25"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/f801cb1e65292e366319a087018d639458b7bc25"
                     },
                     {
                         "sha":  "27673d3c334091a3cdd9e61557f635efa81c6c95",
                         "message":  "docs(release): refresh latest CI and preview evidence",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/27673d3c334091a3cdd9e61557f635efa81c6c95"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/27673d3c334091a3cdd9e61557f635efa81c6c95"
                     },
                     {
                         "sha":  "5cc4d1ed4d207a0bd7e2f92b0c6749b0fa72eea0",
                         "message":  "test(privacy): cover account export coverage and shipping boundary",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5cc4d1ed4d207a0bd7e2f92b0c6749b0fa72eea0"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/5cc4d1ed4d207a0bd7e2f92b0c6749b0fa72eea0"
                     },
                     {
                         "sha":  "83c675fc07c18f870d806053a253f25bde046ee5",
                         "message":  "fix(privacy): expand account export and redact buyer data",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/83c675fc07c18f870d806053a253f25bde046ee5"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/83c675fc07c18f870d806053a253f25bde046ee5"
                     },
                     {
                         "sha":  "466370ab70610cbeea213e8db745d0c6ae62c783",
                         "message":  "test(auth): keep production eligibility fail closed",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/466370ab70610cbeea213e8db745d0c6ae62c783"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/466370ab70610cbeea213e8db745d0c6ae62c783"
                     },
                     {
                         "sha":  "76c6dd9aaf72899ed14a671c74899bd5fe9e21a0",
                         "message":  "test(auth): cover production socket eligibility gate",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/76c6dd9aaf72899ed14a671c74899bd5fe9e21a0"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/76c6dd9aaf72899ed14a671c74899bd5fe9e21a0"
                     },
                     {
                         "sha":  "d8087db17ed08f7df07737d5cfdcb6c553be2d78",
                         "message":  "test(auth): cover stale consent in optional sessions",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/d8087db17ed08f7df07737d5cfdcb6c553be2d78"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/d8087db17ed08f7df07737d5cfdcb6c553be2d78"
                     },
                     {
                         "sha":  "6d0e1d3b22d8b2d7853d03fe62ad1ea2623995d0",
                         "message":  "fix(auth): enforce production consent and eligibility gates",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/6d0e1d3b22d8b2d7853d03fe62ad1ea2623995d0"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/6d0e1d3b22d8b2d7853d03fe62ad1ea2623995d0"
                     },
                     {
                         "sha":  "4c827ee3626e55ea6011f839f2d0adcd94ecb1c1",
                         "message":  "test(auth): restrict login profile before eligibility",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4c827ee3626e55ea6011f839f2d0adcd94ecb1c1"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/4c827ee3626e55ea6011f839f2d0adcd94ecb1c1"
                     },
                     {
                         "sha":  "7f6c45ae661d109bb9e81e0782631e90b6eebe46",
                         "message":  "fix(auth): return restricted profile until verification",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/7f6c45ae661d109bb9e81e0782631e90b6eebe46"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/7f6c45ae661d109bb9e81e0782631e90b6eebe46"
                     },
                     {
                         "sha":  "b077146637fa97e6cbc3906eb7d0151778c73795",
                         "message":  "fix(auth): inject eligibility reader into session responses",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b077146637fa97e6cbc3906eb7d0151778c73795"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/b077146637fa97e6cbc3906eb7d0151778c73795"
                     },
                     {
                         "sha":  "080a93ca41c3c7b12e0c70b5963977359f554595",
                         "message":  "test(eligibility): expose capability bypasses",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/080a93ca41c3c7b12e0c70b5963977359f554595"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/080a93ca41c3c7b12e0c70b5963977359f554595"
                     },
                     {
                         "sha":  "ccdbaa873994261aa514823eb4c634e548bb10f9",
                         "message":  "test(eligibility): define protected route boundaries",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ccdbaa873994261aa514823eb4c634e548bb10f9"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/ccdbaa873994261aa514823eb4c634e548bb10f9"
                     },
                     {
                         "sha":  "4cf8da43f793543538178926cf9b4ee660c5bdae",
                         "message":  "feat(eligibility): enforce HTTP route capabilities",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/4cf8da43f793543538178926cf9b4ee660c5bdae"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/4cf8da43f793543538178926cf9b4ee660c5bdae"
                     },
                     {
                         "sha":  "93ef5d17317a329075e24226e2c70d352985e7a9",
                         "message":  "test(socket): enforce current messaging capability",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/93ef5d17317a329075e24226e2c70d352985e7a9"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/93ef5d17317a329075e24226e2c70d352985e7a9"
                     },
                     {
                         "sha":  "578d9abc2823b66dd95654c47156c7c0cea8eec0",
                         "message":  "feat(eligibility): enforce socket capabilities",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/578d9abc2823b66dd95654c47156c7c0cea8eec0"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/578d9abc2823b66dd95654c47156c7c0cea8eec0"
                     },
                     {
                         "sha":  "77dffe979f1ac25d0b5bddb427552613994685b8",
                         "message":  "test(eligibility): enforce current content ceiling",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/77dffe979f1ac25d0b5bddb427552613994685b8"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/77dffe979f1ac25d0b5bddb427552613994685b8"
                     },
                     {
                         "sha":  "8000dcdb203c635601a82898a141e3a67d76905a",
                         "message":  "feat(safety): enforce eligibility ceilings in discovery",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/8000dcdb203c635601a82898a141e3a67d76905a"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/8000dcdb203c635601a82898a141e3a67d76905a"
                     },
                     {
                         "sha":  "fad9782743d2490d1228094c22a138443cbb8ed4",
                         "message":  "fix(db): repair eligibility content revision constraint",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/fad9782743d2490d1228094c22a138443cbb8ed4"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/fad9782743d2490d1228094c22a138443cbb8ed4"
                     },
                     {
                         "sha":  "27214b2828ec884673786fb6019a07e7ff2d89df",
                         "message":  "Fix empty discovery integration fixture",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/27214b2828ec884673786fb6019a07e7ff2d89df"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/27214b2828ec884673786fb6019a07e7ff2d89df"
                     },
                     {
                         "sha":  "b936bd07525153ce30f1d95ba658fcd32e60725b",
                         "message":  "Filter comment content by audience eligibility",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/b936bd07525153ce30f1d95ba658fcd32e60725b"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/b936bd07525153ce30f1d95ba658fcd32e60725b"
                     },
                     {
                         "sha":  "5fc227a8202124a594a1eccae738718394b6d12a",
                         "message":  "Use distinct authors in discovery pagination fixture",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/5fc227a8202124a594a1eccae738718394b6d12a"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/5fc227a8202124a594a1eccae738718394b6d12a"
                     },
                     {
                         "sha":  "40d71503915e30c79f5faacfcfb0297d73bf61d2",
                         "message":  "Make eligibility migration tolerate partial baselines",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/40d71503915e30c79f5faacfcfb0297d73bf61d2"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/40d71503915e30c79f5faacfcfb0297d73bf61d2"
                     },
                     {
                         "sha":  "bd73a73478fdc862490f8af08a877d4ce0e115bc",
                         "message":  "Record 11 October hardening acceptance",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/bd73a73478fdc862490f8af08a877d4ce0e115bc"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/bd73a73478fdc862490f8af08a877d4ce0e115bc"
                     },
                     {
                         "sha":  "32cc49c2feacd2e79f709c1daf9ace9d8ff7d4d6",
                         "message":  "docs(ops): identify backup drill as loopback test",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/32cc49c2feacd2e79f709c1daf9ace9d8ff7d4d6"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/32cc49c2feacd2e79f709c1daf9ace9d8ff7d4d6"
                     },
                     {
                         "sha":  "ca8ad106647a95e3c5f61f93d7958f5dbd72181b",
                         "message":  "fix(vercel): handle API runtime initialization failures",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/ca8ad106647a95e3c5f61f93d7958f5dbd72181b"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/ca8ad106647a95e3c5f61f93d7958f5dbd72181b"
                     },
                     {
                         "sha":  "387148960e8ae9763c4cc3d9479574270f0fb022",
                         "message":  "test(vercel): verify runtime initialization fails closed",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/387148960e8ae9763c4cc3d9479574270f0fb022"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/387148960e8ae9763c4cc3d9479574270f0fb022"
                     },
                     {
                         "sha":  "75f5664780d51b339ac0d45ffbccd559751198ca",
                         "message":  "fix(ops): enforce Vercel CSP and graceful smoke exits",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/75f5664780d51b339ac0d45ffbccd559751198ca"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/75f5664780d51b339ac0d45ffbccd559751198ca"
                     },
                     {
                         "sha":  "dc77bbd24146bc91e8a14baf25b460f20a36c6b2",
                         "message":  "fix(smoke): scope HSTS and check API liveness",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/dc77bbd24146bc91e8a14baf25b460f20a36c6b2"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/dc77bbd24146bc91e8a14baf25b460f20a36c6b2"
                     },
                     {
                         "sha":  "203f6de9a6513ef21361e31edd6f3918ea0b15c8",
                         "message":  "docs(release): record verified smoke candidate acceptance",
-                        "url":  "https://github.com/yorayriniwnl/yor-talksv2/commit/203f6de9a6513ef21361e31edd6f3918ea0b15c8"
+                        "url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/commit/203f6de9a6513ef21361e31edd6f3918ea0b15c8"
                     }
                 ],
     "files":  [

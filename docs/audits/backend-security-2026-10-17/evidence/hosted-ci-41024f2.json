@@ -1,14 +1,14 @@
 {
   "id": 39143532456,
   "head": "41024f2755723395b02a0d9184d9189e54943b86",
-  "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/39143532456",
+  "url": "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39143532456",
   "status": "completed",
   "conclusion": "failure",
   "jobs": [
     {
       "id": 117722619699,
       "name": "backend",
-      "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/39143532456/job/117722619699",
+      "url": "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39143532456/job/117722619699",
       "status": "completed",
       "conclusion": "success",
       "steps": [
@@ -132,7 +132,7 @@
     {
       "id": 117722619940,
       "name": "verify",
-      "url": "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/39143532456/job/117722619940",
+      "url": "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39143532456/job/117722619940",
       "status": "completed",
       "conclusion": "failure",
       "steps": [

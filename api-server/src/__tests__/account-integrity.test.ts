@@ -312,6 +312,24 @@ test('an injected database failure rolls back ledger anonymization and cleanup e
   } finally { await pool.query(`DROP TABLE "${guardTable}"`); }
 });
 
+test('account erasure affects unbound records only after the address was verified', async () => {
+  for (const verified of [false,true]) {
+    const id=await person(),email=`${id}@example.test`;
+    await pool.query('UPDATE users SET email_verified=$2 WHERE id=$1',[id,verified]);
+    await pool.query('INSERT INTO preregistrations(email,username) VALUES($1,$2)',[email,`pre-${id}`]);
+    await pool.query('INSERT INTO waitlist(id,email) VALUES($1,$2)',[randomUUID(),email]);
+    try {
+      assert.equal(await service.deleteAccount(id,'synthetic-password'),true);
+      assert.equal((await pool.query('SELECT 1 FROM preregistrations WHERE email=$1',[email])).rowCount,verified?0:1);
+      assert.equal((await pool.query('SELECT 1 FROM waitlist WHERE email=$1',[email])).rowCount,verified?0:1);
+      assert.equal((await pool.query("SELECT 1 FROM email_suppressions WHERE email_hash=encode(sha256($1::bytea),'hex')",[email])).rowCount,verified?2:0);
+    } finally {
+      await pool.query('DELETE FROM preregistrations WHERE email=$1',[email]);
+      await pool.query('DELETE FROM waitlist WHERE email=$1',[email]);
+    }
+  }
+});
+
 test('durable jobs deduplicate, recover abandoned leases, fence stale workers and expose exhausted retries', async () => {
   const jobs = new BackgroundJobRepository(), key = `test:${randomUUID()}`, kind = `test_${randomUUID()}`;
   const id = await jobs.enqueue(kind, key, { synthetic: true }); jobIds.push(id);

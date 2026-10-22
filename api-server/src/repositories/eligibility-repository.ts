@@ -93,7 +93,11 @@ export class EligibilityRepository {
     // A single statement keeps account, proof, guardian state and revision on
     // one READ COMMITTED snapshot. Select the latest record, never an older
     // permissive proof hidden behind a newer revocation/rejection.
-    const result = await (tx ?? db).execute(sql`SELECT u.id,u.account_status,u.terms_version,u.terms_accepted_at,
+    const result = await (tx ?? db).execute(sql`SELECT u.id,
+      CASE WHEN u.account_status='active' AND (u.processing_restricted OR EXISTS (SELECT 1 FROM moderation_enforcements me
+        WHERE me.target_type='user' AND me.target_id=u.id::text
+          AND (me.expires_at IS NULL OR me.expires_at>clock_timestamp()))) THEN 'suspended' ELSE u.account_status END AS account_status,
+      u.terms_version,u.terms_accepted_at,
       u.settings->>'contentFilter' AS content_preference,coalesce(r.revision,0)::text AS revision,
       (SELECT row_to_json(a) FROM eligibility_assessments a WHERE a.user_id=u.id ORDER BY a.subject_revision DESC,a.created_at DESC,a.id DESC LIMIT 1) AS assessment,
       coalesce((SELECT jsonb_agg(g ORDER BY g.created_at,g.id) FROM guardian_authorizations g WHERE g.user_id=u.id),'[]'::jsonb) AS guardians

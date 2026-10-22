@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, test, type TestContext } from 'node:test';
 import { contentSafetyClassificationsTable, db, pool, storiesTable, userNotesTable, postsTable } from '@workspace/db';

@@ -1,0 +1,71 @@
+.yor-post__actions button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.yor-post__actions button:focus-visible,
+.yor-post:focus-visible,
+.feed-gallery-arrow:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+
+.yor-post__actions button:disabled {
+  cursor: progress;
+  opacity: .65;
+}
+
+.feed-gallery-arrow {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 55%);
+  color: white;
+  pointer-events: auto;
+}
+
+.feed-gallery-arrow:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.yor-composer[data-compact="true"][data-expanded="false"] .yor-composer__help {
+  display: none;
+}
+
+.yor-composer:disabled {
+  cursor: progress;
+}
+
+.yor-composer__footer button,
+.yor-composer input:not([type="file"]),
+.yor-composer select {
+  min-height: 44px;
+}
+
+.yor-composer__footer button {
+  min-width: 44px;
+}
+
+.yor-composer button:focus-visible,
+.yor-composer textarea:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+
+.yor-post__caption {
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yor-post-shell *,
+  .yor-post-shell *::before,
+  .yor-post-shell *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

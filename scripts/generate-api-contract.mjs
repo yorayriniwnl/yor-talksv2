@@ -16,6 +16,7 @@ const mountPrefixes = {
   "onboarding.ts": "/onboarding",
   "projects.ts": "/projects",
   "reports.ts": "/reports",
+  "moderation.ts": "/moderation",
   "subscriptions.ts": "/subscriptions",
 };
 
@@ -53,6 +54,32 @@ const publicGrievanceSchema = {
   },
 };
 const moderationSchemas = {
+  ModerationDecisionRequest: {
+    type: 'object', additionalProperties: false, required: ['targetType','targetId','action','rationale'],
+    properties: { targetType: { type: 'string', enum: ['post','user','comment','message','video'] }, targetId: { type: 'string', format: 'uuid' },
+      action: { type: 'string', enum: ['no_action','restrict','remove','restore'] }, scope: { type: 'string', enum: ['public','direct_only','global'], default: 'global', description: 'Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads.' },
+      rationale: { type: 'string', minLength: 10, maxLength: 5000, description: 'Public explanation shown to the content author. Never include private evidence or reporter identity.' },
+      internalNotes: { type: 'string', maxLength: 5000 }, expiresAt: { type: 'string', format: 'date-time' },
+      reportId: { type: 'string', format: 'uuid' }, grievanceTicketId: { type: 'string', format: 'uuid' } },
+  },
+  ModerationAppealRequest: { type: 'object', additionalProperties: false, required: ['decisionId','statement'], properties: {
+    decisionId: { type: 'string', format: 'uuid' }, statement: { type: 'string', minLength: 10, maxLength: 5000 },
+    relationship: { type: 'string', enum: ['author','reporter','affected_party'], description: 'If supplied, must match the private notice already issued to this account. It cannot establish authority.' },
+  } },
+  ModerationReviewRequest: { type: 'object', additionalProperties: false, required: ['outcome','reviewerNotes','rationale'], properties: {
+    outcome: { type: 'string', enum: ['upheld','reversed','rejected'] },
+    action: { type: 'string', enum: ['restore','restrict','remove'], description: 'Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action.' },
+    reviewerNotes: { type: 'string', minLength: 10, maxLength: 5000, description: 'Staff-only review evidence.' },
+    rationale: { type: 'string', minLength: 10, maxLength: 5000, description: 'Public review explanation visible only to the affected parties.' },
+  } },
+  PublicModerationAppeal: { type: 'object', additionalProperties: false,
+    required: ['id','decisionId','relationship','statement','status','rationale','outcomeDecisionId','reviewedAt','createdAt','updatedAt'], properties: {
+      id: { type: 'string', format: 'uuid' }, decisionId: { type: 'string', format: 'uuid' }, relationship: { type: 'string', enum: ['author','reporter','affected_party'] },
+      statement: { type: 'string' }, status: { type: 'string', enum: ['pending','under_review','upheld','reversed','rejected'] },
+      rationale: { type: ['string','null'] }, outcomeDecisionId: { type: ['string','null'], format: 'uuid' },
+      reviewedAt: { type: ['string','null'], format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
+    } },
+  PublicModerationAppealList: { type: 'array', items: { $ref: '#/components/schemas/PublicModerationAppeal' } },
   ReportStatusUpdateRequest: {
     oneOf: [
       {
@@ -186,7 +213,37 @@ function contactContract(route) {
   };
   return definitions[`${route.method} ${route.path}`];
 }
+const privacyPurpose = { type: 'string', enum: ['correction','restriction','objection','erasure','access'] };
+const privacyToken = { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Single-use email challenge, bound to its issued purpose and 15-minute database expiry.' };
+const privacySchemas = {
+  PrivacyChallengeRequest: { type: 'object',additionalProperties: false,required: ['email'],properties: {
+    email: { type: 'string',format: 'email',maxLength: 255 },purpose: { ...privacyPurpose,default: 'access' } } },
+  PrivacyChallengeReceipt: { type: 'object',additionalProperties: false,required: ['initiated'],properties: { initiated: { type: 'boolean',const: true } } },
+  PrivacyVerifyRequest: { type: 'object',additionalProperties: false,required: ['token'],properties: { token: privacyToken } },
+  PrivacyVerifyReceipt: { type: 'object',additionalProperties: false,required: ['valid','purpose'],properties: {
+    valid: { type: 'boolean',const: true },purpose: privacyPurpose } },
+  PrivacyRightsRequest: { type: 'object',additionalProperties: false,required: ['token','requestType'],properties: {
+    token: privacyToken,requestType: privacyPurpose,details: { type: 'object',additionalProperties: false,properties: {
+      reason: { type: 'string',maxLength: 500 },preferredUsername: { type: 'string',pattern: '^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$' } } } } },
+  PrivacyRightsResult: { type: 'object',additionalProperties: false,required: ['executed','requestType','message'],properties: {
+    executed: { type: 'boolean' },requestType: privacyPurpose,message: { type: 'string' },recordStatus: { type: 'string' },
+    erasedAt: { type: 'string',format: 'date-time' },details: { type: 'object',additionalProperties: true } } },
+};
+function privacyContract(route) {
+  return {
+    'post /privacy/challenge': { request: 'PrivacyChallengeRequest',result: 'PrivacyChallengeReceipt' },
+    'post /privacy/verify': { request: 'PrivacyVerifyRequest',result: 'PrivacyVerifyReceipt' },
+    'post /privacy/request': { request: 'PrivacyRightsRequest',result: 'PrivacyRightsResult' },
+  }[`${route.method} ${route.path}`];
+}
 function moderationContract(route) {
+  const definitions = {
+    'post /moderation/decisions': { request: 'ModerationDecisionRequest', created: true },
+    'post /moderation/appeals': { request: 'ModerationAppealRequest', result: 'PublicModerationAppeal', created: true },
+    'patch /moderation/appeals/{appealId}/review': { request: 'ModerationReviewRequest' },
+    'get /moderation/appeals/mine': { result: 'PublicModerationAppealList' },
+  };
+  if (definitions[`${route.method} ${route.path}`]) return definitions[`${route.method} ${route.path}`];
   if (route.path === "/reports/{reportId}/status" && route.method === "patch") {
     return { request: "ReportStatusUpdateRequest" };
   }
@@ -460,7 +517,7 @@ function renderYaml(routes) {
       }
 
       if (["post", "put", "patch"].includes(route.method)) {
-        const contract = eligibilityContract(route) ?? contactContract(route) ?? moderationContract(route) ?? preregistrationContract(route);
+        const contract = eligibilityContract(route) ?? contactContract(route) ?? moderationContract(route) ?? privacyContract(route) ?? preregistrationContract(route);
         const request = contract?.request ? { required: true,content: { 'application/json': { schema: { $ref: `#/components/schemas/${contract.request}` } } } } : mediaRequest(route);
         if (request) lines.push(`      requestBody: ${JSON.stringify(request)}`);
         else lines.push(...indent([
@@ -478,7 +535,7 @@ function renderYaml(routes) {
         (route.path === "/reports/grievance/{ticketId}" && route.method === "get");
       const eligibility = eligibilityContract(route);
       const preregistration = preregistrationContract(route);
-      const contract = eligibility ?? contactContract(route) ?? preregistration;
+      const contract = eligibility ?? contactContract(route) ?? moderationContract(route) ?? privacyContract(route) ?? preregistration;
       const resultSchema = contract?.result ?? (publicGrievance ? "PublicGrievanceReceipt" : route.path === "/media/presign" ? "MediaReservation" : ["/media/upload", "/media/{id}/upload", "/media/{id}/finalize"].includes(route.path) ? "MediaResult" : undefined);
       const responseSchema = resultSchema ? `          ${JSON.stringify({ allOf: [{ $ref: "#/components/schemas/ApiEnvelope" }, { properties: { data: { $ref: `#/components/schemas/${resultSchema}` } } }] })}` : '          $ref: "#/components/schemas/ApiEnvelope"';
       if (route.path === '/media/{id}/content') {
@@ -551,6 +608,7 @@ function renderYaml(routes) {
   for (const [name, schema] of Object.entries(moderationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(eligibilitySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(contactSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
+  for (const [name,schema] of Object.entries(privacySchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   for (const [name,schema] of Object.entries(preregistrationSchemas)) lines.push(`    ${name}: ${JSON.stringify(schema)}`);
   return `${lines.join("\n")}\n`;
 }

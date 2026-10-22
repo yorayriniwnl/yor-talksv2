@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from "@playwright/test";
+﻿import { expect, test, type Page, type Route } from "@playwright/test";
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 
@@ -369,7 +369,7 @@ test('message attachment renewal denies mismatches, bounds errors, and ignores a
   await expect(composer).toHaveValue('Alpha draft stays private.');
   await expect(rows).toHaveCount(2);
   await imageRow.getByRole('button', { name: 'Retry attachment' }).click();
-  await expect(imageRow.getByRole('status')).toHaveText('Refreshing attachment…');
+  await expect(imageRow.getByRole('status')).toHaveText('Refreshing attachmentâ€¦');
   await page.getByRole('button', { name: /Attachment Beta.*No messages yet/ }).click();
   await expect(rows.getByText('Beta conversation only.', { exact: true })).toBeVisible();
   await expect(composer).toHaveValue('');
@@ -514,7 +514,7 @@ test('historical message encodings render attachments only with the server legac
   const peer = { ...user, id: '10000000-0000-4000-8000-000000000171', username: 'legacy_peer', fullName: 'Legacy Peer' };
   const conversation = { id: '20000000-0000-4000-8000-000000000171', participantA: user.id, participantB: peer.id, participantIds: [user.id, peer.id], updatedAt: user.createdAt };
   const voice = '[Voice Note] https://legacy.example.test/voice.webm (3s)';
-  const image = 'Historical image caption\n📷 https://legacy.example.test/photo.png';
+  const image = 'Historical image caption\nðŸ“· https://legacy.example.test/photo.png';
   const messages = [voice, image, voice, image].map((content, index) => ({
     id: `legacy-fixture-${index}`, conversationId: conversation.id, senderId: peer.id, recipientId: user.id,
     content, mediaLegacy: index < 2, mediaId: null, mediaType: null, mediaUrl: null, seenAt: user.createdAt,
@@ -624,7 +624,7 @@ test('a story retry reuses its created Highlight and approved voice/cover withou
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: 'Voice Story', exact: true }).click();
   await dialog.locator('#story-voice-file').setInputFiles({ name: 'draft-voice.wav', mimeType: 'audio/wav', buffer: voice });
-  await dialog.getByPlaceholder('Add an optional caption…').fill('Keep this voice and caption for retry.');
+  await dialog.getByPlaceholder('Add an optional captionâ€¦').fill('Keep this voice and caption for retry.');
   await dialog.locator('#story-content-category').selectOption('technology');
   await dialog.getByText('Highlight destination', { exact: true }).locator('..').locator('select').selectOption('new');
   await dialog.getByRole('textbox', { name: 'New Highlight name' }).fill('Field notes');
@@ -632,7 +632,7 @@ test('a story retry reuses its created Highlight and approved voice/cover withou
   const publish = dialog.getByRole('button', { name: 'Share Story Live', exact: true });
   await publish.click();
   await expect(publish).toBeEnabled();
-  await expect(dialog.getByPlaceholder('Add an optional caption…')).toHaveValue('Keep this voice and caption for retry.');
+  await expect(dialog.getByPlaceholder('Add an optional captionâ€¦')).toHaveValue('Keep this voice and caption for retry.');
   await expect(dialog.locator('label[for="story-voice-file"]')).toContainText('draft-voice.wav');
   expect(highlightCreates).toBe(1);
   await publish.click();
@@ -840,9 +840,9 @@ for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancell
     if (status === 'pending') await expect(page.getByRole('button', { name: 'Recover payment', exact: true })).toBeVisible();
     if (status === 'failed') await expect(page.getByText(/last payment attempt failed/)).toBeVisible();
     if (status === 'cancelled') await expect(page.getByText(/Cancellation recorded/)).toBeVisible();
-    if (status === 'expired' || status === 'refunded') await expect(page.getByText(`Free account · ${status}`, { exact: true })).toBeVisible();
+    if (status === 'expired' || status === 'refunded') await expect(page.getByText(`Free account Â· ${status}`, { exact: true })).toBeVisible();
     if (['disputed','chargeback'].includes(status)) { await expect(page.getByText(/Premium access is paused/)).toBeVisible(); await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toHaveCount(0); }
-    if (status === 'active') await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
+    if (status === 'active') await expect(page.getByText('Yor Premium Â· active', { exact: true })).toBeVisible();
     if (status === 'free') {
       await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeDisabled();
       await page.getByRole('checkbox').check();
@@ -882,10 +882,10 @@ test('Premium checkout accepts configured terms, handles failure, recovers payme
   await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Upgrade to Yor Premium' }).click();
   await expect(page.getByRole('alert')).toContainText('Payment did not complete');
   await page.getByRole('button', { name: 'Recover payment', exact: true }).click();
-  await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
+  await expect(page.getByText('Yor Premium Â· active', { exact: true })).toBeVisible();
   expect(created).toBe(1);
   await page.getByRole('button', { name: 'Cancel at end of term' }).click();
-  await expect(page.getByText('Yor Premium · cancelled', { exact: true })).toBeVisible();
+  await expect(page.getByText('Yor Premium Â· cancelled', { exact: true })).toBeVisible();
   await expect(page.getByText('Cancellation recorded. Your paid access remains until the date above.')).toBeVisible();
 });
 
@@ -1069,7 +1069,7 @@ test('Google script failure has an accessible retry without disabling other sign
     return route.fulfill({ contentType: 'application/javascript', body: "window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.type='button';button.textContent='Sign in with Google';parent.appendChild(button)}}}};" });
   });
   await page.goto('/auth');
-  await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldnâ€™t load' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Password', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Email code', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Retry Google sign-in' }).click();
@@ -1598,7 +1598,7 @@ for (const isGroup of [false, true]) test(`message image approval and send retri
     const payload = route.request().postDataJSON();
     expect(payload.mediaId).toBe(mediaIds[publications.length < 2 ? 0 : 1]);
     expect(payload.mediaUrl).toBeUndefined();
-    expect(payload.content).not.toContain('📷');
+    expect(payload.content).not.toContain('ðŸ“·');
     if (isGroup) { expect(payload.conversationId).toBe(conversation.id); expect(payload.recipientId).toBeUndefined(); }
     else { expect(payload.recipientId).toBe(peer.id); expect(payload.conversationId).toBeUndefined(); }
     publications.push(payload);
@@ -1779,11 +1779,11 @@ test('activity failures are retryable and never look caught up', async ({ page }
   await page.route('**/api/users/me/follow-requests', (route) => unavailable ? failure(route) : json(route, []));
   await page.goto('/notifications');
   await expect(page.getByRole('alert').filter({ hasText: 'Your activity could not refresh.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'You’re all caught up' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Youâ€™re all caught up' })).toHaveCount(0);
   await expect(page.getByText('Clear', { exact: true })).toHaveCount(0);
   unavailable = false;
   await page.getByRole('button', { name: 'Retry activity' }).click();
-  await expect(page.getByRole('heading', { name: 'You’re all caught up' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Youâ€™re all caught up' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retry activity' })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
@@ -1816,7 +1816,7 @@ test('follow decisions prevent duplicate actions and activity read-all handles f
   await page.goto('/notifications');
   await expect(page.getByRole('link').filter({ hasText: 'River Stone liked your post' })).toBeVisible();
   await page.getByRole('button', { name: 'Accept', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Savingâ€¦', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Decline', exact: true })).toBeDisabled();
   expect(decisions).toBe(1);
   release();
@@ -2381,7 +2381,7 @@ test('moderator can page and filter reports and handle a grievance with a privat
   await resolvedReportCard.getByRole('button', { name: 'View decision history', exact: true }).click();
   await expect(resolvedReportCard.getByLabel('Report decision history').getByText(decisionReason, { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'grievances', exact: true }).click();
-  await expect(page.getByText('Reporter: Private Reporter · reporter@example.test', { exact: true })).toBeVisible();
+  await expect(page.getByText('Reporter: Private Reporter Â· reporter@example.test', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'all', exact: true }).click();
   await page.getByLabel('Internal case note').fill('Visible only to the review team');
   await page.locator('article').getByRole('button', { name: 'under review', exact: true }).click();
@@ -2425,7 +2425,7 @@ test('moderation discards history reads started before a new decision', async ({
   await historyStarted;
   await card.getByLabel('Decision reason (required to resolve or dismiss)').fill(decisionReason);
   await card.getByRole('button', { name: 'resolved', exact: true }).click();
-  await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+  await expect(card.getByText('post Â· resolved', { exact: true })).toBeVisible();
   const obsoleteResponse = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/history`));
   releaseHistory();
   await (await obsoleteResponse).finished();
@@ -2545,7 +2545,7 @@ test('moderation keeps pending case mutations locked across filter and queue cha
     const reportFinished = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/status`));
     releaseReport();
     await (await reportFinished).finished();
-    await expect(reportCard.getByText('post · reviewed', { exact: true })).toBeVisible();
+    await expect(reportCard.getByText('post Â· reviewed', { exact: true })).toBeVisible();
     await expect(reportCard.getByRole('button', { name: 'pending', exact: true })).toBeEnabled();
 
     await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'grievances', exact: true }).click();
@@ -2559,7 +2559,7 @@ test('moderation keeps pending case mutations locked across filter and queue cha
     await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'reports', exact: true }).click();
     await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'grievances', exact: true }).click();
     await expect(grievanceCard.getByRole('button', { name: 'under review', exact: true })).toBeDisabled();
-    await expect(grievanceCard.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+    await expect(grievanceCard.getByRole('button', { name: 'Savingâ€¦', exact: true })).toBeDisabled();
     await page.getByRole('group', { name: 'Queue status' }).getByRole('button', { name: 'all', exact: true }).click();
     await expect(grievanceCard.getByRole('button', { name: 'under review', exact: true })).toBeDisabled();
     expect(mutations.grievances).toBe(1);
@@ -2645,7 +2645,7 @@ test('moderation refresh preserves a later external decision after an older muta
     const beforeRefresh = queueReads;
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
     await expect.poll(() => queueReads).toBe(beforeRefresh + 1);
-    await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+    await expect(card.getByText('post Â· resolved', { exact: true })).toBeVisible();
     await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toHaveValue(currentRationale);
 
     const beforeCompletion = queueReads;
@@ -2655,8 +2655,8 @@ test('moderation refresh preserves a later external decision after an older muta
     await (await oldResponseFinished).finished();
     await expect.poll(() => queueReads).toBe(beforeCompletion + 1);
     await (await freshQueueResponse).finished();
-    await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
-    await expect(card.getByText('post · reviewed', { exact: true })).toHaveCount(0);
+    await expect(card.getByText('post Â· resolved', { exact: true })).toBeVisible();
+    await expect(card.getByText('post Â· reviewed', { exact: true })).toHaveCount(0);
     await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toHaveValue(currentRationale);
     await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toBeEnabled();
   } finally {
@@ -2796,7 +2796,7 @@ test('account deletion supports keyboard cancellation, field feedback, and a ret
       button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
-    await expect(dialog.getByRole('button', { name: 'Deleting…', exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: 'Deletingâ€¦', exact: true })).toBeDisabled();
     await expect.poll(() => deletions).toBe(2);
     releaseDeletion();
     await expect(page).toHaveURL(/\/auth/);

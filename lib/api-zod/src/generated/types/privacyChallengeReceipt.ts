@@ -6,4 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostPrivacyRequestBody = { [key: string]: unknown };
+export const PrivacyChallengeReceiptValue = {
+  initiated: true,
+} as const;
+export type PrivacyChallengeReceipt = typeof PrivacyChallengeReceiptValue;

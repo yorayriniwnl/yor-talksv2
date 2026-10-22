@@ -169,7 +169,7 @@ that every route and future feature is defect-free.
 
 ### Infrastructure/deployment blockers
 
-1. GitHub Actions account lock. The [audited code run](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/33351350493)
+1. GitHub Actions account lock. The [audited code run](https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/33351350493)
    ended without executing a step. GitHub's annotation states: “The job was not
    started because your account is locked due to a billing issue.” Pushes succeeded.
 2. Docker Desktop's Linux engine is unavailable on this Windows host. Production

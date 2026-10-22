@@ -1,7 +1,7 @@
 import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImageOff, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -30,11 +30,13 @@ export function CinematicMediaLightbox({
   const touchStartX = useRef<number | null>(null);
   const [direction, setDirection] = useState(1);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+  const [retryVersion, setRetryVersion] = useState(0);
 
   const currentIndex = Math.min(Math.max(activeIndex, 0), Math.max(media.length - 1, 0));
   const currentMedia = media[currentIndex];
+  const currentIsVideo = /\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(currentMedia ?? '');
   const canNavigate = media.length > 1;
-  const failCurrentMedia = useCallback(() => setFailedImages(images => new Set(images).add(currentIndex)), [currentIndex]);
+  const failCurrentMedia = useCallback(() => setFailedImages(images => new Set(images).add(currentIndex)), [currentIndex, retryVersion]);
   const currentMediaSource = useProtectedMediaSource(currentMedia, failCurrentMedia);
 
   const moveTo = (nextIndex: number) => {
@@ -49,6 +51,7 @@ export function CinematicMediaLightbox({
     if (!open || !canNavigate) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLVideoElement || event.target instanceof HTMLInputElement) return;
       if (event.key === 'ArrowRight') {
         event.preventDefault();
         moveTo(currentIndex + 1);
@@ -70,7 +73,7 @@ export function CinematicMediaLightbox({
     const owned: Array<{ dispose(): void }> = [];
     [currentIndex - 1, currentIndex + 1].forEach((index) => {
       const nearbyImage = media[(index + media.length) % media.length];
-      if (!nearbyImage) return;
+      if (!nearbyImage || /\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(nearbyImage)) return;
       if (!isGovernedMediaReference(nearbyImage)) {
         const preload = new Image();
         preload.src = nearbyImage;
@@ -92,10 +95,10 @@ export function CinematicMediaLightbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="z-[70] h-[min(92dvh,860px)] max-h-[92dvh] max-w-[min(96vw,1100px)] overflow-hidden border-white/10 bg-black/95 p-0 text-white shadow-2xl">
-        <DialogTitle className="sr-only">{authorName}'s image</DialogTitle>
+      <DialogContent className="z-[70] h-[min(92dvh,860px)] max-h-[92dvh] max-w-[min(96vw,1100px)] overflow-hidden border-white/10 bg-black/95 p-0 text-white shadow-2xl [&>button]:z-20 [&>button]:h-11 [&>button]:w-11">
+        <DialogTitle className="sr-only">{authorName}'s media</DialogTitle>
         <DialogDescription className="sr-only">
-          Image {currentIndex + 1} of {media.length}. Use the arrow keys to browse the gallery.
+          Item {currentIndex + 1} of {media.length}. Use the arrow keys to browse the gallery.
         </DialogDescription>
 
         <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
@@ -105,7 +108,7 @@ export function CinematicMediaLightbox({
               {caption && <p className="mt-1 line-clamp-1 text-xs text-white/60">{caption}</p>}
             </div>
             {canNavigate && (
-              <span className="shrink-0 rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[0.7rem] font-medium tabular-nums text-white/80">
+              <span aria-live="polite" className="shrink-0 rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[0.7rem] font-medium tabular-nums text-white/80">
                 {currentIndex + 1} / {media.length}
               </span>
             )}
@@ -114,6 +117,7 @@ export function CinematicMediaLightbox({
           <div
             className="relative flex min-h-0 flex-1 items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.09),_transparent_58%)]"
             onTouchStart={(event) => {
+              if (event.target instanceof HTMLVideoElement) return;
               touchStartX.current = event.touches[0]?.clientX ?? null;
             }}
             onTouchEnd={(event) => {
@@ -134,11 +138,19 @@ export function CinematicMediaLightbox({
                   className="flex flex-col items-center gap-3 text-center text-white/60"
                 >
                   <ImageOff className="h-9 w-9" />
-                  <p className="text-sm">This image could not be loaded.</p>
+                  <p className="text-sm">This media could not be loaded.</p>
+                  <Button type="button" variant="outline" className="min-h-11 border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={() => {
+                    setFailedImages((images) => { const next = new Set(images); next.delete(currentIndex); return next; });
+                    setRetryVersion((version) => version + 1);
+                  }}>Retry media</Button>
                 </motion.div>
+              ) : !currentMediaSource ? (
+                <div role="status" className="flex items-center gap-2 text-sm text-white/70"><Loader2 className="h-5 w-5 animate-spin" /> Loading media…</div>
+              ) : currentIsVideo ? (
+                <video key={currentMedia} src={currentMediaSource} controls playsInline preload="metadata" aria-label={`${authorName}'s video`} className="max-h-full w-full px-3 py-16 sm:px-14" onError={failCurrentMedia} />
               ) : (
                 <motion.img
-                  key={currentMedia}
+                  key={`${currentMedia}-${retryVersion}`}
                   src={currentMediaSource}
                   alt={`${authorName}'s post, image ${currentIndex + 1} of ${media.length}`}
                   initial={reduceMotion ? false : { opacity: 0, x: direction * 18, scale: 0.985 }}
@@ -189,10 +201,10 @@ export function CinematicMediaLightbox({
                     'h-11 w-11 shrink-0 overflow-hidden rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
                     index === currentIndex ? 'scale-105 border-white/90 opacity-100' : 'border-white/10 opacity-55 hover:opacity-90'
                   )}
-                  aria-label={`View image ${index + 1}`}
+                  aria-label={`View item ${index + 1}`}
                   aria-current={index === currentIndex ? 'true' : undefined}
                 >
-                  <ProtectedMediaImage src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  {/\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(url) ? <Play className="mx-auto h-5 w-5" /> : <ProtectedMediaImage src={url} alt="" className="h-full w-full object-cover" loading="lazy" />}
                 </button>
               ))}
             </div>

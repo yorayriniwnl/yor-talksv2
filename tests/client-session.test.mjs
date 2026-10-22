@@ -38,6 +38,25 @@ test('rate-limit errors display actionable text instead of machine error codes',
   await assert.rejects(api.getCurrentUser(), /Please try again in 2 minutes/);
 });
 
+for (const [label, run] of [
+  ['email verification', api => api.verifyEmail('one-time-token')],
+  ['password confirmation', api => api.confirmPasswordReset('one-time-token', 'ValidPassword1!')],
+  ['password reset request', api => api.requestPasswordReset('person@example.test')],
+  ['public verification resend', api => api.resendPublicVerificationEmail('person@example.test')],
+]) test(`${label} survives unrelated session restoration without attaching account credentials`, async t => {
+  const { api, setStoredTokens, getStoredTokens } = await client(t);
+  const response = deferred();
+  let sent;
+  t.mock.method(globalThis, 'fetch', (_url, options) => { sent = options; return response.promise; });
+  setStoredTokens({ accessToken: 'unrelated-account' });
+  const operation = run(api);
+  setStoredTokens(null);
+  response.resolve(ok({ accepted: true }));
+  assert.deepEqual(await operation, { accepted: true });
+  assert.equal(sent.headers.Authorization, undefined);
+  assert.equal(getStoredTokens(), null);
+});
+
 test('a late refresh cannot restore tokens after logout', async (t) => {
   const { api, setStoredTokens, getStoredTokens } = await client(t);
   const response = deferred();

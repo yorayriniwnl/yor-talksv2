@@ -17,8 +17,11 @@ import { LiveStreamRepository } from "../repositories/live-stream-repository.js"
 import { ContentSafetyService } from "../services/content-safety-service.js";
 import { isTrustedOrigin } from "../middlewares/trusted-origin.js";
 import { authorizeSocketAction, dispatchSocketToUsers, parseSocketPayload, socketErrorEvent, type SocketRequester } from "./policy.js";
+import { assertRecoveryReplay } from '../services/privacy-readiness.js';
 
 export const attachSocketServer = async (httpServer: HttpServer) => {
+  await assertRecoveryReplay({enabled:env.RECOVERY_REPLAY_GATE,
+    through:env.RESTORE_DELETION_JOURNAL_THROUGH,sha256:env.RESTORE_DELETION_MANIFEST_SHA256});
   const io = new Server(httpServer, {
     maxHttpBufferSize: 64 * 1024,
     // CORS alone does not protect the WebSocket transport.
@@ -276,13 +279,14 @@ export const attachSocketServer = async (httpServer: HttpServer) => {
         const members = await conversationRepository.getMembers(actualConversationId);
         await dispatchSocketToUsers(io, members, "message:receive",
           async (requester:SocketRequester) => {
-            await messageService.authorizeConversationDelivery(actualConversationId,requester.userId);
+            await messageService.authorizeConversationDelivery(actualConversationId,requester.userId,message.id);
             return hydrateMediaValue(message, undefined, requester);
           }, "message:deliver", undefined,
-          requester=>messageService.authorizeConversationDelivery(actualConversationId,requester.userId));
+          requester=>messageService.authorizeConversationDelivery(actualConversationId,requester.userId,message.id));
         await authorizeSocketAction(userId, "message:send");
         const senderDelivery = await hydrateMediaValue(message, undefined, { userId, deviceId, authVersion: socket.data.authVersion as number });
         await authorizeSocketAction(userId, "message:send");
+        await messageService.authorizeConversationDelivery(actualConversationId,userId,message.id);
         socket.emit("message:sent", senderDelivery); // Confirm to sender's current device
       } catch (err) {
         if (err instanceof MediaLifecycleError) {
