@@ -176,7 +176,7 @@ after the implemented repair/retest loop. Test counts are not exhaustive coverag
 
 ### Infrastructure/deployment blockers
 
-1. The [final code Actions run](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/33372146351)
+1. The [final code Actions run](https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/33372146351)
    failed before any step. GitHub's annotation states: "The job was not started
    because your account is locked due to a billing issue." The account owner must
    resolve it; pushes succeeded but do not establish CI verification.

@@ -177,12 +177,15 @@ export class EmailService {
     });
   }
 
-  async sendPrivacyChallengeEmail(email: string, token: string, _purpose = "privacy_rights"): Promise<boolean> {
-    const verifyUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/privacy/verify?token=${encodeURIComponent(token)}`;
+  async sendPrivacyChallengeEmail(email: string, token: string, purpose = "access"): Promise<boolean> {
+    const purposeLabel = ({access:'access to your records',correction:'correction of your records',
+      erasure:'erasure of pre-registration or waitlist records',restriction:'restriction of processing',
+      objection:'objection to processing'} as Record<string,string>)[purpose] ?? 'a privacy request';
+    const verifyUrl = `${env.CLIENT_ORIGIN ?? "http://localhost:5173"}/privacy/verify?token=${encodeURIComponent(token)}&purpose=${encodeURIComponent(purpose)}`;
     const html = this.renderTemplate({
       eyebrow: "PRIVACY / VERIFICATION",
       title: "Verify your request.",
-      body: "A privacy request or account inquiry was initiated for this email address. Use the secure single-use button below to verify your identity.",
+      body: `A request for ${purposeLabel} was initiated for this email address. Verify your identity, then confirm the requested action.`,
       actionLabel: "Verify privacy request",
       actionUrl: verifyUrl,
       footnote: "This single-use link expires in 15 minutes. If you did not make this request, you can safely ignore this message; no account details or records will be modified or disclosed.",
@@ -191,7 +194,7 @@ export class EmailService {
       to: email,
       subject: "Verify your Yor Talks privacy request",
       html,
-      text: `Verify your Yor Talks privacy request: ${verifyUrl}. This single-use link expires in 15 minutes.`,
+      text: `Verify your request for ${purposeLabel}: ${verifyUrl}. This single-use link expires in 15 minutes.`,
     });
   }
 

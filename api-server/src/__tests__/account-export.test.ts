@@ -27,6 +27,30 @@ async function read(userId: string, pageSize = 2) {
   return JSON.parse(text);
 }
 
+test('private-chat exports contain participant ciphertext and only the subjects public identity', async t => {
+  const { users, owner, other } = await fixtures(t);
+  const outsider = await createTestUser(users);
+  t.after(() => pool.query('DELETE FROM users WHERE id=$1', [outsider.id]));
+  for (const [index, user] of [owner, other, outsider].entries()) {
+    await pool.query(`INSERT INTO private_chat_identities(user_id,public_key,fingerprint) VALUES($1,$2,$3)`,
+      [user.id, `-----BEGIN PGP PUBLIC KEY BLOCK-----\n${'public-fixture-'.repeat(10)}${index}`, String(index + 1).repeat(64)]);
+  }
+  const shared = randomUUID(), unrelated = randomUUID();
+  const pair = [owner.id, other.id].sort(), otherPair = [other.id, outsider.id].sort();
+  await pool.query(`INSERT INTO private_chat_threads(id,user_a_id,user_b_id) VALUES($1,$2,$3),($4,$5,$6)`,
+    [shared, ...pair, unrelated, ...otherPair]);
+  const encrypted = `-----BEGIN PGP MESSAGE-----\n${'opaque-fixture-'.repeat(10)}`;
+  await pool.query(`INSERT INTO private_chat_envelopes(id,thread_id,sender_id,ciphertext) VALUES($1,$2,$3,$4),($5,$6,$3,$7)`,
+    [randomUUID(), shared, other.id, encrypted, randomUUID(), unrelated, `${encrypted}-unrelated`]);
+  const archive = await read(owner.id, 1);
+  assert.equal(archive.content.privateChatEnvelopes.length, 1);
+  assert.equal(archive.content.privateChatEnvelopes[0].ciphertext, encrypted);
+  assert.deepEqual(archive.content.privateChatThreads.map((row: { id: string }) => row.id), [shared]);
+  assert.deepEqual(archive.content.privateChatPublicIdentity.map((row: { userId: string }) => row.userId), [owner.id]);
+  assert.equal(JSON.stringify(archive).includes(`${encrypted}-unrelated`), false);
+  assert.equal(Object.hasOwn(archive.content.privateChatEnvelopes[0], 'content'), false);
+});
+
 test('message archives omit shared legacy receipts while retaining the subjects own read records', async t => {
   const { owner, other } = await fixtures(t);
   const conversation = randomUUID(), sent = randomUUID(), received = randomUUID();
@@ -46,6 +70,41 @@ test('message archives omit shared legacy receipts while retaining the subjects 
   assert.deepEqual(archive.activity.messageReads.map((row: { messageId: string; userId: string }) =>
     [row.messageId, row.userId]), [[received, owner.id]]);
   assert.ok(archive.activity.messageReads[0].readAt);
+});
+
+test('consent, rights requests and moderation exports include subject records without internal evidence', async t => {
+  const { owner, other } = await fixtures(t);
+  const decisionId = randomUUID();
+  const rightsIds = [randomUUID(), randomUUID()];
+  t.after(async () => {
+    await pool.query('DELETE FROM moderation_decisions WHERE id=$1', [decisionId]);
+    await pool.query('DELETE FROM privacy_rights_requests WHERE id=ANY($1::uuid[])', [rightsIds]);
+  });
+  await pool.query(`INSERT INTO moderation_decisions(id,target_type,target_id,action,actor_id,rationale,internal_notes)
+    VALUES($1,'user',$2,'no_action',$3,'A subject-facing decision','internal-decision-marker')`, [decisionId, owner.id, other.id]);
+  for (const [index, subject] of [owner, other].entries()) {
+    await pool.query(`INSERT INTO consent_records(subject_id,subject_digest,purpose,version,granted,metadata)
+      VALUES($1,'identity-digest-marker','optional_analytics','v1',$2,'{"internal":"consent-metadata-marker"}')`, [subject.id, index === 0]);
+    await pool.query(`INSERT INTO privacy_rights_requests(id,subject_id,email_hash,request_type,status,verification_token_hash,details)
+      VALUES($1,$2,'email-hash-marker','access','verified',$3,'{"internal":"rights-details-marker"}')`,
+      [rightsIds[index], subject.id,`verification-token-marker-${rightsIds[index]}`]);
+    await pool.query(`INSERT INTO moderation_decision_notices(id,decision_id,recipient_user_id,recipient_role,target_type,target_id,safe_summary,action)
+      VALUES($1,$2,$3::uuid,'affected_party','user',$3::text,$4,'no_action')`, [randomUUID(), decisionId, subject.id, `safe-notice-${index}`]);
+    await pool.query(`INSERT INTO moderation_appeals(id,decision_id,appellant_user_id,relationship,statement,reviewer_id,reviewer_notes)
+      VALUES($1,$2,$3,'affected_party',$4,$5,'internal-review-marker')`,
+      [randomUUID(), decisionId, subject.id, `My submitted appeal ${index}`, other.id]);
+  }
+  const archive = await read(owner.id);
+  assert.equal(archive.safety.consentRecords.length, 1);
+  assert.equal(archive.safety.consentRecords[0].granted, true);
+  assert.equal(archive.safety.privacyRightsRequests.length, 1);
+  assert.equal(archive.safety.privacyRightsRequests[0].requestType, 'access');
+  assert.deepEqual(archive.safety.moderationNotices.map((row: { safeSummary: string }) => row.safeSummary), ['safe-notice-0']);
+  assert.deepEqual(archive.safety.moderationAppeals.map((row: { statement: string }) => row.statement), ['My submitted appeal 0']);
+  for (const hidden of ['identity-digest-marker', 'consent-metadata-marker', 'email-hash-marker', 'verification-token-marker',
+    'rights-details-marker', 'internal-decision-marker', 'internal-review-marker', 'safe-notice-1', 'My submitted appeal 1']) {
+    assert.equal(JSON.stringify(archive).includes(hidden), false, hidden);
+  }
 });
 
 test('every migrated user foreign key has an explicit export or privacy exclusion decision', async () => {

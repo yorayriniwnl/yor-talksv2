@@ -1,12 +1,12 @@
 {
   "name": "Yor Talks",
   "short_name": "Yor",
-  "description": "A premium social experience with Indian data residency as a launch commitment and privacy inspired by EU principles.",
+  "description": "Meet Yor Talks. A premium social space being built around your people, your choices, and an India-first approach to your data.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#0d1011",
+  "background_color": "#f5f6f2",
+  "theme_color": "#f5f6f2",
   "orientation": "portrait-primary",
   "icons": [
     {

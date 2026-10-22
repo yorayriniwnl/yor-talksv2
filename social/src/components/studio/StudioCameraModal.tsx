@@ -20,6 +20,7 @@ import { ContentCategorySelect } from '@/components/content/ContentCategorySelec
 import { type ContentCategory } from '@/lib/content-category';
 import { api } from '@/lib/api-client';
 import { uploadApprovedMedia } from '@/lib/media-upload';
+import { PreviewSticker } from '@/components/studio/PreviewSticker';
 
 interface StudioCameraModalProps {
   isOpen: boolean;
@@ -56,6 +57,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
   const [stickersDrawerOpen, setStickersDrawerOpen] = useState(false);
   const stickerTriggerRef = useRef<HTMLButtonElement>(null);
   const stickerCloseRef = useRef<HTMLButtonElement>(null);
+  const stickerBoundsRef = useRef<HTMLDivElement>(null);
 
   const closeStickers = () => {
     setStickersDrawerOpen(false);
@@ -297,7 +299,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
     setActiveStickers((prev) => [
       ...prev,
-      { id: `stk_${Date.now()}`, type: typeId, data, x: 50, y: 50 }
+      { id: `stk_${crypto.randomUUID()}`, type: typeId, data, x: 50, y: 50 }
     ]);
     setStickersDrawerOpen(false);
     stickerTriggerRef.current?.focus();
@@ -422,7 +424,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
           <div className="flex-1 bg-black relative flex items-center justify-center overflow-hidden">
             
             {/* Live Video Feed or Fallback Studio Visualizer */}
-            <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+            <div ref={stickerBoundsRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
               <video
                 ref={videoRef}
                 aria-label="Live camera preview"
@@ -454,15 +456,19 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               )}
 
               {/* Placed Interactive Stickers Overlays */}
+              <p id="studio-sticker-help" className="sr-only">Move a sticker with the arrow keys or its direction buttons. Hold Shift for larger steps. Press Delete to remove it. Stickers appear only in this preview.</p>
               {activeStickers.map((sticker) => (
-                <motion.div
+                <PreviewSticker
                   key={sticker.id}
-                  drag
-                  dragConstraints={{ left: -150, right: 150, top: -200, bottom: 200 }}
-                  className="absolute z-20 cursor-grab active:cursor-grabbing select-none"
+                  label={`${sticker.type} preview sticker`}
+                  bounds={stickerBoundsRef}
+                  onRemove={() => {
+                    setActiveStickers(items => items.filter(item => item.id !== sticker.id));
+                    stickerTriggerRef.current?.focus();
+                  }}
                 >
                   {sticker.type === 'poll' && (
-                    <div className="surface-1/90 backdrop-blur-xl p-3.5 rounded-2xl border-2 border-primary shadow-2xl text-center min-w-[200px]">
+                    <div className="surface-1/90 backdrop-blur-xl p-3.5 rounded-2xl border-2 border-primary shadow-2xl text-center w-[220px] max-w-full">
                       <span className="text-[0.62rem] font-mono uppercase text-primary font-bold block mb-1">📊 LIVE POLL</span>
                       <h5 className="font-display font-black text-xs text-foreground mb-2">{sticker.data.question}</h5>
                       <div className="space-y-1.5">
@@ -473,7 +479,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                   )}
 
                   {sticker.type === 'question' && (
-                    <div className="bg-gradient-to-tr from-purple-600 via-pink-600 to-rose-500 p-3.5 rounded-2xl shadow-2xl text-center text-white min-w-[220px]">
+                    <div className="bg-gradient-to-tr from-purple-600 via-pink-600 to-rose-500 p-3.5 rounded-2xl shadow-2xl text-center text-white w-[220px] max-w-full">
                       <span className="text-[0.62rem] font-mono uppercase font-bold block opacity-80">❓ ANONYMOUS Q&A</span>
                       <h5 className="font-bold text-xs mt-1 mb-2">{sticker.data.prompt}</h5>
                       <div className="bg-white/20 backdrop-blur-md rounded-xl py-1 px-2 text-[0.68rem] text-white/90">
@@ -493,7 +499,8 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
                       🇮🇳 {sticker.data.tag}
                     </div>
                   )}
-                </motion.div>
+                  {sticker.type === 'countdown' && <div className="rounded-2xl border border-border bg-background p-4 text-center text-foreground"><p className="text-xs font-semibold">Countdown preview</p><p className="mt-1 font-mono text-lg">{sticker.data.time}</p><p className="mt-1 text-xs text-muted-foreground">Static sample · no timer is running</p></div>}
+                </PreviewSticker>
               ))}
 
               {/* Recording Overlay & Timer Indicator */}

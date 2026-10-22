@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { test } from 'node:test';
+import { test as nodeTest } from 'node:test';
 import { createRequire } from 'node:module';
 import { migrateRelease, RELEASE_SCHEMA_VERSION } from '../lib/db/scripts/migrate-release.mjs';
 import { ACCOUNT_HISTORY_RETENTION_VERSION } from '../lib/db/scripts/migrate-account-history-retention.mjs';
@@ -8,9 +8,12 @@ import { PRIVACY_RETENTION_SCHEMA_VERSION } from '../lib/db/scripts/migrate-priv
 
 const require = createRequire(new URL('../lib/db/package.json', import.meta.url));
 const { Client } = require('pg');
-const ADMIN_URL = process.env.MIGRATION_REHEARSAL_ADMIN_URL || 'postgresql://postgres:postgres@localhost:5432/postgres';
+const ADMIN_URL = process.env.MIGRATION_REHEARSAL_ADMIN_URL;
+const test = (name,run) => nodeTest(name,{skip:!ADMIN_URL},run);
 
 async function withAdmin(fn) {
+  const target = new URL(ADMIN_URL);
+  assert.ok(['localhost','127.0.0.1','[::1]'].includes(target.hostname), 'Rehearsal requires an explicit loopback administrator URL');
   const admin = new Client({ connectionString: ADMIN_URL, connectionTimeoutMillis: 5000 });
   await admin.connect();
   try {
@@ -37,7 +40,7 @@ async function dropIsolatedDatabase(dbName) {
 }
 
 /** Sets up the base baseline schema mimicking the pre-release state */
-async function setupBaselineSchema(client) {
+export async function setupBaselineSchema(client) {
   await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
   await client.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
 
@@ -394,6 +397,12 @@ async function setupBaselineSchema(client) {
       email text NOT NULL UNIQUE,
       username text NOT NULL UNIQUE,
       created_at timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE TABLE waitlist (
+      id uuid PRIMARY KEY,
+      email text NOT NULL UNIQUE,
+      status text NOT NULL DEFAULT 'pending',
+      created_at timestamp NOT NULL DEFAULT now()
     );
   `);
 }

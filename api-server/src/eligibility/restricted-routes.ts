@@ -9,6 +9,10 @@ const parameter = (method: string, before: string, after = ""): RouteRule => ({
 });
 
 const restrictedRoutes: RouteRule[] = [
+  exact("GET", "/moderation/notices"),
+  parameter("POST", "/moderation/notices", "/acknowledge"),
+  exact("POST", "/moderation/appeals"),
+  exact("GET", "/moderation/appeals/mine"),
   exact("GET", "/users/me"),
   exact("POST", "/users/me/consent"),
   exact("GET", "/users/me/eligibility"),
@@ -34,6 +38,10 @@ const restrictedRoutes: RouteRule[] = [
 ];
 
 const restrictedRightsRoutes: RouteRule[] = [
+  exact("GET", "/moderation/notices"),
+  parameter("POST", "/moderation/notices", "/acknowledge"),
+  exact("POST", "/moderation/appeals"),
+  exact("GET", "/moderation/appeals/mine"),
   exact("GET", "/users/me"),
   exact("GET", "/users/me/export"),
   exact("DELETE", "/users/me"),

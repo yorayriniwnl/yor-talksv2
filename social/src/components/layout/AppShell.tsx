@@ -3,19 +3,21 @@ import { useLocation, Link } from 'wouter';
 import { 
   Activity, Compass, Film, Globe2, Heart, House, MessageCircle, PlusSquare, Gauge,
   UserRound, Settings, Camera, Radio, WandSparkles, Bookmark, Megaphone, WifiOff,
-  ChevronDown, Layers3, Sparkles, Flame
+  ChevronDown, Layers3, Sparkles, Flame, KeyRound, Users, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { ThemeMorpher } from '@/components/ui/ThemeMorpher';
 import { GlobalAudioPlayer } from '@/components/player/GlobalAudioPlayer';
 import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 import { AppTopbar } from '@/components/layout/AppTopbar';
+import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
+import { isNavigationActive } from '@/components/layout/navigation';
+import '@/styles/navigation.css';
 import { DeviceApprovalInbox } from '@/components/auth/DeviceApprovalInbox';
 import { CompanionPet } from '@/components/ui/CompanionPet';
 import { publicBetaConfig } from '@/lib/public-beta-config';
@@ -32,6 +34,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [location, setLocation] = useLocation();
+  const privateChatActive = location.split('?')[0] === '/private-messages';
   const currentUser = useAppStore((state) => state.currentUser);
   const worldPreferences = useAppStore((state) => state.worldPreferences);
 
@@ -48,6 +51,7 @@ export function AppShell({ children }: AppShellProps) {
   });
   const [isComposing, setIsComposing] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
 
   useEffect(() => {
@@ -90,7 +94,10 @@ export function AppShell({ children }: AppShellProps) {
     {
       label: 'Social',
       items: [
+        { icon: KeyRound, label: 'Private messages', path: '/private-messages' },
         { icon: Globe2, label: 'Worlds', path: '/worlds' },
+        { icon: Users, label: 'Communities', path: '/communities' },
+        { icon: CalendarDays, label: 'Events', path: '/events' },
         { icon: Activity, label: 'Pulse', path: '/pulse' },
         { icon: Radio, label: 'Live', path: '/live' },
         { icon: Megaphone, label: 'Channels', path: '/channels' },
@@ -116,8 +123,13 @@ export function AppShell({ children }: AppShellProps) {
   ];
 
   const secondaryNavItems = secondaryNavGroups.flatMap((group) => group.items);
-  const secondaryRouteActive = secondaryNavItems.some((item) => location.startsWith(item.path));
-  const showSecondaryNavigation = moreOpen || secondaryRouteActive;
+  const secondaryRouteActive = secondaryNavItems.some((item) => isNavigationActive(location, item.path));
+  const showSecondaryNavigation = moreOpen;
+
+  useEffect(() => {
+    setMoreOpen(secondaryRouteActive);
+    setNavigationOpen(false);
+  }, [location, secondaryRouteActive]);
 
   const currentDisplayName = currentUser?.displayName || currentUser?.username || 'User';
 
@@ -125,6 +137,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell operator-ui relative flex min-h-screen overflow-x-clip bg-background font-sans text-foreground">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <CommandPalette />
+      <NavigationDrawer open={navigationOpen} onOpenChange={setNavigationOpen} />
       {isOffline && (
         <div className="yor-offline-banner" role="status" aria-live="polite">
           <WifiOff className="h-4 w-4 shrink-0" />
@@ -207,12 +220,12 @@ export function AppShell({ children }: AppShellProps) {
         </button>
 
         {/* Navigation List */}
-        <nav className="shell-navigation flex-1">
+        <nav aria-label="Main navigation" className="shell-navigation flex-1">
           <div className="space-y-1.5">
             {!sidebarCollapsed && <p className="shell-nav-label">Your signal</p>}
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = item.path === '/' ? location === '/' : location.startsWith(item.path);
+              const isActive = isNavigationActive(location, item.path);
 
               return (
                 <button
@@ -255,6 +268,7 @@ export function AppShell({ children }: AppShellProps) {
               onClick={() => setMoreOpen((open) => !open)}
               aria-expanded={showSecondaryNavigation}
               aria-controls="shell-more-navigation"
+              aria-label="More"
               title={sidebarCollapsed ? 'More' : undefined}
             >
               <Layers3 className="h-5 w-5" />
@@ -269,7 +283,7 @@ export function AppShell({ children }: AppShellProps) {
                     {!sidebarCollapsed && <p>{group.label}</p>}
                     {group.items.map((item) => {
                       const Icon = item.icon;
-                      const isActive = location.startsWith(item.path);
+                      const isActive = isNavigationActive(location, item.path);
                       return (
                         <button
                           type="button"
@@ -325,7 +339,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* ── MAIN CONTENT AREA ────────────────────────────────────────────── */}
       <div className="app-shell__content min-h-screen min-w-0 flex-1">
-        <AppTopbar onCompose={() => setIsComposing(true)} />
+        <AppTopbar onCompose={() => setIsComposing(true)} onOpenNavigation={() => setNavigationOpen(true)} />
         <main id="main-content" tabIndex={-1} className="w-full h-full outline-none">
           {children}
         </main>
@@ -377,7 +391,7 @@ export function AppShell({ children }: AppShellProps) {
           <DialogHeader className="border-b border-border/70 px-5 py-4 sm:px-6">
             <div className="pr-8">
               <DialogTitle className="font-display font-bold text-lg">Create post</DialogTitle>
-              <p className="text-xs text-muted-foreground">Share a thought, photo, or update with your people.</p>
+              <DialogDescription className="text-xs text-muted-foreground">Share a thought, photo, or update with your people.</DialogDescription>
             </div>
             <Link href="/dream" onClick={() => setIsComposing(false)} className="seed-dialog-dream-link">
               <WandSparkles className="h-4 w-4" />
@@ -390,11 +404,11 @@ export function AppShell({ children }: AppShellProps) {
         </DialogContent>
       </Dialog>
 
-      <GlobalAudioPlayer />
-      <PwaInstallPrompt />
+      {!privateChatActive && <GlobalAudioPlayer />}
+      {!privateChatActive && <PwaInstallPrompt />}
       <DeviceApprovalInbox />
       {publicBetaConfig.rtcCallsEnabled && <Suspense fallback={null}><IncomingCallManager /></Suspense>}
-      <CompanionPet />
+      {!privateChatActive && <CompanionPet />}
     </div>
   );
 }

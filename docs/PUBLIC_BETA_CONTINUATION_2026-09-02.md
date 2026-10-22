@@ -48,7 +48,7 @@ Scoped commits for this continuation are `a721378`, `1cc63f9`, `31d8642`,
 | Graceful shutdown | **PASS**, SIGTERM logs completion and exits 0 |
 | Production browser inspection | **PASS LOCALLY**, settled 390×844 and 1440×900 sign-in/legal views, no horizontal overflow, nested interactive elements or console errors |
 | Git push | **PASS**, local and remote application SHA matched `949dc290578fe9e593c6d424f4fc2de10184c591` before this docs handoff |
-| GitHub Actions | **BLOCKED BEFORE EXECUTION**, run [#173](https://github.com/yorayriniwnl/yor-talksv2/actions/runs/33601711396) failed in six seconds because the account is billing-locked |
+| GitHub Actions | **BLOCKED BEFORE EXECUTION**, run [#173](https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/33601711396) failed in six seconds because the account is billing-locked |
 
 The browser inspection used the actual production Nginx container rather than a
 source screenshot. Mobile sign-in preserved password, email-code, Google and

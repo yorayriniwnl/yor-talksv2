@@ -21,6 +21,17 @@ Scope: `/preregister` and `/launch`, including the countdown, product previews, 
 - Local layout checks at 320, 375, 601, 768, 900, 1024 and 1440px found no initial horizontal overflow; section links clear the sticky header.
 - The mobile Axe scan at 375px found zero violations.
 - Loaded 3D labels stayed inside their scene at 320px and 375px after changing districts.
-- Browser regressions cover connection failure/retry, timeout recovery, malformed receipts, return focus and deferred 3D loading alongside the existing signup and product tests. Production browser execution is pending completion of the local rebuild.
+- Browser regressions cover connection failure/retry, timeout recovery, malformed receipts, return focus and deferred 3D loading alongside the existing signup and product tests. All 18 cases have passing results against the existing local development server. The first run passed 17 cases and exposed a request matcher that also matched the lightweight deferred loader; after correcting the matcher, all four affected launch/layout/loading cases passed on rerun.
+- Production browser verification did not complete: the test server’s build exceeded its 300,000ms startup timeout before any production browser cases ran. The previous build output was unchanged. This review does not count that attempt as a successful production build.
+
+Commands used:
+
+```text
+pnpm --filter @workspace/social typecheck
+pnpm exec playwright test e2e/preregister.spec.ts --project=chromium --workers=2 --grep-invert "browser execution against real local API"
+pnpm exec playwright test --config test-results/preregister-issues-local.config.ts --project=chromium
+```
+
+The local review configuration reuses the tracked Playwright settings, points to the existing local server on port 5173, and disables server startup. The original production test configuration remains intact. Signup/auth requests are mocked, external requests are blocked, and database-backed browser cases were excluded from this frontend review.
 
 India-only hosting and legal compliance remain launch review items. This review does not verify production data residency or certify GDPR compliance.

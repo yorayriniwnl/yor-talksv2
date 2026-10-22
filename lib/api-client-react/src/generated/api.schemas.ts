@@ -220,6 +220,158 @@ export interface PublicGrievanceReceipt {
   createdAt: string;
 }
 
+export type ModerationDecisionRequestTargetType = typeof ModerationDecisionRequestTargetType[keyof typeof ModerationDecisionRequestTargetType];
+
+
+export const ModerationDecisionRequestTargetType = {
+  post: 'post',
+  user: 'user',
+  comment: 'comment',
+  message: 'message',
+  video: 'video',
+} as const;
+
+export type ModerationDecisionRequestAction = typeof ModerationDecisionRequestAction[keyof typeof ModerationDecisionRequestAction];
+
+
+export const ModerationDecisionRequestAction = {
+  no_action: 'no_action',
+  restrict: 'restrict',
+  remove: 'remove',
+  restore: 'restore',
+} as const;
+
+/**
+ * Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads.
+ */
+export type ModerationDecisionRequestScope = typeof ModerationDecisionRequestScope[keyof typeof ModerationDecisionRequestScope];
+
+
+export const ModerationDecisionRequestScope = {
+  public: 'public',
+  direct_only: 'direct_only',
+  global: 'global',
+} as const;
+
+export interface ModerationDecisionRequest {
+  targetType: ModerationDecisionRequestTargetType;
+  targetId: string;
+  action: ModerationDecisionRequestAction;
+  /** Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads. */
+  scope?: ModerationDecisionRequestScope;
+  /**
+     * Public explanation shown to the content author. Never include private evidence or reporter identity.
+     * @minLength 10
+     * @maxLength 5000
+     */
+  rationale: string;
+  /** @maxLength 5000 */
+  internalNotes?: string;
+  expiresAt?: string;
+  reportId?: string;
+  grievanceTicketId?: string;
+}
+
+/**
+ * If supplied, must match the private notice already issued to this account. It cannot establish authority.
+ */
+export type ModerationAppealRequestRelationship = typeof ModerationAppealRequestRelationship[keyof typeof ModerationAppealRequestRelationship];
+
+
+export const ModerationAppealRequestRelationship = {
+  author: 'author',
+  reporter: 'reporter',
+  affected_party: 'affected_party',
+} as const;
+
+export interface ModerationAppealRequest {
+  decisionId: string;
+  /**
+     * @minLength 10
+     * @maxLength 5000
+     */
+  statement: string;
+  /** If supplied, must match the private notice already issued to this account. It cannot establish authority. */
+  relationship?: ModerationAppealRequestRelationship;
+}
+
+export type ModerationReviewRequestOutcome = typeof ModerationReviewRequestOutcome[keyof typeof ModerationReviewRequestOutcome];
+
+
+export const ModerationReviewRequestOutcome = {
+  upheld: 'upheld',
+  reversed: 'reversed',
+  rejected: 'rejected',
+} as const;
+
+/**
+ * Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action.
+ */
+export type ModerationReviewRequestAction = typeof ModerationReviewRequestAction[keyof typeof ModerationReviewRequestAction];
+
+
+export const ModerationReviewRequestAction = {
+  restore: 'restore',
+  restrict: 'restrict',
+  remove: 'remove',
+} as const;
+
+export interface ModerationReviewRequest {
+  outcome: ModerationReviewRequestOutcome;
+  /** Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action. */
+  action?: ModerationReviewRequestAction;
+  /**
+     * Staff-only review evidence.
+     * @minLength 10
+     * @maxLength 5000
+     */
+  reviewerNotes: string;
+  /**
+     * Public review explanation visible only to the affected parties.
+     * @minLength 10
+     * @maxLength 5000
+     */
+  rationale: string;
+}
+
+export type PublicModerationAppealRelationship = typeof PublicModerationAppealRelationship[keyof typeof PublicModerationAppealRelationship];
+
+
+export const PublicModerationAppealRelationship = {
+  author: 'author',
+  reporter: 'reporter',
+  affected_party: 'affected_party',
+} as const;
+
+export type PublicModerationAppealStatus = typeof PublicModerationAppealStatus[keyof typeof PublicModerationAppealStatus];
+
+
+export const PublicModerationAppealStatus = {
+  pending: 'pending',
+  under_review: 'under_review',
+  upheld: 'upheld',
+  reversed: 'reversed',
+  rejected: 'rejected',
+} as const;
+
+export interface PublicModerationAppeal {
+  id: string;
+  decisionId: string;
+  relationship: PublicModerationAppealRelationship;
+  statement: string;
+  status: PublicModerationAppealStatus;
+  /** @nullable */
+  rationale: string | null;
+  /** @nullable */
+  outcomeDecisionId: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PublicModerationAppealList = PublicModerationAppeal[];
+
 export type ReportStatusUpdateRequest = {
   status: 'pending' | 'reviewed';
 } | {
@@ -620,6 +772,102 @@ export type NullReceipt = null;
  */
 export type ContactWithdrawalReceipt = null;
 
+export type PrivacyChallengeRequestPurpose = typeof PrivacyChallengeRequestPurpose[keyof typeof PrivacyChallengeRequestPurpose];
+
+
+export const PrivacyChallengeRequestPurpose = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export interface PrivacyChallengeRequest {
+  /** @maxLength 255 */
+  email: string;
+  purpose?: PrivacyChallengeRequestPurpose;
+}
+
+export const PrivacyChallengeReceiptValue = {
+  initiated: true,
+} as const;
+export type PrivacyChallengeReceipt = typeof PrivacyChallengeReceiptValue;
+
+export interface PrivacyVerifyRequest {
+  /**
+     * Single-use email challenge, bound to its issued purpose and 15-minute database expiry.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  token: string;
+}
+
+export type PrivacyVerifyReceiptPurpose = typeof PrivacyVerifyReceiptPurpose[keyof typeof PrivacyVerifyReceiptPurpose];
+
+
+export const PrivacyVerifyReceiptPurpose = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export interface PrivacyVerifyReceipt {
+  valid: true;
+  purpose: PrivacyVerifyReceiptPurpose;
+}
+
+export type PrivacyRightsRequestRequestType = typeof PrivacyRightsRequestRequestType[keyof typeof PrivacyRightsRequestRequestType];
+
+
+export const PrivacyRightsRequestRequestType = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export type PrivacyRightsRequestDetails = {
+  /** @maxLength 500 */
+  reason?: string;
+  /** @pattern ^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$ */
+  preferredUsername?: string;
+};
+
+export interface PrivacyRightsRequest {
+  /**
+     * Single-use email challenge, bound to its issued purpose and 15-minute database expiry.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  token: string;
+  requestType: PrivacyRightsRequestRequestType;
+  details?: PrivacyRightsRequestDetails;
+}
+
+export type PrivacyRightsResultRequestType = typeof PrivacyRightsResultRequestType[keyof typeof PrivacyRightsResultRequestType];
+
+
+export const PrivacyRightsResultRequestType = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export type PrivacyRightsResultDetails = { [key: string]: unknown };
+
+export interface PrivacyRightsResult {
+  executed: boolean;
+  requestType: PrivacyRightsResultRequestType;
+  message: string;
+  recordStatus?: string;
+  erasedAt?: string;
+  details?: PrivacyRightsResultDetails;
+}
+
 export type PreregistrationRequestPerksItem = typeof PreregistrationRequestPerksItem[keyof typeof PreregistrationRequestPerksItem];
 
 
@@ -965,6 +1213,16 @@ export type PostMessagesByMessageIdReactionsBody = { [key: string]: unknown };
 
 export type PostMessagesByMessageIdSeenBody = { [key: string]: unknown };
 
+export type PostModerationAppeals201 = ApiEnvelope & {
+  data?: PublicModerationAppeal;
+};
+
+export type GetModerationAppealsMine200 = ApiEnvelope & {
+  data?: PublicModerationAppealList;
+};
+
+export type PostModerationNoticesByNoticeIdAcknowledgeBody = { [key: string]: unknown };
+
 export type PostNotesBody = { [key: string]: unknown };
 
 export type PostNotificationsByNotificationIdReadBody = { [key: string]: unknown };
@@ -1049,9 +1307,23 @@ export type GetPreregisterStats200 = ApiEnvelope & {
   data?: PreregistrationStats;
 };
 
-export type PostPrivacyChallengeBody = { [key: string]: unknown };
+export type PostPrivacyChallenge200 = ApiEnvelope & {
+  data?: PrivacyChallengeReceipt;
+};
 
-export type PostPrivacyRequestBody = { [key: string]: unknown };
+export type PostPrivacyRequest200 = ApiEnvelope & {
+  data?: PrivacyRightsResult;
+};
+
+export type PostPrivacyVerify200 = ApiEnvelope & {
+  data?: PrivacyVerifyReceipt;
+};
+
+export type PutPrivateMessagesIdentityBody = { [key: string]: unknown };
+
+export type PostPrivateMessagesThreadsBody = { [key: string]: unknown };
+
+export type PostPrivateMessagesThreadsByThreadIdMessagesBody = { [key: string]: unknown };
 
 export type PostProductsBody = {
   /** @maxItems 10 */

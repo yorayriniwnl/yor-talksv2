@@ -116,11 +116,13 @@ export default function EsportsCalendar() {
     URL.revokeObjectURL(url);
 
     sounds.playChime();
-    setMatches(prev => {
-      const next = prev.map(m => m.id === id ? { ...m, reminderSet: true } : m);
+    const next = matches.map(m => m.id === id ? { ...m, reminderSet: true } : m);
+    setMatches(next);
+    try {
       localStorage.setItem('yor-esports-calendar-reminders', JSON.stringify(next.filter((m) => m.reminderSet).map((m) => m.id)));
-      return next;
-    });
+    } catch {
+      // The downloaded calendar file remains usable when local storage is unavailable.
+    }
     toast.success(`Calendar file downloaded for ${matchName}. Add it to your calendar to receive reminders.`);
   };
 

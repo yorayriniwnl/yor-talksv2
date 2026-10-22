@@ -79,9 +79,15 @@ export default function Achievements() {
     try {
       const stored = localStorage.getItem('yor-achievement-card-sets');
       if (stored) {
-        const parsed = JSON.parse(stored) as TradingCardSet[];
-        if (Array.isArray(parsed) && parsed.every((set) => typeof set.id === 'string' && typeof set.crafted === 'boolean')) {
-          return INITIAL_CARD_SETS.map((initial) => parsed.find((set) => set.id === initial.id) ?? initial);
+        const parsed: unknown = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return INITIAL_CARD_SETS.map((initial) => {
+            const saved = parsed.find((value): value is Pick<TradingCardSet, 'id' | 'crafted'> =>
+              value !== null && typeof value === 'object' && !Array.isArray(value)
+              && value.id === initial.id && typeof value.crafted === 'boolean');
+            // Only the local craft selection is persisted; catalogue fields stay authoritative.
+            return { ...initial, crafted: saved?.crafted ?? initial.crafted };
+          });
         }
       }
     } catch {
@@ -93,7 +99,7 @@ export default function Achievements() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try { localStorage.setItem('yor-achievement-card-sets', JSON.stringify(cardSets)); }
+      try { localStorage.setItem('yor-achievement-card-sets', JSON.stringify(cardSets.map(({ id, crafted }) => ({ id, crafted })))); }
       catch { /* Local previews also work in browsers that restrict storage. */ }
     }
   }, [cardSets]);

@@ -76,7 +76,7 @@ jobs:
         run: pnpm contract:check
 
       - name: Run backend infrastructure regression tests
-        run: node --test tests/ci-workflow.test.mjs tests/database-runtime-role.test.mjs tests/alertmanager-config.test.mjs tests/migration-safety.test.mjs tests/realtime-smoke.test.mjs tests/restore-deletion-verification.test.mjs
+        run: node --test tests/ci-workflow.test.mjs tests/database-runtime-role.test.mjs tests/alertmanager-config.test.mjs tests/migration-safety.test.mjs tests/realtime-smoke.test.mjs tests/restore-deletion-verification.test.mjs tests/deployment-boundary-verifier.test.mjs
 
       - name: Verify restored-account detection against disposable PostgreSQL
         run: node --test ops/backup/restore-deletion-database.test.mjs
@@ -98,7 +98,19 @@ jobs:
         run: pnpm --filter @workspace/api-server typecheck
 
       - name: Install media verification runtime
-        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg postgresql-client-16
+
+      - name: Verify full-schema privacy recovery from a historical database dump
+        run: node --test ops/backup/privacy-recovery-database.test.mjs
+        env:
+          RECOVERY_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          RECOVERY_TEST_SCHEMA_URL: postgresql://postgres:postgres@localhost:5432/yor_talks
+          RECOVERY_TEST_PG_BIN: /usr/lib/postgresql/16/bin
+
+      - name: Rehearse fresh, populated and interrupted release migrations
+        run: node --test tests/operational-migration-rehearsal.test.mjs
+        env:
+          MIGRATION_REHEARSAL_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
       - name: Run API tests serially
         run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts

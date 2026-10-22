@@ -1,12 +1,13 @@
 import { useParams, Link, useLocation } from 'wouter';
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useAppStore, type Showcase, type ProfileComment, type Story } from '@/lib/store';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { mapPost, useAppStore, type Showcase, type ProfileComment, type Story, type Post } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -31,7 +32,42 @@ import { MediaImageField } from '@/components/media/MediaImageField';
 import { FounderBadge, LevelBadge, Metric, SignalLabel, StatusBadge } from '@/components/system';
 import { toast } from 'sonner';
 import { computeLevel } from '@/lib/achievement-progress';
-import { ProtectedMediaImage } from '@/lib/protected-media';
+import { ProtectedMediaImage, ProtectedMediaVideo } from '@/lib/protected-media';
+import { useFollowAction } from '@/hooks/use-follow-action';
+
+type ProfileCollection = { key: string; ids: string[]; loading: boolean; error: string; nextCursor?: string; errorCursor?: string };
+
+function useProfileCollection(profileId: string | undefined, kind: 'posts' | 'liked') {
+  const viewerId = useAppStore(state => state.currentUser?.id);
+  const [collection, setCollection] = useState<ProfileCollection>({ key: '', ids: [], loading: true, error: '' });
+  const generation = useRef(0);
+  const busy = useRef(false);
+  const key = `${viewerId}:${profileId}:${kind}`;
+  const load = useCallback(async (cursor?: string) => {
+    if (!profileId || busy.current) return;
+    const request = ++generation.current;
+    busy.current = true;
+    setCollection(previous => ({ ...(previous.key === key ? previous : { key, ids: [] }), loading: true, error: '', errorCursor: undefined }));
+    try {
+      const result = kind === 'posts' ? await api.getUserPostsPage(profileId, 30, cursor) : await api.getLikedPosts();
+      if (request !== generation.current || useAppStore.getState().currentUser?.id !== viewerId) return;
+      const mapped = result.data.map(post => mapPost(post, viewerId));
+      const ids = new Set(mapped.map(post => post.id));
+      useAppStore.setState(state => ({ posts: [...state.posts.filter(post => !ids.has(post.id)), ...mapped] }));
+      setCollection(previous => ({ key, ids: cursor ? [...new Set([...previous.ids, ...ids])] : [...ids], loading: false, error: '', nextCursor: kind === 'posts' && result.hasMore && result.nextCursor !== cursor ? result.nextCursor : undefined }));
+    } catch {
+      if (request === generation.current) setCollection(previous => ({ ...previous, loading: false, error: `${cursor ? 'More posts' : kind === 'liked' ? 'Your liked posts' : 'Profile posts'} could not load. Please try again.`, errorCursor: cursor }));
+    } finally {
+      if (request === generation.current) busy.current = false;
+    }
+  }, [profileId, kind, key, viewerId]);
+  useEffect(() => {
+    void load();
+    return () => { generation.current++; busy.current = false; };
+  }, [load]);
+  const current = collection.key === key ? collection : { ids: [] as string[], loading: Boolean(profileId), error: '', nextCursor: undefined, errorCursor: undefined };
+  return { ...current, retry: () => load(current.errorCursor), loadMore: () => current.nextCursor ? load(current.nextCursor) : Promise.resolve() };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CONSTANTS & HELPERS
@@ -236,15 +272,16 @@ function CommentCard({ comment, author, isOwner, onDelete }: {
 // ═══════════════════════════════════════════════════════════════════════════
 //  POST GRID ITEM — Instagram 3-column grid with overlay
 // ═══════════════════════════════════════════════════════════════════════════
-function PostGridItem({ post, onClick, canPin = false, onTogglePin, pinBusy = false }: { post: any; onClick: () => void; canPin?: boolean; onTogglePin?: () => void; pinBusy?: boolean }) {
+function PostGridItem({ post, onClick, canPin = false, onTogglePin, pinBusy = false }: { post: Post; onClick: () => void; canPin?: boolean; onTogglePin?: () => void; pinBusy?: boolean }) {
   const firstMedia = post.media?.[0];
   const hasMultiple = post.media && post.media.length > 1;
+  const isVideo = firstMedia && /(^data:video\/|\/video\/upload\/|\.(mp4|m4v|mov|webm|ogv)(?:[?#]|$))/i.test(firstMedia);
 
   return (
     <div className="relative aspect-square overflow-hidden bg-muted group hover-lift">
-      <button type="button" aria-label={`Open post with ${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`} className="h-full w-full cursor-pointer text-left" onClick={onClick}>
+      <button type="button" aria-label={`Open post: ${post.content.slice(0, 90) || `${formatCount(post.likes)} likes and ${formatCount(post.comments)} comments`}`} className="h-full w-full cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary" onClick={onClick}>
       {firstMedia ? (
-        <ProtectedMediaImage src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
+        isVideo ? <ProtectedMediaVideo src={firstMedia} aria-label="Video preview" muted playsInline preload="metadata" className="h-full w-full object-cover" /> : <ProtectedMediaImage src={firstMedia} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 to-accent/5">
           <p className="text-xs text-muted-foreground line-clamp-4 text-center font-serif leading-relaxed">{post.content}</p>
@@ -289,9 +326,7 @@ export default function Profile() {
   const videos = useAppStore(s => s.videos);
   const loadVideos = useAppStore(s => s.loadVideos);
   const loadUserProfile = useAppStore(s => s.loadUserProfile);
-  const loadUserFeed = useAppStore(s => s.loadUserFeed);
-  const followUser = useAppStore(s => s.followUser);
-  const unfollowUser = useAppStore(s => s.unfollowUser);
+  const { toggleFollow: handleToggleFollow, pendingIds: followPendingIds } = useFollowAction();
   const toggleBlockUser = useAppStore(s => s.toggleBlockUser);
   const showcases = useAppStore(s => s.showcases);
   const removeShowcase = useAppStore(s => s.removeShowcase);
@@ -309,23 +344,19 @@ export default function Profile() {
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
   const [followerListOpen, setFollowerListOpen] = useState(false);
   const [followerListMode, setFollowerListMode] = useState<'followers' | 'following'>('followers');
-  const [selectedFrame, setSelectedFrame] = useState<'neon' | 'gold' | 'cosmic' | 'fire' | 'holographic' | 'founder'>(() => {
-    try {
-      const hasFounderPass = localStorage.getItem('yor:founder:pass:v1');
-      return hasFounderPass ? 'founder' : 'neon';
-    } catch {
-      return 'neon';
-    }
-  });
+  const [selectedFrame, setSelectedFrame] = useState('neon');
   const [frameDialogOpen, setFrameDialogOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [highlightBuilderOpen, setHighlightBuilderOpen] = useState(false);
-  const [highlightViewerOpen, setHighlightViewerOpen] = useState(false);
+  const [highlightViewerGroup, setHighlightViewerGroup] = useState<string | null>(null);
   const [profileAttempt, setProfileAttempt] = useState(0);
   const [finishedProfileLookup, setFinishedProfileLookup] = useState('');
   const [profileFollowers, setProfileFollowers] = useState<BackendUser[]>([]);
   const [postingComment, setPostingComment] = useState(false);
   const [pinBusyId, setPinBusyId] = useState<string | null>(null);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [interactions, setInteractions] = useState({ key: '', loading: true, error: false });
+  const [interactionsAttempt, setInteractionsAttempt] = useState(0);
 
   const profileLookup = id || username || currentUser?.id;
   const profile = id
@@ -337,12 +368,23 @@ export default function Profile() {
         : null;
   const profileId = profile?.id;
   const isOwnProfile = currentUser?.id === profileId;
+  const visibleTab = activeTab === 'liked' && !isOwnProfile ? 'grid' : activeTab;
   const isFollowing = !isOwnProfile && !!currentUser?.followingIds?.includes(profileId ?? '');
   const isFollowPending = !isOwnProfile && !!currentUser?.pendingFollowIds?.includes(profileId ?? '');
   const isBlocked = !isOwnProfile && !!currentUser?.blockedUserIds?.includes(profileId ?? '');
   const isFavorite = !isOwnProfile && !!currentUser?.favoriteCreatorIds?.includes(profileId ?? '');
   const toggleFavoriteCreator = useAppStore((s) => s.toggleFavoriteCreator);
-  const loadLikedPosts = useAppStore((s) => s.loadLikedPosts);
+  const profileCollection = useProfileCollection(profileId, 'posts');
+  const likedCollection = useProfileCollection(isOwnProfile ? profileId : undefined, 'liked');
+  useEffect(() => {
+    let frame = profile?.avatarFrame || 'neon';
+    if (isOwnProfile && profileId) {
+      try { frame = localStorage.getItem(`yor:profile-frame:${profileId}`) || frame; } catch { /* Device preferences are optional. */ }
+    }
+    setSelectedFrame(['neon', 'gold', 'cosmic', 'fire', 'holographic', 'founder'].includes(frame) ? frame : 'neon');
+  }, [profileId, profile?.avatarFrame, isOwnProfile]);
+  const videosLoading = useAppStore(s => s.videosLoading);
+  const videosError = useAppStore(s => s.videosError);
 
   useEffect(() => { loadVideos(); }, [loadVideos]);
 
@@ -365,28 +407,39 @@ export default function Profile() {
   }, [profileId, isOwnProfile]);
 
   useEffect(() => {
-    if (profile?.id) {
-      loadUserFeed(profile.id);
-      loadProfileInteractions(profile.id);
-      if (isOwnProfile) loadLikedPosts();
-    }
-  }, [profile?.id, isOwnProfile, loadUserFeed, loadProfileInteractions, loadLikedPosts]);
+    if (!profileId) return;
+    let active = true;
+    setInteractions({ key: profileId, loading: true, error: false });
+    void loadProfileInteractions(profileId).then(success => {
+      if (active) setInteractions({ key: profileId, loading: false, error: !success });
+    });
+    return () => { active = false; };
+  }, [profileId, loadProfileInteractions, interactionsAttempt]);
 
   // Scroll to top on profile change
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [profileLookup]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setActiveTab('grid');
+    setActiveReelIndex(null);
+    setHighlightViewerGroup(null);
+    setFollowerListOpen(false);
+    setNewComment('');
+  }, [profileLookup]);
 
-  const userPosts = useMemo(() => [...posts.filter(p => p.authorId === profile?.id)].sort((a, b) => {
+  const userPosts = useMemo(() => [...posts.filter(p => p.authorId === profile?.id && profileCollection.ids.includes(p.id))].sort((a, b) => {
     const aPin = a.pinnedPosition ?? Number.MAX_SAFE_INTEGER;
     const bPin = b.pinnedPosition ?? Number.MAX_SAFE_INTEGER;
     return aPin - bPin || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  }), [posts, profile?.id]);
+  }), [posts, profile?.id, profileCollection.ids]);
   const userVideos = useMemo(() => videos.filter(v => v.authorId === profile?.id), [videos, profile?.id]);
   const userReels = useMemo(() => userVideos.filter(v => v.type === 'short'), [userVideos]);
   const genreBadge = useMemo(() => getGenreBadge(profile?.bio, profile?.username), [profile?.bio, profile?.username]);
-  const likedPosts = useMemo(() => posts.filter(p => p.likedByMe), [posts]);
+  const likedPosts = useMemo(() => isOwnProfile ? posts.filter(p => p.likedByMe && likedCollection.ids.includes(p.id)) : [], [posts, isOwnProfile, likedCollection.ids]);
 
   const userShowcases = profile ? (showcases[profile.id] || []) : [];
   const userComments = profile ? (profileComments[profile.id] || []) : [];
+  const interactionsLoading = interactions.key !== profileId || interactions.loading;
+  const interactionsError = interactions.key === profileId && interactions.error;
   const levelData = computeLevel(achievements);
 
   // Story highlights for this user
@@ -403,6 +456,8 @@ export default function Profile() {
     return [...groups.entries()].map(([title, groupStories]) => ({ title, stories: groupStories }));
   }, [userHighlights]);
 
+  const viewingHighlights = highlightGroups.find(group => group.title === highlightViewerGroup)?.stories ?? [];
+
   const mutualFollowers = useMemo(() => {
     if (isOwnProfile || !currentUser?.followingIds) return [];
     return profileFollowers.filter(u =>
@@ -410,15 +465,13 @@ export default function Profile() {
     ).slice(0, 3).map(u => ({ ...u, displayName: u.fullName || u.username }));
   }, [profileFollowers, currentUser, isOwnProfile]);
 
-  const handleToggleFollow = useCallback((targetId: string) => {
-    if (!currentUser) return;
-    currentUser.followingIds?.includes(targetId) || currentUser.pendingFollowIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
-  }, [currentUser, followUser, unfollowUser]);
-
   const handleToggleFavorite = useCallback(async () => {
-    if (!profile || isOwnProfile) return;
-    await toggleFavoriteCreator(profile.id);
-  }, [isOwnProfile, profile, toggleFavoriteCreator]);
+    if (!profile || isOwnProfile || favoriteBusy) return;
+    setFavoriteBusy(true);
+    try { await toggleFavoriteCreator(profile.id); }
+    catch { /* The store preserves the previous value and reports the error. */ }
+    finally { setFavoriteBusy(false); }
+  }, [isOwnProfile, profile, toggleFavoriteCreator, favoriteBusy]);
 
   const handleCopyLink = useCallback(async () => {
     try {
@@ -486,12 +539,12 @@ export default function Profile() {
     <div className="operator-profile-page flex min-h-screen flex-col bg-background">
       {isOwnProfile && <BadgeShowcaseModal isOpen={badgeModalOpen} onOpenChange={setBadgeModalOpen} />}
       <StoryBuilderModal isOpen={highlightBuilderOpen} onOpenChange={setHighlightBuilderOpen} isHighlight />
-      {highlightViewerOpen && profile && userHighlights.length > 0 && (
+      {highlightViewerGroup !== null && profile && viewingHighlights.length > 0 && (
         <StoryViewer
           initialAuthorId={profile.id}
-          groupedStories={{ [profile.id]: userHighlights }}
+          groupedStories={{ [profile.id]: viewingHighlights }}
           authors={[profile.id]}
-          onClose={() => setHighlightViewerOpen(false)}
+          onClose={() => setHighlightViewerGroup(null)}
         />
       )}
 
@@ -537,6 +590,7 @@ export default function Profile() {
           <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 pb-0.5">
             {isOwnProfile ? (
               <>
+                <Button asChild variant="outline" className="h-9 rounded-xl text-xs font-bold"><Link href="/settings">Edit profile</Link></Button>
                 <Dialog open={frameDialogOpen} onOpenChange={setFrameDialogOpen}>
                   <DialogTrigger asChild>
                     <motion.div whileTap={{ scale: 0.95 }}>
@@ -548,7 +602,7 @@ export default function Profile() {
                   <DialogContent className="sm:max-w-[420px] rounded-2xl">
                     <DialogHeader><DialogTitle className="font-display text-lg">Customize profile frame</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-2 font-sans">
-                      <p className="text-xs text-muted-foreground font-serif">Choose an avatar frame that matches your profile identity.</p>
+                      <p className="text-xs text-muted-foreground font-serif">Choose how your avatar appears on this device.</p>
                       <div className="grid grid-cols-2 gap-3">
                         {[
                           { id: 'founder', name: 'VIP Genesis Founder', color: 'from-amber-400 via-rose-500 to-red-600', badge: 'Mythic' },
@@ -560,7 +614,7 @@ export default function Profile() {
                         ].map((f) => (
                           <button
                             key={f.id}
-                            onClick={() => setSelectedFrame(f.id as any)}
+                            type="button" aria-pressed={selectedFrame === f.id} onClick={() => setSelectedFrame(f.id)}
                             className={cn(
                               "p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all relative overflow-hidden",
                               selectedFrame === f.id ? "border-primary bg-primary/10 font-bold" : "border-border/60 hover:border-border"
@@ -578,7 +632,11 @@ export default function Profile() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={() => setFrameDialogOpen(false)} className="rounded-xl font-bold text-xs px-6">Equip Frame</Button>
+                      <Button onClick={() => {
+                        try { localStorage.setItem(`yor:profile-frame:${profile.id}`, selectedFrame); toast.success('Frame saved on this device'); }
+                        catch { toast.error('This browser could not save your frame preference.'); }
+                        setFrameDialogOpen(false);
+                      }} className="rounded-xl font-bold text-xs px-6">Save frame</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -592,8 +650,8 @@ export default function Profile() {
             ) : (
               <>
                 <motion.div whileTap={{ scale: 0.95 }}>
-                  <Button variant={isFollowing || isFollowPending ? 'outline' : 'default'} className={cn("rounded-xl h-9 font-bold text-[0.78rem] px-6", !isFollowing && !isFollowPending && "glow-neon-primary")} onClick={() => handleToggleFollow(profile.id)}>
-                    {isFollowing ? 'Following' : isFollowPending ? 'Requested' : (<><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Follow</>)}
+                  <Button variant={isFollowing || isFollowPending ? 'outline' : 'default'} className={cn("rounded-xl h-9 font-bold text-[0.78rem] px-6", !isFollowing && !isFollowPending && "glow-neon-primary")} disabled={followPendingIds.has(profile.id) || isBlocked} onClick={() => void handleToggleFollow(profile.id)}>
+                    {followPendingIds.has(profile.id) ? 'Saving…' : isFollowing ? 'Following' : isFollowPending ? 'Requested' : (<><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Follow</>)}
                   </Button>
                 </motion.div>
                 <Tooltip><TooltipTrigger asChild>
@@ -601,7 +659,7 @@ export default function Profile() {
                     variant={isFavorite ? 'default' : 'outline'}
                     size="icon"
                     className={cn('rounded-xl h-9 w-9', isFavorite && 'bg-amber-400 text-amber-950 hover:bg-amber-300')}
-                    onClick={() => void handleToggleFavorite()}
+                    disabled={favoriteBusy} aria-pressed={isFavorite} onClick={() => void handleToggleFavorite()}
                     aria-label={isFavorite ? `Remove ${profile.displayName} from Favorites` : `Add ${profile.displayName} to Favorites`}
                   >
                     <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
@@ -637,8 +695,8 @@ export default function Profile() {
               </TooltipTrigger><TooltipContent>Verified account</TooltipContent></Tooltip>
             )}
             <FounderBadge
-              isFounder={Boolean((profile as any).isFounder || (currentUser?.id === profile.id && localStorage.getItem('yor:founder:pass:v1')))}
-              passNumber={(profile as any).founderPassNumber || (currentUser?.id === profile.id ? (() => { try { return JSON.parse(localStorage.getItem('yor:founder:pass:v1') || '{}')?.referralCode; } catch { return undefined; } })() : undefined)}
+              isFounder={Boolean(profile.isFounder)}
+              passNumber={profile.founderPassNumber}
               variant="pill"
             />
           </div>
@@ -718,7 +776,7 @@ export default function Profile() {
           {highlightGroups.map((group, index) => {
             const cover = group.stories[0];
             const gradients = ['from-blue-500 to-cyan-400', 'from-purple-500 to-pink-400', 'from-orange-500 to-yellow-400', 'from-emerald-500 to-teal-400'];
-            return <button type="button" key={group.title} onClick={() => setHighlightViewerOpen(true)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group" aria-label={`Open ${group.title} highlights`}>
+            return <button type="button" key={group.title} onClick={() => setHighlightViewerGroup(group.title)} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer group" aria-label={`Open ${group.title} highlights`}>
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-muted-foreground/20 to-muted-foreground/10">
                 <div className={cn("relative w-[58px] h-[58px] overflow-hidden rounded-full bg-gradient-to-br flex items-center justify-center text-xl border-[3px] border-background", gradients[index % gradients.length])}>
                   {cover.type === 'image' && cover.mediaUrl ? <ProtectedMediaImage src={cover.mediaUrl} alt="" className="h-full w-full object-cover" /> : <span>{cover.textContent?.trim().slice(0, 1) || '✨'}</span>}
@@ -755,50 +813,54 @@ export default function Profile() {
            CONTENT TABS — Instagram-style grid
            ══════════════════════════════════════════════════════════════ */}
         <section className="operator-profile-content operator-panel">
-          <div className="profile-tabs my-0 rounded-none bg-transparent gap-0 p-0 border-b border-border/50">
+          <Tabs key={profile.id} value={visibleTab} onValueChange={value => setActiveTab(value as typeof activeTab)}>
+          <TabsList aria-label="Profile content" className="profile-tabs my-0 rounded-none bg-transparent gap-0 p-0 border-b border-border/50">
             {([
               { key: 'grid' as const, icon: Grid3X3, label: 'Posts' },
               { key: 'reels' as const, icon: Film, label: 'Reels' },
               ...(isOwnProfile ? [{ key: 'liked' as const, icon: Heart, label: 'Liked' }] : []),
             ]).map(tab => (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              <TabsTrigger key={tab.key} value={tab.key} aria-label={tab.label}
                 className={cn("profile-tab rounded-none border-b-2 transition-all press-scale",
-                  activeTab === tab.key ? "is-active border-foreground bg-transparent" : "border-transparent"
+                  visibleTab === tab.key ? "is-active border-foreground bg-transparent" : "border-transparent"
                 )}>
-                <tab.icon className="!w-4 !h-4" /> <span className="hidden sm:inline">{tab.label}</span>
-              </button>
+                <tab.icon className="!w-4 !h-4" aria-hidden="true" /> <span>{tab.label}</span>
+              </TabsTrigger>
             ))}
-          </div>
+          </TabsList>
 
           <AnimatePresence mode="wait">
             {/* ── Grid Tab (Instagram 3-col) ─────────────────────── */}
-            {activeTab === 'grid' && (
-              <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            {visibleTab === 'grid' && (
+              <TabsContent key="grid" value="grid" asChild><motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <ProfileCollectionStatus loading={profileCollection.loading} error={profileCollection.error} onRetry={() => void profileCollection.retry()} />
                 {userPosts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
                     {userPosts.map(post => (
                       <PostGridItem key={post.id} post={post} canPin={isOwnProfile} pinBusy={pinBusyId === post.id} onTogglePin={() => void handleTogglePin(post)} onClick={() => setLocation(`/post/${post.id}`)} />
                     ))}
                   </div>
-                ) : (
+                ) : !profileCollection.loading && !profileCollection.error && !profileCollection.nextCursor ? (
                   <div className="py-20 text-center">
                     <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
                       <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
                     </div>
-                    <h3 className="font-display font-bold tracking-tight text-xl mb-1">Share Photos</h3>
-                    <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">When you share photos, they will appear on your profile.</p>
+                    <h3 className="font-display font-bold tracking-tight text-xl mb-1">{isOwnProfile ? 'Your story starts here' : 'No posts yet'}</h3>
+                    <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">{isOwnProfile ? 'Share a photo, a thought, or something you are making.' : `${profile.displayName}'s posts will appear here when shared with you.`}</p>
                   </div>
-                )}
-              </motion.div>
+                ) : null}
+                {profileCollection.nextCursor && !profileCollection.error && <div className="p-4 text-center"><Button variant="outline" disabled={profileCollection.loading} onClick={() => void profileCollection.loadMore()}>{profileCollection.loading ? 'Loading more posts…' : 'Load more posts'}</Button></div>}
+              </motion.div></TabsContent>
             )}
 
             {/* ── Reels Tab (Instagram/TikTok style Reels Grid) ──────────────────────── */}
-            {activeTab === 'reels' && (
-              <motion.div key="reels" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            {visibleTab === 'reels' && (
+              <TabsContent key="reels" value="reels" asChild><motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <ProfileCollectionStatus loading={videosLoading} error={videosError ?? ''} onRetry={() => void loadVideos()} loadingLabel="Loading Reels…" />
                 {userReels.length > 0 ? (
                   <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
                     {userReels.map((video, idx) => (
-                      <motion.div
+                      <motion.button type="button" aria-label={`Play ${video.title}`}
                         key={video.id}
                         variants={staggerItem}
                         onClick={() => {
@@ -806,7 +868,7 @@ export default function Profile() {
                         }}
                         className="relative aspect-[9/16] bg-muted overflow-hidden group cursor-pointer hover-lift rounded-none"
                       >
-                        <img
+                        <ProtectedMediaImage
                           src={video.thumbnailUrl}
                           alt={video.title}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -839,36 +901,38 @@ export default function Profile() {
                             <span>{formatCount(video.likes || 0)}</span>
                           </div>
                         </div>
-                      </motion.div>
+                      </motion.button>
                     ))}
                   </div>
-                ) : (
+                ) : !videosLoading && !videosError ? (
                   <div className="py-20 text-center">
                     <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
                       <Film className="w-8 h-8 text-muted-foreground/30" />
                     </div>
-                    <h3 className="font-display font-bold tracking-tight text-xl mb-1">No Reels Shared Yet</h3>
-                    <p className="text-sm text-muted-foreground max-w-[260px] mx-auto mb-4">When short-form reels and creative clips are uploaded, they'll appear here.</p>
+                    <h3 className="font-display font-bold tracking-tight text-xl mb-1">No Reels available</h3>
+                    <p className="text-sm text-muted-foreground max-w-[260px] mx-auto mb-4">Recent short videos shared with you appear here.</p>
                     <Button asChild variant="outline" className="rounded-2xl font-bold text-xs">
                       <Link href="/videos">
                         <Play className="w-3.5 h-3.5 mr-1.5" /> Explore Yor Reels
                       </Link>
                     </Button>
                   </div>
-                )}
-              </motion.div>
+                ) : null}
+              </motion.div></TabsContent>
             )}
 
             {/* ── Liked Tab ──────────────────────────────────────── */}
-            {activeTab === 'liked' && (
-              <motion.div key="liked" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            {visibleTab === 'liked' && isOwnProfile && (
+              <TabsContent key="liked" value="liked" asChild><motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                <ProfileCollectionStatus loading={likedCollection.loading} error={likedCollection.error} onRetry={() => void likedCollection.retry()} />
+                {likedPosts.length >= 100 && <p className="px-4 py-3 text-sm text-muted-foreground">Showing up to 100 liked posts. Only you can see this collection.</p>}
                 {likedPosts.length > 0 ? (
                   <div className="grid grid-cols-3 gap-[2px] mt-[2px] stagger-in">
                     {likedPosts.map(post => (
                       <PostGridItem key={post.id} post={post} onClick={() => setLocation(`/post/${post.id}`)} />
                     ))}
                   </div>
-                ) : (
+                ) : !likedCollection.loading && !likedCollection.error ? (
                   <div className="py-20 text-center">
                     <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-muted-foreground/20 flex items-center justify-center">
                       <Heart className="w-8 h-8 text-muted-foreground/30" />
@@ -876,10 +940,11 @@ export default function Profile() {
                     <h3 className="font-display font-bold text-xl mb-1">Posts You've Liked</h3>
                     <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">When you like posts, they'll show up here.</p>
                   </div>
-                )}
-              </motion.div>
+                ) : null}
+              </motion.div></TabsContent>
             )}
           </AnimatePresence>
+          </Tabs>
         </section>
 
         {/* ══════════════════════════════════════════════════════════════
@@ -893,6 +958,9 @@ export default function Profile() {
               <span className="comment-wall-count">{userComments.length}</span>
             </div>
           </div>
+
+          {interactionsLoading && <p role="status" className="py-4 text-sm text-muted-foreground">Loading showcases and wall comments…</p>}
+          {interactionsError && <div role="alert" className="my-4 rounded-xl border border-destructive/30 p-4 text-sm"><p>Showcases and wall comments could not load. Please try again.</p><Button variant="outline" size="sm" className="mt-3" onClick={() => setInteractionsAttempt(value => value + 1)}>Retry showcases and comments</Button></div>}
 
           {/* Composer */}
           {currentUser && (
@@ -920,7 +988,7 @@ export default function Profile() {
                       <div className="award-picker">
                         {AWARDS.map(a => (
                           <Tooltip key={a.emoji}><TooltipTrigger asChild>
-                            <button type="button" onClick={() => { setNewComment(p => p + a.emoji); setShowAwardPicker(false); }}>{a.emoji}</button>
+                            <button type="button" onClick={() => { setNewComment(p => (p + a.emoji).slice(0, 280)); setShowAwardPicker(false); }}>{a.emoji}</button>
                           </TooltipTrigger><TooltipContent className="text-xs">{a.label} emoji</TooltipContent></Tooltip>
                         ))}
                       </div>
@@ -951,13 +1019,13 @@ export default function Profile() {
                 if (!author) return null;
                 return <CommentCard key={c.id} comment={c} author={author} isOwner={isOwnProfile} onDelete={() => deleteProfileComment(c.id, profile.id)} />;
               })
-            ) : (
+            ) : !interactionsLoading && !interactionsError ? (
               <div className="py-16 text-center rounded-2xl border border-dashed border-border/60">
                 <MessageCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground/20" />
                 <p className="text-sm font-semibold text-foreground/80 mb-1">No comments yet</p>
                 <p className="text-[0.75rem] text-muted-foreground">Be the first to leave a message on this wall!</p>
               </div>
-            )}
+            ) : null}
           </div>
         </section>
         </section>
@@ -999,7 +1067,7 @@ export default function Profile() {
               <button type="button" onClick={() => setActiveTab('reels')}>
                 <span><Film className="h-4 w-4" /><strong>Reels</strong></span><small>{userReels.length}</small>
               </button>
-              <button type="button" onClick={() => setHighlightViewerOpen(highlightGroups.length > 0)} disabled={highlightGroups.length === 0}>
+              <button type="button" onClick={() => setHighlightViewerGroup(highlightGroups[0]?.title ?? null)} disabled={highlightGroups.length === 0}>
                 <span><Star className="h-4 w-4" /><strong>Highlights</strong></span><small>{highlightGroups.length}</small>
               </button>
               <div>
@@ -1023,7 +1091,7 @@ export default function Profile() {
                         <Avatar className="h-9 w-9"><AvatarImage src={user.avatarUrl} /><AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback></Avatar>
                         <span><strong>{user.displayName}</strong><small>@{user.username}</small></span>
                       </Link>
-                      <button type="button" onClick={() => handleToggleFollow(user.id)}>{following ? 'Following' : 'Follow'}</button>
+                      <button type="button" disabled={followPendingIds.has(user.id)} onClick={() => void handleToggleFollow(user.id)}>{followPendingIds.has(user.id) ? 'Saving…' : following ? 'Following' : currentUser?.pendingFollowIds?.includes(user.id) ? 'Requested' : 'Follow'}</button>
                     </div>
                   );
                 })}
@@ -1051,66 +1119,82 @@ export default function Profile() {
   );
 }
 
+function ProfileCollectionStatus({ loading, error, onRetry, loadingLabel = 'Loading posts…' }: { loading: boolean; error: string; onRetry: () => void; loadingLabel?: string }) {
+  if (error) return <div role="alert" className="m-4 rounded-2xl border border-destructive/30 p-4 text-sm"><p>{error}</p><Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>Try again</Button></div>;
+  if (loading) return <div role="status" className="p-6 text-center text-sm text-muted-foreground">{loadingLabel}</div>;
+  return null;
+}
+
 function FollowerListModal({ isOpen, onOpenChange, mode, userId }: { isOpen: boolean; onOpenChange: (open: boolean) => void; mode: 'followers' | 'following'; userId: string }) {
   const currentUser = useAppStore((state) => state.currentUser);
-  const followUser = useAppStore((state) => state.followUser);
-  const unfollowUser = useAppStore((state) => state.unfollowUser);
+  const cachePublicProfiles = useAppStore((state) => state.cachePublicProfiles);
+  const { toggleFollow, pendingIds } = useFollowAction();
   const [displayUsers, setDisplayUsers] = useState<BackendUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!isOpen || !userId) return;
     let active = true;
+    setDisplayUsers([]);
     setLoading(true);
+    setError('');
     const load = mode === 'followers' ? api.getFollowers(userId) : api.getFollowing(userId);
     void load.then((items) => {
-      if (active) setDisplayUsers(items);
+      if (!active) return;
+      cachePublicProfiles(items);
+      setDisplayUsers(items);
     }).catch(() => {
-      if (active) setDisplayUsers([]);
+      if (active) setError(`Could not load ${mode}. Check your connection and try again.`);
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [isOpen, mode, userId]);
-  
+  }, [isOpen, mode, userId, attempt, cachePublicProfiles]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px] rounded-3xl max-h-[70vh] flex flex-col p-0">
         <DialogHeader className="p-4 pb-2 border-b border-border/40">
           <DialogTitle className="font-display font-bold text-base text-center capitalize">{mode}</DialogTitle>
+          <DialogDescription className="sr-only">People in this profile's {mode} list.</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {loading && <p className="py-8 text-center text-xs text-muted-foreground">Loading {mode}…</p>}
-          {!loading && displayUsers.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">No {mode} to show.</p>}
-          {!loading && displayUsers.map((user) => (
-            <Link key={user.id} href={`/profile/${user.id}`} onClick={() => onOpenChange(false)}>
-              <div className="flex items-center gap-3 hover:bg-muted/40 rounded-xl p-2 transition-colors cursor-pointer">
-                <Avatar className="w-10 h-10 border border-border/50">
-                  <AvatarImage src={user.avatarUrl} />
-                  <AvatarFallback className="font-bold text-xs">{(user.fullName || user.username || 'U').charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-bold text-sm truncate">{user.fullName || user.username}</h4>
-                  <p className="text-xs text-muted-foreground font-mono truncate">@{user.username}</p>
-                </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+          {loading && <p role="status" className="py-8 text-center text-sm text-muted-foreground">Loading {mode}…</p>}
+          {error && <div role="alert" className="space-y-3 py-6 text-center text-sm"><p>{error}</p><Button variant="outline" onClick={() => setAttempt(value => value + 1)}>Retry {mode}</Button></div>}
+          {!loading && !error && displayUsers.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No {mode} to show.</p>}
+          {!loading && displayUsers.map((user) => {
+            const following = currentUser?.followingIds?.includes(user.id);
+            const requested = currentUser?.pendingFollowIds?.includes(user.id);
+            const name = user.fullName || user.username;
+            return (
+              <div key={user.id} className="flex items-center gap-3 rounded-xl p-2 hover:bg-muted/40">
+                <Link href={`/profile/${user.id}`} onClick={() => onOpenChange(false)} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg">
+                  <Avatar className="w-10 h-10 border border-border/50">
+                    <AvatarImage src={user.avatarUrl} alt="" />
+                    <AvatarFallback className="font-bold text-xs">{name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm">{name}</strong>
+                    <span className="block truncate text-xs text-muted-foreground font-mono">@{user.username}</span>
+                  </span>
+                </Link>
                 {user.id !== currentUser?.id && (
                   <Button
-                    variant={currentUser?.followingIds?.includes(user.id) ? 'secondary' : 'outline'}
+                    variant={following || requested ? 'secondary' : 'outline'}
                     size="sm"
-                    className="rounded-xl text-xs font-bold h-8 shrink-0"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      if (currentUser?.followingIds?.includes(user.id)) void unfollowUser(user.id);
-                      else void followUser(user.id);
-                    }}
+                    disabled={pendingIds.has(user.id)}
+                    aria-label={`${following ? 'Unfollow' : requested ? 'Cancel follow request to' : 'Follow'} ${name}`}
+                    className="rounded-xl text-xs font-bold h-9 shrink-0"
+                    onClick={() => void toggleFollow(user.id)}
                   >
-                    {currentUser?.followingIds?.includes(user.id) ? 'Following' : currentUser?.pendingFollowIds?.includes(user.id) ? 'Requested' : 'Follow'}
+                    {pendingIds.has(user.id) ? 'Saving…' : following ? 'Following' : requested ? 'Requested' : 'Follow'}
                   </Button>
                 )}
               </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       </DialogContent>
     </Dialog>

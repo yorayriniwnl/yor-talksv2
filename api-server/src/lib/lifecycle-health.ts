@@ -7,7 +7,7 @@ export type LifecycleHealth = {
   deadCleanupJobs: number;
 };
 
-/** Operational status for durable account and media cleanup work. */
+/** Operational status for durable account, media and privacy cleanup work. */
 export async function inspectLifecycleHealth(): Promise<LifecycleHealth> {
   const [result, worker] = await Promise.all([pool.query(`
     SELECT
@@ -17,7 +17,7 @@ export async function inspectLifecycleHealth(): Promise<LifecycleHealth> {
           OR (status='running' AND lease_until IS NOT NULL AND lease_until < clock_timestamp())
       )::int AS overdue_cleanup_jobs
     FROM background_jobs
-    WHERE kind IN ('account_cleanup','media_cleanup')
+    WHERE kind IN ('account_cleanup','media_cleanup','privacy_cleanup','message_cleanup')
       AND status IN ('pending','running','dead')
   `), getLifecycleWorkerStatus({ heartbeatGraceSeconds: 45, requiredHandler: 'account_cleanup' })]);
   const row = result.rows[0] as { dead_cleanup_jobs?: number | string; overdue_cleanup_jobs?: number | string } | undefined;

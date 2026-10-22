@@ -10,6 +10,7 @@ const readyMedia: MediaReadiness = {
 const healthyDependencies = (media: () => MediaReadiness) => ({
   media,
   database: async () => {},
+  recoveryReplay: async () => {},
   redis: async () => ({ compatible: true, version: '7.0.0' }),
   notificationWorker: async () => true,
   lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),

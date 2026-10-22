@@ -1,4 +1,4 @@
-Run: https://github.com/yorayriniwnl/yor-talksv2/actions/runs/39161664450/job/117776062907
+Run: https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39161664450/job/117776062907
 Head: 0b99a15175d3254b9b4256611109c113928a6bcb
 Actual result: 104 executed, 97 passed, 7 failed.
 2026-10-18T20:14:35.6960713Z   1) [chromium] › e2e/core-social.spec.ts:2631:1 › Studio camera blocks duplicate recording starts, stops access on close, and releases late permission streams

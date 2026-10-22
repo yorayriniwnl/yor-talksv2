@@ -39,6 +39,7 @@ const Profile = lazyWithRetry(() => import('@/pages/profile'));
 const Projects = lazyWithRetry(() => import('@/pages/projects'));
 const PostDetail = lazyWithRetry(() => import('@/pages/post-detail'));
 const Messages = lazyWithRetry(() => import('@/pages/messages'));
+const PrivateMessages = lazyWithRetry(() => import('@/pages/private-messages'));
 const Notifications = lazyWithRetry(() => import('@/pages/notifications'));
 const Saved = lazyWithRetry(() => import('@/pages/saved'));
 const BroadcastChannels = lazyWithRetry(() => import('@/pages/broadcast-channels'));
@@ -123,6 +124,7 @@ function ProtectedRoutes() {
                 <Route path="/profile/:id?" component={Profile} />
                 <Route path="/projects" component={Projects} />
                 <Route path="/messages/:id?" component={Messages} />
+                <Route path="/private-messages" component={PrivateMessages} />
                 <Route path="/notifications" component={Notifications} />
                 <Route path="/saved" component={Saved} />
                 <Route path="/channels" component={BroadcastChannels} />
@@ -226,7 +228,9 @@ function Router() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (isInitializing && location !== '/preregister' && location !== '/launch') {
+  const publicEntry = ['/preregister', '/launch', '/privacy', '/cookies', '/terms', '/community-guidelines', '/grievance', '/reset-password', '/verify-email'].includes(location)
+    || location.startsWith('/verify-email/');
+  if (isInitializing && !publicEntry) {
     return <RouteSkeleton />;
   }
 
@@ -239,11 +243,11 @@ function Router() {
         <Route path="/terms" component={LegalPage} />
         <Route path="/community-guidelines" component={LegalPage} />
         <Route path="/grievance" component={Grievance} />
+        <Route path="/verify-email/:token?" component={VerifyEmail} />
+        <Route path="/reset-password" component={ResetPassword} />
         {!currentUser && (
           <>
             <Route path="/auth" component={Auth} />
-            <Route path="/verify-email/:token" component={VerifyEmail} />
-            <Route path="/reset-password" component={ResetPassword} />
             <Route>
               <Redirect to={`/auth?redirect=${encodeURIComponent(location)}`} />
             </Route>
@@ -270,8 +274,6 @@ function Router() {
         )}
         {currentUser && !needsTerms && !needsEligibility && needsOnboarding && (
           <>
-            <Route path="/verify-email/:token" component={VerifyEmail} />
-            <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding" component={Onboarding} />
             <Route>
               <Redirect to="/onboarding" />
@@ -281,8 +283,6 @@ function Router() {
         {currentUser && !needsTerms && !needsEligibility && !needsOnboarding && (
           <>
             <Route path="/auth" component={AuthRedirect} />
-            <Route path="/verify-email/:token" component={VerifyEmail} />
-            <Route path="/reset-password" component={ResetPassword} />
             <Route path="/onboarding">
               <Redirect to="/" />
             </Route>

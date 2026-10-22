@@ -1,11 +1,12 @@
 import { Router, type Request, type Response } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
 import { hasHealthyNotificationWorker } from "../lib/worker-health.js";
 import { getMediaReadinessSnapshot } from '../services/media-readiness.js';
 import { inspectLifecycleHealth } from "../lib/lifecycle-health.js";
+import { assertPrivateChatSchema } from '../services/private-chat-readiness.js';
+import { assertModerationSchema } from '../services/moderation-readiness.js';
+import { assertPrivacySchema, assertRecoveryReplay } from '../services/privacy-readiness.js';
 
 const router = Router();
 
@@ -16,21 +17,12 @@ const liveHandler = (_req: Request, res: Response) => {
 
 const readinessDependencies = {
   media: getMediaReadinessSnapshot,
-  database: async () => { await db.execute(sql`SELECT 1`); },
+  database: async () => { await Promise.all([assertPrivateChatSchema(), assertModerationSchema(), assertPrivacySchema()]); },
   redis: () => inspectRedisCompatibility(env.REDIS_URL),
   notificationWorker: hasHealthyNotificationWorker,
   lifecycle: inspectLifecycleHealth,
-  recoveryReplay: async () => {
-    if (process.env.RECOVERY_REPLAY_GATE !== 'true') return;
-    const requiredCutoff = process.env.RESTORE_DELETION_JOURNAL_THROUGH;
-    const query = requiredCutoff
-      ? sql`SELECT 1 FROM recovery_replay_log WHERE through >= ${requiredCutoff} LIMIT 1`
-      : sql`SELECT 1 FROM recovery_replay_log LIMIT 1`;
-    const result = await db.execute(query).catch(() => ({ rows: [] }));
-    if (!result.rows || result.rows.length === 0) {
-      throw new Error("Disaster recovery erasure replay not completed; services must not serve affected data");
-    }
-  },
+  recoveryReplay: () => assertRecoveryReplay({ enabled: env.RECOVERY_REPLAY_GATE,
+    through: env.RESTORE_DELETION_JOURNAL_THROUGH, sha256: env.RESTORE_DELETION_MANIFEST_SHA256 }),
 };
 
 export function createReadinessHandler(dependencies = readinessDependencies) {
@@ -75,7 +67,7 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
       if (!lifecycle.workerUp) throw new Error("Required lifecycle worker is not ready");
       services.lifecycleWorker = "up";
 
-      if (process.env.RECOVERY_REPLAY_GATE === 'true') {
+      if (env.RECOVERY_REPLAY_GATE) {
         services.recoveryReplay = "down";
         await dependencies.recoveryReplay();
         services.recoveryReplay = "up";

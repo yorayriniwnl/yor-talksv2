@@ -1,6 +1,16 @@
 # Release gate status
 
-**17 October 2026 — BLOCKED / NO-GO.** PR [#25](https://github.com/yorayriniwnl/yor-talksv2/pull/25) remains restricted. Technical repairs and synthetic verification do not authorize a public release. The current task authorizes preparation and a reviewable GitHub change, not deployment, production-data changes, or paid provider settings.
+## 21 October 2026 private-chat release preparation
+
+The landing redesign and private-chat implementation remain local changes. No deployment was performed. The new readiness probe rejects missing private-chat migrations, columns or integrity protections; the production smoke command now verifies authentication and no-store responses at both private-chat API mounts. The isolated production migration and all 35 runtime-role backend tests plus three migration-fault tests passed. Detailed coverage and limits are in [Private chat security](PRIVATE_CHAT_SECURITY.md).
+
+Vite was patched to 7.3.7 and the markdown-it override to 14.3.3. A fresh all-scope `pnpm audit` reports zero known vulnerabilities, replacing the earlier six-advisory result. The relevant upstream fixes are documented by [Vite's maintainer](https://github.com/vitejs/launch-editor/security/advisories/GHSA-587h-7wmj-h5pm) and [markdown-it's maintainer](https://github.com/markdown-it/markdown-it/security/advisories/GHSA-gfr2-rv44-r23c). This dependency check is not an independent application audit.
+
+A read-only public check on 21 October found `https://yor-talks.vercel.app/` returning HTTP 200 HTML, while `/api/healthz` and `/api/readyz` returned HTTP 500. No production account or setting was modified. This checkout has Docker and Vercel configurations but no linked hosting target or production environment file; the deployment project/server still needs to be identified. Docker is unavailable locally, and the isolated HTTP authentication tests used the available Windows Redis 3.0.504 instance. Production Redis 7, background workers and container/proxy acceptance require the configured CI or target environment. Local test success does not close those gates.
+
+## 17 October 2026 baseline
+
+**17 October 2026 — BLOCKED / NO-GO.** PR [#25](https://github.com/[REDACTED legacy test credential]/yor-talksv2/pull/25) remains restricted. Technical repairs and synthetic verification do not authorize a public release. The current task authorizes preparation and a reviewable GitHub change, not deployment, production-data changes, or paid provider settings.
 
 This is the current gate index. The [programme audit](PROGRAMME_COMPLETION_AUDIT_2026-10-16.md), [readiness review](PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](PRODUCTION_LAUNCH.md) retain their detailed evidence and procedures. The new compliance/security/test evidence documents must be read alongside these gates; a code test cannot supply an operator's legal identity or approve a provider.
 

@@ -2675,6 +2675,24 @@ test('Studio camera blocks duplicate recording starts, stops access on close, an
   await page.keyboard.press('Escape');
   await expect(stickerTrigger).toBeFocused();
   await expect(studio).toBeVisible();
+  await stickerTrigger.click();
+  await studio.getByRole('button', { name: /Interactive Poll/ }).click();
+  const sticker = studio.getByRole('group', { name: 'poll preview sticker', exact: true });
+  await expect(sticker).toBeVisible();
+  const initialStickerPosition = await sticker.boundingBox();
+  await sticker.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await sticker.boundingBox())!.x).toBeGreaterThan(initialStickerPosition!.x);
+  await sticker.getByRole('button', { name: 'Move sticker left', exact: true }).click();
+  await expect.poll(async () => (await sticker.boundingBox())!.x).toBeLessThan(initialStickerPosition!.x);
+  await sticker.focus();
+  await page.keyboard.press('Delete');
+  await expect(sticker).toHaveCount(0);
+  await expect(stickerTrigger).toBeFocused();
+  await stickerTrigger.click();
+  await studio.getByRole('button', { name: /Live Countdown/ }).click();
+  await expect(studio.getByText('Static sample · no timer is running')).toBeVisible();
+  await studio.getByRole('group', { name: 'countdown preview sticker', exact: true }).getByRole('button', { name: 'Remove sticker' }).click();
   await expect(record).toBeEnabled();
   await record.evaluate(button => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));

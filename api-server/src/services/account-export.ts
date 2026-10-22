@@ -67,6 +67,13 @@ export const ACCOUNT_EXPORT_COLLECTIONS: readonly Collection[] = [
   collection('content','notes','user_notes','id author_id content audience content_category content_rating created_at expires_at',`${own('author_id')} AND ${unexpired()}`),
   collection('content','sentMessages','messages',messageColumns,`${own('sender_id')} AND ${visibleMessage}`),
   collection('content','receivedMessages','messages',messageColumns,`t.sender_id<>$1::uuid AND ${visibleMessage} AND ${participates('t.conversation_id')}`),
+  // Private-chat keys and plaintext never exist on the server. Export only the
+  // participant's opaque encrypted envelopes; decryption needs their own key.
+  collection('content','privateChatEnvelopes','private_chat_envelopes','id thread_id sender_id ciphertext created_at',
+    `EXISTS(SELECT 1 FROM private_chat_threads pc WHERE pc.id=t.thread_id AND (pc.user_a_id=$1::uuid OR pc.user_b_id=$1::uuid))`),
+  collection('content','privateChatThreads','private_chat_threads','id user_a_id user_b_id created_at updated_at',
+    `t.user_a_id=$1::uuid OR t.user_b_id=$1::uuid`),
+  collection('content','privateChatPublicIdentity','private_chat_identities','user_id public_key fingerprint created_at',own('user_id'),'user_id'),
   collection('content','articles','articles','id author_id title excerpt content cover_url read_time claps created_at collection content_category content_rating',own('author_id')),
   collection('content','videos','videos','id author_id video_url thumbnail_url title views created_at type content_category content_rating',own('author_id')),
   collection('content','videoComments','video_comments','id video_id author_id content media_url media_type media_duration created_at updated_at',own('author_id')),
@@ -144,6 +151,10 @@ export const ACCOUNT_EXPORT_COLLECTIONS: readonly Collection[] = [
   collection('commerce','paymentDisputes','payment_disputes','id payment_id status amount_minor currency amount_deducted product order_id respond_by updated_at',paymentOwner('t.payment_id')),
   collection('commerce','disputeHistory','payment_dispute_history','id dispute_id status amount_deducted observed_at',`EXISTS(SELECT 1 FROM payment_disputes d WHERE d.id=t.dispute_id AND (${paymentOwner('d.payment_id')}))`),
   collection('safety','moderationContributions','report_moderation_events','id report_id moderator_id from_status to_status decision_reason created_at',own('moderator_id')),
+  collection('safety','moderationNotices','moderation_decision_notices','id decision_id recipient_role target_type target_id safe_summary action appeal_eligible appeal_deadline acknowledged_at created_at',own('recipient_user_id')),
+  collection('safety','moderationAppeals','moderation_appeals','id decision_id relationship statement status public_rationale outcome_decision_id reviewed_at created_at updated_at',own('appellant_user_id')),
+  collection('safety','consentRecords','consent_records','id purpose version granted granted_at withdrawn_at',own('subject_id')),
+  collection('safety','privacyRightsRequests','privacy_rights_requests','id request_type status verified_at completed_at created_at',own('subject_id')),
   collection('safety','invites','invites','id inviter_id invitee_id status created_at claimed_at',`t.inviter_id=$1::uuid OR t.invitee_id=$1::uuid`),
   collection('safety','waitlist','waitlist','id email status created_at',`EXISTS(SELECT 1 FROM users u WHERE u.id=$1::uuid AND u.email_verified AND lower(u.email)=lower(t.email))`),
   collection('safety','storyAudienceSelections','story_audience_members','story_id user_id created_at',ownedStory,'story_id user_id'),
@@ -172,6 +183,14 @@ export const ACCOUNT_EXPORT_COLLECTIONS: readonly Collection[] = [
 // of private relationships. CI compares this list against the migrated catalog.
 export const ACCOUNT_EXPORT_USER_FK_DECISIONS: Readonly<Record<string,string>> = Object.fromEntries([
   ['user_terms_acceptances.user_id', 'Export the requesting subject\'s versioned terms acknowledgement history.'],
+  ['private_chat_identities.user_id', 'Only the subject public key is exported; recovery keys and passphrases are never held by the server.'],
+  ['private_chat_envelopes.sender_id', 'Export opaque ciphertext only where the subject is a private-thread participant.'],
+  ['consent_records.subject_id', 'Export the subject consent history without identity digests or internal metadata.'],
+  ['privacy_rights_requests.subject_id', 'Export subject-linked request status and dates without verification tokens, identity hashes or internal details.'],
+  ['moderation_decision_notices.recipient_user_id', 'Export only safe notices already addressed to the requesting subject.'],
+  ['moderation_appeals.appellant_user_id', 'Export the subject submitted appeals and outcomes without reviewer identities or internal notes.'],
+  ['moderation_appeals.reviewer_id', 'Reviewer identities and internal review notes are excluded; only appellant-owned safe fields are exported.'],
+  ['moderation_decisions.actor_id', 'Internal moderation evidence and actor identities are excluded; subject-addressed safe notices are exported separately.'],
   ...`articles.author_id broadcast_channel_members.user_id broadcast_channel_messages.author_id broadcast_channels.owner_id business_members.user_id business_profiles.owner_id checkout_intents.owner_id comments.author_id communities.owner_id community_members.user_id contact_authorization_approvals.child_user_id contact_authorization_approvals.guardian_user_id contact_authorizations.initiator_id contact_authorizations.user_a_id contact_authorizations.user_b_id contact_shields.owner_id conversation_invitation_approvals.child_user_id conversation_invitation_approvals.guardian_user_id conversation_invitations.invitee_id conversation_invitations.inviter_id conversation_members.user_id conversations.participant_a conversations.participant_b creator_analytics_daily.creator_id creator_profile_view_events.viewer_id creator_workspace_items.owner_id eligibility_assessments.user_id eligibility_challenges.user_id eligibility_enrollments.bound_user_id eligibility_revisions.user_id entitlements.user_id event_rsvps.user_id events.host_id follow_requests.requester_id follow_requests.target_id guardian_authorizations.guardian_user_id guardian_authorizations.user_id highlights.owner_id invites.invitee_id invites.inviter_id ledger_transactions.credit_account_id ledger_transactions.debit_account_id live_streams.host_id marketplace_orders.buyer_id marketplace_orders.seller_id media_assets.owner_id message_preview_events.user_id message_reads.user_id messages.recipient_id messages.sender_id notifications.recipient_id payment_operation_audit.actor_id payment_orders.creator_id payment_orders.payer_id post_bookmarks.user_id post_likes.user_id post_poll_votes.user_id post_reposts.user_id posts.author_id premium_access.user_id premium_orders.user_id product_analytics_events.actor_id product_saves.user_id products.seller_id profile_comments.author_id profile_post_pins.user_id profile_showcases.user_id project_collaborators.user_id projects.owner_id push_subscriptions.user_id reel_views.user_id report_moderation_events.moderator_id reports.reporter_id stories.author_id story_poll_votes.user_id story_reactions.user_id story_view_events.viewer_id story_views.user_id subscription_orders.creator_id subscription_orders.subscriber_id subscriptions.creator_id subscriptions.subscriber_id user_close_friends.user_id user_favorite_creators.user_id user_feature_overrides.user_id user_follows.follower_id user_follows.following_id user_notes.author_id user_topics.user_id video_bookmarks.user_id video_comments.author_id videos.author_id`.split(' ').map(key => [key,'Exported through the explicit subject/actor/participation projection.']),
   ['creator_profile_view_events.creator_id','Daily aggregates only; another viewer\'s private browsing history is excluded.'],
   ['profile_comments.profile_id','Received profile comments use a content-only projection without other authors\' private fields.'],
@@ -187,6 +206,7 @@ export const ACCOUNT_EXPORT_EXCLUSIONS = [
   'Other people\'s private profile fields, browsing events, audience choices, saved/close-friend lists, raw reaction identities and buyer shipping fields are excluded.',
   'Deleted/expired messages, expired notes and expired non-highlight stories are excluded, including their attachment references.',
   'Uploaded media values are canonical references, not bytes or access grants; delivery still requires current authorization. Submitted allowlisted external video links are retained.',
+  'Private chats are exported as encrypted envelopes. Their text and embedded file bytes require the participant-held private key to decrypt; the server has no recovery keys or passphrases.',
   'System-only queues, webhook payloads, provider reconciliation, background jobs, global aggregates and internal moderation/security evidence are excluded.',
   'Unbound guest enrollment/grievance records cannot safely be attributed from an account email; verified support handles those access requests separately.',
 ] as const;

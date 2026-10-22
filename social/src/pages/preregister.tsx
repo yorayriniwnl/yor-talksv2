@@ -1,35 +1,12 @@
 import * as React from 'react';
 import { Link } from 'wouter';
 import QRCode from 'qrcode';
-import { ArrowUpRight, ArrowDown, Box, WandSparkles, Sparkles, Scan, AtSign, MoveUpRight, CheckCheck, Copy, ArrowRight, Check, Mail, Loader2, Plus, Heart, MapPin, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { ArrowUpRight, ArrowDown, AtSign, MoveUpRight, CheckCheck, Copy, ArrowRight, Check, Mail, Loader2, Plus, Heart, MapPin, ShieldCheck, Fingerprint, LockKeyhole, KeyRound, Sparkles } from 'lucide-react';
 import { api, ApiError, type PreregisterPass } from '@/lib/api-client';
-import YorProductPreviews from '@/components/launch/YorProductPreviews';
-import DeferredYorWorldPreview from '@/components/launch/DeferredYorWorldPreview';
-import type { YorWorldDistrict } from '@/components/launch/YorWorldPreview';
-import YorSocialPreview, { YorSocialFeatures } from '@/components/launch/YorSocialPreview';
-import '@/styles/preregister.css';
-import '@/components/launch/yor-social-preview.css';
-const DISTRICTS: {
-  id: YorWorldDistrict;
-  label: string;
-  title: string;
-  copy: string;
-}[] = [{
-  id: 'commons',
-  label: 'The Commons',
-  title: 'Your people have a place.',
-  copy: 'Find communities around what moves you. Start conversations, share stories, and build a world that feels like yours.'
-}, {
-  id: 'studio',
-  label: 'Creator Studio',
-  title: 'Your ideas deserve a first take.',
-  copy: 'Explore visual styles and creative tools. Give your photos, stories and next project a voice of their own.'
-}, {
-  id: 'dream',
-  label: 'Dream Dock',
-  title: 'Give a thought somewhere to go.',
-  copy: 'Shape an idea into roles and milestones, then find collaborators who want to help make it real.'
-}];
+import PrivateRelayPreview from '@/components/launch/PrivateRelayPreview';
+import YorSocialPreview from '@/components/launch/YorSocialPreview';
+import '@/styles/preregister-rebuild.css';
+import '@/components/launch/yor-live-demo.css';
 const LAUNCH_AT = new Date('2026-12-01T00:00:00+05:30').getTime();
 type FieldErrors = Partial<Record<'email' | 'username' | 'consent', string>>;
 function countdownValues() {
@@ -47,7 +24,7 @@ function LaunchCountdown() {
       <div className="pr-launch-date">
         <span className="pr-asterisk" aria-hidden="true">✳</span>
         <div>
-          <span>YOR TALKS GOES LIVE</span>
+          <span>THE NEXT CHAPTER BEGINS</span>
           <time dateTime="2026-12-01T00:00:00+05:30">1 December 2026</time>
           <small>00:00 IST</small>
         </div>
@@ -67,7 +44,6 @@ function inviteUrl(code?: string | null) {
   return url.toString();
 }
 export default function Preregister() {
-  const [district, setDistrict] = React.useState<YorWorldDistrict>('commons');
   const [email, setEmail] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [consent, setConsent] = React.useState(false);
@@ -90,8 +66,8 @@ export default function Preregister() {
     const oldTitle = document.title;
     const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     const oldDescription = description?.content;
-    document.title = 'Yor Talks — Premium social. Rooted in India. Launching 1 December 2026';
-    if (description) description.content = 'A premium social experience with Indian data residency as a launch commitment and privacy inspired by EU principles. Join the Yor Talks launch list for 1 December 2026.';
+    document.title = 'Yor Talks — Life’s personal. Keep it that way.';
+    if (description) description.content = 'Meet Yor Talks. A premium social space being built around your people, your choices, and an India-first approach to your data. Launching 1 December 2026.';
     // Older drafts cached personal details and could contain fabricated passes.
     try {
       localStorage.removeItem('yor:founder:pass:v1');
@@ -201,208 +177,123 @@ export default function Preregister() {
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  function handleDistrictKey(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
-    let next = index;
-    if (event.key === 'ArrowRight') next = (index + 1) % DISTRICTS.length;else if (event.key === 'ArrowLeft') next = (index + DISTRICTS.length - 1) % DISTRICTS.length;else if (event.key === 'Home') next = 0;else if (event.key === 'End') next = DISTRICTS.length - 1;else return;
-    event.preventDefault();
-    setDistrict(DISTRICTS[next].id);
-    document.getElementById(`pr-district-${DISTRICTS[next].id}`)?.focus();
-  }
-  return <div className={"pr-page"}>
-<a className={"pr-skip"} href={"#pr-signup"}>
-{"Skip to pre-registration"}
-</a>
-<header className={"pr-header pr-container"}>
-<Link href={"/preregister"} className={"pr-brand"} aria-label={"Yor Talks home"}>
-{"yor talks"}
-<span>
-{"\u2733"}
-</span>
-</Link>
-<nav className={"pr-nav"} aria-label={"Launch navigation"}>
-<a href={"#pr-commitments"}>
-{"Our commitments"}
-</a>
-<a href={"#pr-social"}>
-{"The experience"}
-</a>
-<a href={"#pr-register-title"}>
-{"Early member perks"}
-</a>
-</nav>
-<div className="pr-header-makers"><span><span className="pr-header-makers__label">Made with <Heart size={12} aria-hidden="true" /> by</span><strong>Aditi &amp; Ayush.</strong></span></div>
-<a className={"pr-header-cta"} href={"#pr-signup"}>
-{"Get early access "}
-<ArrowUpRight size={16} />
-</a>
-</header>
-<main>
-<LaunchCountdown />
-<section className="pr-social-hero pr-container" aria-labelledby="pr-title">
-  <div className="pr-social-hero-grid">
-    <div className="pr-product-copy">
-      <p className="pr-kicker"><span className="pr-india-mark" aria-hidden="true"><i /><i /><i /></span> ROOTED IN INDIA. BUILT AROUND YOU.</p>
-      <h1 id="pr-title">Your world.<br />Your privacy.<br /><em>Rooted in India.</em></h1>
-      <p className="pr-hero-description">A <strong>premium social experience</strong>, with Indian data residency as a launch commitment and privacy inspired by EU principles.</p>
-      <div className="pr-product-actions">
-        <a className="pr-product-primary" href="#pr-signup">Get early access <ArrowUpRight size={20} /></a>
-        <a className="pr-explore-link" href="#pr-commitments"><span><ArrowDown size={17} /></span>What we stand for</a>
+
+  return <div className="pr-page">
+    <a className="pr-skip" href="#pr-signup">Skip to pre-registration</a>
+    <header className="pr-header pr-container">
+      <Link href="/preregister" className="pr-brand" aria-label="Yor Talks home">yor<span className="pr-brand-symbol" aria-hidden="true">✳</span><span className="pr-brand-word">talks</span></Link>
+      <nav className="pr-nav" aria-label="Launch navigation">
+        <a href="#pr-demo">Try the app</a>
+        <a href="#pr-commitments">Privacy &amp; security</a>
+        <a href="#pr-questions">Good questions</a>
+      </nav>
+      <div className="pr-header-makers"><span>Made with <Heart size={11} aria-hidden="true" /></span><strong>Aditi &amp; Ayush.</strong></div>
+      <a className="pr-header-cta" href="#pr-signup">Join the list <ArrowUpRight size={16} /></a>
+    </header>
+    <main>
+      <LaunchCountdown />
+      <section className="pr-hero pr-hero--with-demo pr-container" aria-labelledby="pr-title">
+        <div className="pr-hero-copy">
+          <p className="pr-kicker"><span className="pr-live-dot" /> A MORE PERSONAL SOCIAL LIFE</p>
+          <h1 id="pr-title">Life’s personal.<br /><span>Keep it<br className="pr-title-break" /> that way.</span></h1>
+        </div>
+        <div className="pr-demo-invitation">
+          <p className="pr-hero-description">Meet Yor Talks. A premium social space for <strong>your people and your private moments.</strong> Built around thoughtful design and a commitment to keep your personal data in India.</p>
+          <div className="pr-hero-actions">
+            <a className="pr-primary" href="#pr-demo">Step inside the app <ArrowUpRight size={19} /></a>
+            <a className="pr-text-link" href="#pr-signup">Get early access <ArrowUpRight size={17} /></a>
+          </div>
+          <p className="pr-hero-note">Explore the demo. No account needed. Make yourself at home.</p>
+        </div>
+      </section>
+      <section className="pr-demo-showcase pr-container" aria-label="Try the Yor Talks application">
+        <YorSocialPreview />
+      </section>
+      <div className="pr-values pr-container" aria-label="What we are building around">
+        <span><MapPin size={17} /> India at the heart</span>
+        <span><Fingerprint size={18} /> Privacy by intention</span>
+        <span><Sparkles size={17} /> Care in every detail</span>
+        <a href="#pr-commitments">OUR COMMITMENTS <ArrowDown size={15} /></a>
       </div>
-      <p className="pr-hero-detail">Free pre-registration. Early member benefits. A more considered social life.</p>
-    </div>
-    <YorSocialPreview />
-  </div>
-  <div className="pr-social-signoff"><span>THOUGHTFULLY SOCIAL. DISTINCTLY YOURS.</span><a href="#pr-commitments">A BETTER FOUNDATION <ArrowDown size={13} /></a></div>
-</section>
-<div className="pr-product-rail pr-container" aria-label="The Yor Talks commitments">
-  <a href="#pr-india"><span className="pr-rail-number">01</span><MapPin size={21} strokeWidth={1.4} /><span><strong>Indian data residency</strong><small>A core commitment for launch</small></span><ArrowUpRight size={17} /></a>
-  <a href="#pr-privacy"><span className="pr-rail-number">02</span><ShieldCheck size={21} strokeWidth={1.4} /><span><strong>EU-inspired privacy</strong><small>Consent, transparency & control</small></span><ArrowUpRight size={17} /></a>
-  <a href="#pr-premium"><span className="pr-rail-number">03</span><Sparkles size={21} strokeWidth={1.4} /><span><strong>A premium experience</strong><small>Care in the details that matter</small></span><ArrowUpRight size={17} /></a>
-</div>
-<section className="pr-commitments pr-container" id="pr-commitments" aria-labelledby="pr-commitments-title">
-  <div className="pr-section-heading">
-    <div><p className="pr-kicker"><span className="pr-section-index">01 /</span> OUR LAUNCH COMMITMENTS</p><h2 id="pr-commitments-title">A better social experience<br /><span>starts with trust.</span></h2></div>
-    <p>Where your data lives. How your choices are respected. How it feels to spend time here. These are the foundations we’re building on.</p>
-  </div>
-  <div className="pr-commitment-grid">
-    <article id="pr-india">
-      <div className="pr-commitment-top"><MapPin size={23} strokeWidth={1.4} /><span>01 / RESIDENCY</span></div>
-      <h3>Your data.<br />At home in India.</h3>
-      <p>Our commitment is to keep your personal data in India. India-based hosting and provider reviews are being finalised before launch.</p>
-      <span className="pr-commitment-status"><span className="pr-live-dot" /> LAUNCH COMMITMENT</span>
-    </article>
-    <article id="pr-privacy">
-      <div className="pr-commitment-top"><ShieldCheck size={23} strokeWidth={1.4} /><span>02 / PRIVACY</span></div>
-      <h3>Privacy<br />with substance.</h3>
-      <p>Inspired by EU privacy principles: clear consent, collecting only what’s needed, and meaningful access and deletion controls.</p>
-      <Link className="pr-commitment-link" href="/privacy">Read our privacy approach <ArrowUpRight size={15} /></Link>
-    </article>
-    <article id="pr-premium">
-      <div className="pr-commitment-top"><SlidersHorizontal size={23} strokeWidth={1.4} /><span>03 / EXPERIENCE</span></div>
-      <h3>Premium<br />in every detail.</h3>
-      <p>Expressive profiles, considered creative tools, and conversations that feel personal. A social space designed to deserve your time.</p>
-      <a className="pr-commitment-link" href="#pr-social">Explore the experience <ArrowDown size={15} /></a>
-    </article>
-  </div>
-  <div className="pr-privacy-controls"><span>YOUR CHOICES MATTER</span><p>Optional analytics are off by default. Account export and deletion controls are available in Settings.</p><Link href="/privacy">Your privacy controls <ArrowUpRight size={15} /></Link></div>
-</section>
-<YorSocialFeatures />
-<section className={"pr-platform pr-container"} id={"pr-platform"} aria-labelledby={"pr-platform-title"}>
-<div className={"pr-section-heading"}>
-<div>
-<p className={"pr-kicker"}>
-<span className={"pr-section-index"}>
-{"03 /"}
-</span>
-{" THE CREATIVE SIDE OF YOR TALKS"}
-</p>
-<h2 id={"pr-platform-title"}>
-{"Make it yours."}
-<br />
-<span>
-{"Then share it."}
-</span>
-</h2>
-</div>
-<p>
-{"For the photos you post, the stories you tell, and the ideas you share."}
-<br />
-{"Meet the creative side of your social life."}
-<br />
-{"Try Studio and Dream."}
-</p>
-</div>
-<YorProductPreviews />
-<div className={"pr-connection-line"}>
-<div className={"pr-connection-mark"} aria-hidden={"true"}>
-<span>
-{"y"}
-</span>
-<span>
-{"o"}
-</span>
-<span>
-{"r"}
-</span>
-</div>
-<div>
-<strong>
-{"Better when it\u2019s together."}
-</strong>
-<p>
-{"Communities, conversations, stories and shared projects. Find the people who turn \u201Cwhat if\u201D into \u201Clet\u2019s do it.\u201D"}
-</p>
-</div>
-<a href={"#pr-signup"} aria-label={"Join the community launch list"}>
-<ArrowUpRight size={26} />
-</a>
-</div>
-</section>
-<section className={"pr-registration pr-container"} aria-labelledby={"pr-register-title"}>
-<div className={"pr-signup-story"}>
-<p className={"pr-kicker"}>
-<span className={"pr-section-index"}>
-{"04 /"}
-</span>
-{" EARLY LOOKS GOOD ON YOU"}
-</p>
-<h2 id={"pr-register-title"}>
-{"A better social life."}
-<br />
-<span>
-{"An earlier start."}
-</span>
-<br />
-<em>
-{"Be here first."}
-</em>
-</h2>
-<p>
-{"Be part of a premium social experience rooted in India. Get launch updates, choose your preferred name, and discover the benefits of being here early."}
-</p>
-<div className={"pr-early-benefits"}>
-<div>
-<span>
-<Sparkles size={19} />
-</span>
-<p>
-<strong>
-{"The original-member treatment"}
-</strong>
-{"A founder badge and special profile frame for eligible accounts."}
-</p>
-</div>
-<div>
-<span>
-<WandSparkles size={19} />
-</span>
-<p>
-<strong>
-{"A year of SuperPass"}
-</strong>
-{"One year of premium features for eligible founder accounts."}
-</p>
-</div>
-<div>
-<span>
-<AtSign size={19} />
-</span>
-<p>
-<strong>
-{"A name that\u2019s yours"}
-</strong>
-{"Tell us your preferred handle. Confirm availability when you create your account."}
-</p>
-</div>
-</div>
-<p className={"pr-early-note"}>
-{"Use the same email when you create your account. Account eligibility and final launch terms apply."}
-</p>
-</div>
-<div className={"pr-signup"} id={"pr-signup"} tabIndex={-1}>
+
+      <section className="pr-vision" id="pr-vision" aria-labelledby="pr-vision-title">
+        <div className="pr-container">
+          <div className="pr-vision-top"><p className="pr-kicker">01 / A SIMPLE BELIEF</p><span>PEOPLE FIRST. ALWAYS.</span></div>
+          <h2 id="pr-vision-title">We’re here to<br /><em>connect you.</em></h2>
+          <div className="pr-vision-bottom">
+            <div className="pr-connection-art" aria-hidden="true"><span>you</span><i /><span className="pr-connection-art__yor">yor✳</span><i /><span>yours</span></div>
+            <div><p>The late-night catch-ups. The plans that finally happen. The people who get you. That’s what a social space should make room for.</p><p className="pr-vision-principle">In Private chats, our role is delivery. You and the person you choose hold the keys to your conversation.</p><a href="#pr-privacy" className="pr-text-link">See how private chats work <ArrowUpRight size={17} /></a></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pr-foundations pr-container" id="pr-commitments" aria-labelledby="pr-commitments-title">
+        <div className="pr-section-heading">
+          <div><p className="pr-kicker">02 / BUILT ON WHAT MATTERS</p><h2 id="pr-commitments-title">Good connections.<br /><span>Stronger foundations.</span></h2></div>
+          <p>A considered experience starts with the choices behind it. Here are ours, and where the work stands.</p>
+        </div>
+        <div className="pr-foundation-grid">
+          <article className="pr-india-card" id="pr-india">
+            <div className="pr-card-eyebrow"><MapPin size={19} /><span>ROOTED IN INDIA</span><span className="pr-state">LAUNCH COMMITMENT</span></div>
+            <div className="pr-india-art" aria-hidden="true"><div className="pr-india-orbit pr-india-orbit--one" /><div className="pr-india-orbit pr-india-orbit--two" /><span className="pr-india-coordinate">20.5937° N &nbsp; 78.9629° E</span><strong>IN<span>✳</span></strong><div className="pr-india-home"><span /><span /><span /></div><span className="pr-india-caption">A CLOSER HOME FOR YOUR DATA</span></div>
+            <h3>Your data deserves<br />a home in India.</h3>
+            <p>Indian data residency is a core launch commitment. We’re reviewing hosting, backups and service providers to make that promise concrete.</p>
+            <a className="pr-text-link" href="#pr-residency-answer" onClick={() => {
+              const answer = document.getElementById('pr-residency-answer');
+              if (answer instanceof HTMLDetailsElement) answer.open = true;
+            }}>What this means for you <ArrowUpRight size={16} /></a>
+          </article>
+          <article className="pr-privacy-card" id="pr-privacy">
+            <div className="pr-card-eyebrow"><LockKeyhole size={19} /><span>PERSONAL MEANS PERSONAL</span></div>
+            <h3>Your words.<br />Between you.</h3>
+            <p>In Private chats, one-to-one messages and small files are encrypted on your device. Yor Talks carries the encrypted content; your keys open it.</p>
+            <div className="pr-status-note"><span className="pr-state">A SEPARATE PRIVATE MODE</span><p>Set up your own keys and save your recovery file. Standard messages still use server processing, including safety moderation.</p></div>
+            <div className="pr-privacy-links"><Link className="pr-text-link" href="/private-messages">Open private chats <ArrowUpRight size={16} /></Link><Link className="pr-text-link" href="/privacy">Read our privacy approach <ArrowUpRight size={16} /></Link></div>
+          </article>
+          <article className="pr-control-card" id="pr-premium">
+            <div className="pr-card-eyebrow"><Fingerprint size={19} /><span>YOUR SPACE. YOUR SAY.</span></div>
+            <h3>More control.<br />Less second-guessing.</h3>
+            <p>EU-inspired privacy principles guide our approach to consent, transparency and control over your data.</p>
+            <ul><li><Check size={15} /> Optional analytics off by default</li><li><Check size={15} /> Account export and deletion controls</li><li><Check size={15} /> Two-factor authentication and session controls</li></ul>
+            <Link className="pr-text-link" href="/privacy">Your privacy controls <ArrowUpRight size={16} /></Link>
+          </article>
+        </div>
+        <div className="pr-security-line"><ShieldCheck size={20} /><p>Security is a responsibility, every day.</p><span>Clear promises. Visible progress. A launch built on trust.</span></div>
+        <div className="pr-private-delivery">
+          <div><p className="pr-kicker">HOW PRIVATE CHATS WORK</p><h2>We carry the message.<br /><span>You hold the keys.</span></h2><p>Follow a sample message from your device to your person. See what each side can read, and what the delivery service receives.</p><a className="pr-text-link" href="#pr-private-chat-answer" onClick={() => {
+            const answer = document.getElementById('pr-private-chat-answer');
+            if (answer instanceof HTMLDetailsElement) answer.open = true;
+          }}>What private chats protect <ArrowUpRight size={17} /></a></div>
+          <PrivateRelayPreview />
+        </div>
+      </section>
+
+      <section className="pr-social-section pr-container" id="pr-social" aria-labelledby="pr-social-title">
+        <div className="pr-social-intro"><p className="pr-kicker">03 / ROOM TO BE YOURSELF</p><h2 id="pr-social-title">A little more<br /><em>human.</em></h2><p>A thoughtful home for your everyday social life. Beautifully simple, with room for the things that matter to you.</p><a className="pr-text-link" href="#pr-signup">Be part of the beginning <ArrowUpRight size={17} /></a></div>
+        <div className="pr-social-moments">
+          <article><div className="pr-moment-art pr-moment-art--chat" aria-hidden="true"><span>Same time tomorrow?</span><span>Wouldn’t miss it. <Heart size={13} /></span></div><span className="pr-moment-number">01 / CONVERSATIONS</span><h3>Your kind of catch-up.</h3><p>Make room for the people you want to hear from.</p></article>
+          <article><div className="pr-moment-art pr-moment-art--circle" aria-hidden="true"><span>music</span><span>design</span><span>you</span><span>life</span><span>ideas</span></div><span className="pr-moment-number">02 / COMMUNITIES</span><h3>Find your familiar.</h3><p>Come together around the things you care about.</p></article>
+          <article><div className="pr-moment-art pr-moment-art--story" aria-hidden="true"><span>little<br />things.</span><i /><small>A MOMENT WORTH SHARING ↗</small></div><span className="pr-moment-number">03 / EXPRESSION</span><h3>A space that feels like you.</h3><p>Share a thought, a story, a little of your world.</p></article>
+        </div>
+      </section>
+
+      <section className="pr-registration-wrap">
+        <div className="pr-registration pr-container" aria-labelledby="pr-register-title">
+          <div className="pr-signup-story">
+            <p className="pr-kicker"><span className="pr-live-dot" /> THE START OF SOMETHING PERSONAL</p>
+            <h2 id="pr-register-title">Your people.<br />Your space.<br /><em>Your invitation.</em></h2>
+            <p>Be here for the beginning. Choose your preferred handle and get the news when Yor Talks opens its doors.</p>
+            <div className="pr-early-benefits">
+              <div><Sparkles size={20} /><p><strong>A little recognition</strong>A founder badge and profile frame for eligible early members.</p></div>
+              <div><KeyRound size={20} /><p><strong>A year of SuperPass</strong>One year of premium features for eligible founder accounts.</p></div>
+              <div><AtSign size={20} /><p><strong>A name that feels like you</strong>Share your preferred handle. Confirm availability at account creation.</p></div>
+            </div>
+            <p className="pr-early-note">Use the same email when you create your account. Eligibility and final launch terms apply.</p>
+          </div>
+          <div className={"pr-signup"} id={"pr-signup"} tabIndex={-1}>
 <div className={"pr-card-tab"}>
 <span className={"pr-live-dot"} />
-{" THE FIRST CHAPTER "}
+{" YOUR EARLY ACCESS "}
 <span>
 {"01.12.26"}
 </span>
@@ -410,7 +301,7 @@ export default function Preregister() {
 <div className={"pr-card"}>
 <div className={"pr-card__top"}>
 <span>
-{"YOUR INVITATION STARTS HERE"}
+{"A PLACE FOR YOUR PEOPLE"}
 </span>
 <MoveUpRight size={23} strokeWidth={1.3} />
 </div>
@@ -506,7 +397,7 @@ export default function Preregister() {
 </em>
 </h2>
 <p className={"pr-card__description"}>
-{"Two details. A whole world to look forward to."}
+{"Join the launch list. Make yourself at home."}
 </p>
 {referralCode && <p className={"pr-referral"}>
 <Check size={14} />
@@ -601,195 +492,32 @@ export default function Preregister() {
 </div>
 <p className={"pr-card-footnote"}>
 <Check size={13} />
-{" Your account comes later. Your story starts here."}
+{" Your account comes later. This is your invitation."}
 </p>
 </div>
-</section>
-<section className={"pr-world-section pr-container"} id={"pr-world"} aria-labelledby={"pr-world-title"}>
-<div className={"pr-section-heading"}>
-<div>
-<p className={"pr-kicker"}>
-<span className={"pr-section-index"}>
-{"05 /"}
-</span>
-{" YOR WORLD"}
-</p>
-<h2 id={"pr-world-title"}>
-{"Meet Yor World."}
-<br />
-<span>
-{"Another way to explore."}
-</span>
-</h2>
-</div>
-<p>
-{"There’s more to explore inside Yor Talks."}
-<br />
-{"Yor World adds an immersive dimension to the social experience. Try this 3D preview: drag to look around or choose a district."}
-</p>
-</div>
-<div className={"pr-engine-frame"}>
-<div className={"pr-engine-toolbar"}>
-<span>
-<Box size={15} />
-{" YOR WORLD "}
-<i>
-{"/"}
-</i>
-{" EXPERIENCE PREVIEW"}
-</span>
-<span className={"pr-engine-status"}>
-<span className={"pr-live-dot"} />
-{" INTERACTIVE 3D"}
-</span>
-</div>
-<DeferredYorWorldPreview selectedDistrict={district} onSelectDistrict={setDistrict} />
-<div className={"pr-engine-details"}>
-<div className={"pr-district-tabs"} role={"tablist"} aria-label={"Explore Yor World districts"}>
-{DISTRICTS.map((j, D) => <button type={"button"} role={"tab"} id={`pr-district-${j.id}`} aria-controls={`pr-district-panel-${j.id}`} aria-selected={district === j.id} tabIndex={district === j.id ? 0 : -1} onClick={() => setDistrict(j.id)} onKeyDown={se => handleDistrictKey(se, D)} key={j.id}>
-<span>
-{"0"}
-{D + 1}
-</span>
-{j.label}
-<ArrowUpRight size={15} />
-</button>)}
-</div>
-{DISTRICTS.map(j => <div className={"pr-world-info"} role={"tabpanel"} id={`pr-district-panel-${j.id}`} aria-labelledby={`pr-district-${j.id}`} hidden={district !== j.id} key={j.id}>
-<h3>
-{j.title}
-</h3>
-<p>
-{j.copy}
-</p>
-</div>)}
-</div>
-</div>
-<div className={"pr-world-footnote"}>
-<span>
-<Scan size={14} />
-{" EXPLORE IN 3D "}
-<i>
-{"\xB7"}
-</i>
-{" ROTATE THE CAMERA "}
-<i>
-{"\xB7"}
-</i>
-{" FIND YOUR CORNER"}
-</span>
-<span>
-{"Yor World is one part of Yor Talks. This is an experience preview."}
-</span>
-</div>
-</section>
-<section className={"pr-faq pr-container"} aria-labelledby={"pr-faq-title"}>
-<div>
-<p className={"pr-kicker"}>
-{"A LITTLE CLARITY"}
-</p>
-<h2 id={"pr-faq-title"}>
-{"Before you"}
-<br />
-<span>
-{"say hello."}
-</span>
-</h2>
-</div>
-<div className={"pr-faq__list"}>
-<details>
-<summary>
-{"What exactly is Yor Talks?"}
-<Plus size={18} />
-</summary>
-<p>
-{"Yor Talks is a premium social platform built around an Indian data residency commitment and privacy inspired by EU principles. Share posts and stories, message friends, and find communities. Studio, Dream and Yor World add more ways to create and explore."}
-</p>
-</details>
-<details>
-<summary>Will my data stay in India?<Plus size={18} /></summary>
-<p>Keeping your personal data in India is our launch commitment. Hosting locations, backups and external service arrangements are still being reviewed. India-only storage is not yet verified; we’ll publish the confirmed scope and any exceptions before launch.</p>
-</details>
-<details>
-<summary>Is Yor Talks GDPR compliant?<Plus size={18} /></summary>
-<p>Our privacy approach is inspired by EU principles, including clear consent, data minimisation and access and deletion rights. Legal and operational reviews are still in progress. We do not currently claim verified GDPR compliance. Read our <Link href="/privacy">Privacy Policy</Link> for the current scope and controls.</p>
-</details>
-<details>
-<summary>
-{"When can I get in?"}
-<Plus size={18} />
-</summary>
-<p>
-{"Our launch date is 1 December 2026. The countdown runs to midnight India Standard Time (UTC+05:30). Join the list for launch updates."}
-</p>
-</details>
-<details>
-<summary>
-{"What happens after I join the list?"}
-<Plus size={18} />
-</summary>
-<p>
-{"Your email, preferred username and consent to updates are saved. New signups receive an early member pass right here. You\u2019ll create your eligible account separately, using the same email."}
-</p>
-</details>
-<details>
-<summary>
-{"Does it cost anything?"}
-<Plus size={18} />
-</summary>
-<p>
-{"Pre-registration is free. You don\u2019t need a password, payment details or an existing account."}
-</p>
-</details>
-</div>
-</section>
-</main>
-<footer className={"pr-footer"}>
-<div className={"pr-container"}>
-<div className={"pr-footer__invitation"}>
-<div>
-<p>
-{"YOUR WORLD. YOUR PRIVACY. ROOTED IN INDIA."}
-</p>
-<h2>
-{"See you on"}
-<br />
-<span>
-{"Yor Talks."}
-</span>
-</h2>
-</div>
-<a href={"#pr-signup"} aria-label={"Back to pre-registration"}>
-<ArrowUpRight size={56} strokeWidth={1.1} />
-</a>
-</div>
-<div className={"pr-footer__bottom"}>
-<div className={"pr-makers"}>
-<Heart size={14} aria-hidden={"true"} />
-<span>
-{"With love by "}
-<strong>
-{"Aditi & Ayush."}
-</strong>
-</span>
-</div>
-<span>
-{"\xA9 2026 Yor Talks"}
-</span>
-<div>
-<Link href={"/privacy"}>
-{"Privacy"}
-</Link>
-<Link href={"/terms"}>
-{"Terms"}
-</Link>
-<Link href={"/auth"}>
-{"Sign in "}
-<ArrowUpRight size={13} />
-</Link>
-</div>
-</div>
-</div>
-</footer>
-</div>;
+
+        </div>
+      </section>
+
+      <section className="pr-faq pr-container" id="pr-questions" aria-labelledby="pr-faq-title">
+        <div><p className="pr-kicker">04 / OPEN CONVERSATIONS</p><h2 id="pr-faq-title">Good questions.<br /><span>Honest answers.</span></h2><p>Trust begins with knowing where you stand.</p></div>
+        <div className="pr-faq__list">
+          <details><summary>What exactly is Yor Talks?<Plus size={19} /></summary><p>Yor Talks is a social platform in development for conversations, communities and sharing your world. We’re building a premium experience around an Indian data residency commitment and privacy inspired by EU principles.</p></details>
+          <details id="pr-private-chat-answer"><summary>Can Yor Talks read my personal chats?<Plus size={19} /></summary><p>The separate <Link href="/private-messages">Private chats</Link> experience encrypts one-to-one text and small files on your device. Our delivery service receives encrypted content without the private keys to open it. Standard messages are not end-to-end encrypted: our servers process their readable content, including safety moderation that may use configured external providers.</p><p>Private chats require a recovery file, your passphrase and verification of the other person’s fingerprint through another channel. Keep that file safe: we cannot recover your private key. This mode does not cover group chats or calls, and it has not undergone an independent security audit.</p></details>
+          <details><summary>What does Yor still see with private delivery?<Plus size={19} /></summary><p>Encrypted content and delivery details are different things. A delivery service still needs to know which accounts are connected and when messages are sent. End-to-end encryption protects the contents of a conversation; it does not make account or connection activity anonymous. The preview uses sample messages to explain that distinction.</p></details>
+          <details id="pr-residency-answer"><summary>Will my data stay in India?<Plus size={19} /></summary><p>Keeping your personal data in India is our launch commitment. Hosting locations, backups and external service arrangements are still being reviewed. India-only storage is not yet verified; we’ll publish the confirmed scope and any exceptions before launch.</p></details>
+          <details><summary>Is Yor Talks GDPR compliant?<Plus size={19} /></summary><p>Our approach is inspired by EU privacy principles, including clear consent, data minimisation and access and deletion rights. Legal and operational reviews are still in progress. We do not currently claim verified GDPR compliance. Read our <Link href="/privacy">Privacy Policy</Link> for the current scope and controls.</p></details>
+          <details><summary>When can I get in?<Plus size={19} /></summary><p>Our planned launch date is 1 December 2026, at midnight India Standard Time (UTC+05:30). Join the list for launch updates.</p></details>
+          <details><summary>What happens after I join the list?<Plus size={19} /></summary><p>We save your email, preferred username and consent to launch updates. New signups receive an early member pass here. You’ll create your eligible account separately using the same email. Pre-registration is free and doesn’t need payment details or a password.</p></details>
+        </div>
+      </section>
+    </main>
+    <footer className="pr-footer">
+      <div className="pr-container">
+        <div className="pr-footer-top"><p>A MORE PERSONAL SOCIAL LIFE.</p><a className="pr-text-link" href="#pr-signup">See you at the beginning <ArrowUpRight size={20} /></a></div>
+        <div className="pr-footer-wordmark" aria-hidden="true">yor talks<span>✳</span></div>
+        <div className="pr-footer__bottom"><span className="pr-makers"><Heart size={13} /> With love by <strong>Aditi &amp; Ayush.</strong></span><span>© 2026 Yor Talks</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/auth">Sign in <ArrowUpRight size={14} /></Link></div></div>
+      </div>
+    </footer>
+  </div>;
 }

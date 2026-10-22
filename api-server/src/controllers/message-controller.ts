@@ -46,11 +46,12 @@ export class MessageController {
       if (io) {
         const memberIds = await this.messageService.getConversationMemberIds(actualConversationId, message.senderId);
         await dispatchSocketToUsers(io,memberIds,"message:receive",async(requester:SocketRequester)=>{
-          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId);
+          await this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId,message.id);
           return hydrateMediaValue(message,undefined,requester);
-        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId));
+        },'message:deliver',undefined,requester=>this.messageService.authorizeConversationDelivery(message.conversationId,requester.userId,message.id));
       }
       
+      if (message.content || message.mediaId) await this.messageService.authorizeConversationDelivery(message.conversationId,req.user!.id,message.id);
       return res.status(201).json(createResponse("Message sent", message));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));

@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, boolean, integer, numeric, jsonb, uuid, index
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 export { mediaAssetsTable, mediaReferencesTable } from "./media";
+export { privateChatIdentitiesTable, privateChatThreadsTable, privateChatEnvelopesTable } from './private-chat';
 export { eligibilityAssessmentsTable, eligibilityChallengesTable, eligibilityEnrollmentsTable,
   guardianAuthorizationsTable, eligibilityRevisionsTable, contentSafetyClassificationsTable,
   contactAuthorizationsTable, contactAuthorizationApprovalsTable,
@@ -238,11 +239,16 @@ export const messagesTable = pgTable("messages", {
   editedAt: timestamp("edited_at", { mode: "string" }),
   deletedAt: timestamp("deleted_at", { mode: "string" }),
   expiresAt: timestamp("expires_at", { mode: "string" }),
+  contentPurgedAt: timestamp("content_purged_at", { withTimezone: true, mode: "string" }),
   pinned: boolean("pinned").default(false),
 }, (table) => ({
   convIdx: index("msg_conv_idx").on(table.conversationId),
   senderIdx: index("msg_sender_idx").on(table.senderId),
   recipientIdx: index("msg_recipient_idx").on(table.recipientId),
+  purgeDeletedIdx: index("messages_purge_deleted_idx").on(table.deletedAt, table.id)
+    .where(sql`${table.contentPurgedAt} IS NULL AND ${table.deletedAt} IS NOT NULL`),
+  purgeExpiredIdx: index("messages_purge_expired_idx").on(table.expiresAt, table.id)
+    .where(sql`${table.contentPurgedAt} IS NULL AND ${table.deletedAt} IS NULL AND ${table.expiresAt} IS NOT NULL`),
 }));
 
 export const notificationsTable = pgTable("notifications", {
@@ -1440,7 +1446,7 @@ export type Preregistration = typeof preregistrationsTable.$inferSelect;
 
 export const deletionJournalTable = pgTable("deletion_journal", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: uuid("account_id").notNull(),
+  accountId: uuid("account_id"), // NULL for verified unbound preregistration/waitlist erasure.
   stableIdentityDigest: text("stable_identity_digest").notNull(),
   reason: text("reason").notNull().default("user_request"),
   status: text("status").notNull().default("erased"),
@@ -1471,6 +1477,9 @@ export const privacyRightsRequestsTable = pgTable("privacy_rights_requests", {
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   emailHashIdx: index("privacy_rights_requests_email_hash_idx").on(table.emailHash),
+  tokenUniqueIdx: uniqueIndex("privacy_rights_requests_token_unique_idx").on(table.verificationTokenHash).where(sql`${table.verificationTokenHash} IS NOT NULL`),
+  challengeRateIdx: index("privacy_rights_requests_challenge_rate_idx").on(table.emailHash, table.createdAt),
+  expiryIdx: index("privacy_rights_requests_expiry_idx").on(table.verificationExpiresAt, table.id).where(sql`${table.status}='pending_verification'`),
   statusIdx: index("privacy_rights_requests_status_idx").on(table.status, table.createdAt),
 }));
 

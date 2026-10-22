@@ -17,7 +17,7 @@ const apiServerEnv = {
 };
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const rootDir = process.cwd();
+const rootDir = import.meta.dirname || process.cwd();
 
 const commands = [
   { command: npmCommand, args: ['run', 'dev'], env: apiServerEnv, cwd: path.resolve(rootDir, 'api-server') },

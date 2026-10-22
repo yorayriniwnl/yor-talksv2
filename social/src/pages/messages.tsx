@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useAppStore, type Message as DirectMessage, type MessageDraft } from '@/lib/store';
 import { api, type BackendUser, type UploadedMedia } from '@/lib/api-client';
-import { useParams, useLocation } from 'wouter';
+import { useParams, useLocation, Link } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -884,6 +884,10 @@ export default function Messages() {
               />
             </div>
             <div className="operator-inbox__summary"><span>{conversationList.length} conversations</span><StatusBadge status={!online ? 'offline' : realtimeConnected ? 'online' : 'away'}>{!online ? 'Offline' : realtimeConnected ? 'Live updates' : 'Periodic updates'}</StatusBadge></div>
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed">
+              <p>Standard messages can be processed by Yor’s servers.</p>
+              <Link href="/private-messages" className="mt-2 inline-flex min-h-11 items-center gap-2 font-medium underline underline-offset-4"><LockKeyhole size={15} /> Open encrypted private chats</Link>
+            </div>
           </header>
           
           <div className="operator-inbox__list">
@@ -892,7 +896,7 @@ export default function Messages() {
               <div className="operator-inbox__empty">
                 <Inbox aria-hidden="true" />
                 <h2>{searchQuery ? 'No matching conversations' : 'Your inbox is clear'}</h2>
-                <p>{searchQuery ? 'Try a shorter name or username.' : 'Start a private conversation with someone in your network.'}</p>
+                <p>{searchQuery ? 'Try a shorter name or username.' : 'Start a conversation with someone in your network.'}</p>
                 {!searchQuery && <button type="button" onClick={() => setNewMessageOpen(true)}>Start a conversation</button>}
               </div>
             )) : (

@@ -869,7 +869,7 @@ interface AppState {
   deleteProfileComment: (commentId: string, targetUserId: string) => Promise<void>;
   addShowcase: (showcase: Omit<Showcase, 'id' | 'customImageUrl'> & { customImageMediaId?: string }) => Promise<void>;
   removeShowcase: (showcaseId: string, userId: string) => Promise<void>;
-  loadProfileInteractions: (userId: string) => Promise<void>;
+  loadProfileInteractions: (userId: string) => Promise<boolean>;
 
   loadConversations: () => Promise<void>;
   loadConversationMessages: (conversationId: string) => Promise<void>;
@@ -2885,7 +2885,7 @@ export const useAppStore = create<AppState>()(
         const isCurrent = latestSessionLoad(get, `profileInteractions:${userId}`);
         try {
           const [comments, showcases] = await Promise.all([api.getProfileComments(userId), api.getProfileShowcases(userId)]);
-          if (!isCurrent()) return;
+          if (!isCurrent()) return false;
           const authors = comments.reduce<Record<string, User>>((result, comment) => {
             result[comment.author.id] = mapUser(comment.author);
             return result;
@@ -2895,8 +2895,9 @@ export const useAppStore = create<AppState>()(
             showcases: { ...state.showcases, [userId]: showcases.map(mapShowcase) },
             users: { ...state.users, ...authors },
           }));
+          return true;
         } catch {
-          // Profile APIs can correctly reject private profiles; the main profile view handles that state.
+          return false;
         }
       },
 

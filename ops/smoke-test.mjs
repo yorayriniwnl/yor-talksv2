@@ -1,4 +1,5 @@
 import { verifyRealtime } from './realtime-smoke.mjs';
+import { verifyPrivateChat } from './private-chat-smoke.mjs';
 
 const baseUrl = (process.env.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 
@@ -111,6 +112,9 @@ try {
     throw new Error("Production prescreen must not create an enrollment without an approved provider and territory policy");
   }
   await log("ELIGIBILITY", "✓ Owner routes are protected and the empty production registry enables no enrollment");
+
+  await verifyPrivateChat({ baseUrl });
+  await log('PRIVATE-CHAT', 'Both API mounts reject unauthenticated private-chat reads with no-store responses');
 
   await verifyRealtime({
     baseUrl: process.env.SMOKE_REALTIME_URL || baseUrl,
