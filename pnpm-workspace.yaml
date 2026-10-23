@@ -126,3 +126,11 @@ overrides:
   browserslist: 4.28.7
   baseline-browser-mapping: 2.11.0
   "xcode>uuid": 11.1.1
+
+# Temporary exception (remove when zod is upgraded to >=4.6.6): GHSA-mrhx-c7xc-m3w5
+# fixes zod-3 memory use on oversized constrained collections and is patched only
+# in zod 4. API JSON bodies are capped at 1 MB (2.3 MB for one route) and rate
+# limited, bounding collection size. Recorded 2026-10-24; review by 2026-11-24.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-mrhx-c7xc-m3w5
