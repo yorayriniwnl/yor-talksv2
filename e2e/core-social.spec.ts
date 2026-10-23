@@ -855,6 +855,7 @@ for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancell
 }
 
 test('Premium checkout accepts configured terms, handles failure, recovers payment and cancels the paid term', async ({ page }) => {
+  test.skip(process.env.FRONTEND_COMPLIANCE_PAYMENTS !== 'true', 'Requires the explicit payments-enabled test build; no live provider is contacted.');
   await installApiBoundary(page);
   let state = premiumState('free'), created = 0;
   await page.route('**/api/premium/**', async route => {
@@ -1069,6 +1070,8 @@ test('Google script failure has an accessible retry without disabling other sign
     return route.fulfill({ contentType: 'application/javascript', body: "window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.type='button';button.textContent='Sign in with Google';parent.appendChild(button)}}}};" });
   });
   await page.goto('/auth');
+  // Google loads only after the person chooses it.
+  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Google sign-in couldn’t load' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Password', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Email code', exact: true })).toBeEnabled();
@@ -1201,6 +1204,7 @@ test('narrow Google sign-in stays within its panel as the viewport changes', asy
   }));
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/auth');
+  await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
   const button = page.locator('.operator-google-access__button button');
   await expect(button).toBeVisible();
   const widthAt320 = Number(await button.getAttribute('data-rendered-width'));
@@ -2830,7 +2834,7 @@ test('account deletion supports keyboard cancellation, field feedback, and a ret
     await expect.poll(() => deletions).toBe(2);
     releaseDeletion();
     await expect(page).toHaveURL(/\/auth/);
-    await expect(page.getByText('Your account has been deleted. External cleanup and retained records follow the Privacy Notice.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Your account was deleted. Financial, security, and backup records may remain under applicable retention rules.', { exact: true })).toBeVisible();
     expect(deletions).toBe(2);
   } finally { releaseDeletion(); }
 });

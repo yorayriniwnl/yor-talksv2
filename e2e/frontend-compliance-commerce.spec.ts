@@ -10,6 +10,7 @@ const premium = { catalog: { available: true, plan, operationalFeatures: { MESSA
   billingModel: 'prepaid_fixed_term', testMode: true, supportEmail: 'support@example.test' }, subscription: null, orders: [], enabledFeatures: {} };
 
 test('disabled payments override an available Premium catalog while recovery and cancellation remain usable', async ({ page }) => {
+  test.skip(process.env.FRONTEND_COMPLIANCE_PAYMENTS === 'true', 'Covers the default build, where payments are disabled.');
   await installComplianceApiBoundary(page);
   let pending = false, cancellations = 0, recoveries = 0;
   const providerRequests: string[] = [];
