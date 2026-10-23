@@ -348,7 +348,7 @@ export function AppShell({ children }: AppShellProps) {
         <main id="main-content" tabIndex={-1} className="w-full h-full outline-none">
           {children}
         </main>
-        <GlobalAudioPlayer inline={/^\/messages\/[^/]+/.test(location)} />
+        {!privateChatActive && <GlobalAudioPlayer inline={/^\/messages\/[^/]+/.test(location)} />}
       </div>
 
       {/* ── MOBILE BOTTOM NAVIGATION BAR ─────────────────────────────────── */}
@@ -410,7 +410,6 @@ export function AppShell({ children }: AppShellProps) {
         </DialogContent>
       </Dialog>
 
-      {!privateChatActive && <GlobalAudioPlayer />}
       {!privateChatActive && <PwaInstallPrompt />}
       <DeviceApprovalInbox />
       {publicBetaConfig.rtcCallsEnabled && <Suspense fallback={null}><IncomingCallManager /></Suspense>}
