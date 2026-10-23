@@ -1862,7 +1862,10 @@ test('failed blocking never announces success or hides the post, and retry persi
   await expect(page.getByText('Blocking could not be saved', { exact: true })).toBeVisible();
   await expect(page.getByText('User blocked', { exact: true })).toHaveCount(0);
   await expect(itemCard).toBeVisible();
+  // Let the first menu finish closing so the retry targets the newly opened one.
+  await expect(page.getByRole('menu')).toHaveCount(0);
   await itemCard.getByRole('button', { name: 'More post options' }).click();
+  await expect(page.getByRole('menu')).toBeVisible();
   await page.getByRole('menuitem', { name: 'Block user', exact: true }).click();
   await expect(itemCard).toHaveCount(0);
   expect(attempts).toBe(2);

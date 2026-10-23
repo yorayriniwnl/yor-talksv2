@@ -312,6 +312,7 @@ export function PostCard({ post }: { post: PostType }) {
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [showHeartOverlay, setShowHeartOverlay] = useState(false);
   const [authorLoading, setAuthorLoading] = useState(true);
   const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
@@ -630,16 +631,17 @@ export function PostCard({ post }: { post: PostType }) {
               )}
             </div>
             
-            <DropdownMenu modal={false}>
+            <DropdownMenu modal={false} open={optionsOpen} onOpenChange={setOptionsOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full opacity-100 text-muted-foreground hover:text-foreground" onClick={(event) => event.stopPropagation()} aria-label="More post options">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl data-[state=closed]:animate-none">
-                <DropdownMenuItem onClick={copyPostLink}>Copy link</DropdownMenuItem>
-                <DropdownMenuItem onClick={reportPost}>Report</DropdownMenuItem>
-                {author.id !== currentUser?.id && <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={blockAuthor}>Block user</DropdownMenuItem>}
+                {/* Close explicitly: an option's async work can re-render the menu before Radix closes it. */}
+                <DropdownMenuItem onClick={(event) => { setOptionsOpen(false); void copyPostLink(event); }}>Copy link</DropdownMenuItem>
+                <DropdownMenuItem onClick={(event) => { setOptionsOpen(false); void reportPost(event); }}>Report</DropdownMenuItem>
+                {author.id !== currentUser?.id && <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(event) => { setOptionsOpen(false); void blockAuthor(event); }}>Block user</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

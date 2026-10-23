@@ -255,6 +255,8 @@ body {
 .companion-choice-card strong, .companion-choice-card small { display: block; }
 .companion-choice-card strong { font-size: 0.78rem; font-weight: 800; }
 .companion-choice-card small { margin-top: 0.16rem; color: hsl(var(--muted-foreground)); font-size: 0.64rem; line-height: 1.35; }
+/* The selected tint lowers muted text to 4.4:1; keep small descriptions above 4.5:1. */
+.companion-choice-card--selected small { color: hsl(var(--foreground) / 0.8); }
 
 .yor-companion-pet--sunrise { --companion-a: 40 96% 62%; --companion-b: 346 78% 58%; }
 .yor-companion-pet--ocean { --companion-a: 188 86% 54%; --companion-b: 220 78% 56%; }
