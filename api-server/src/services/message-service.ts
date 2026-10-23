@@ -327,6 +327,7 @@ export class MessageService {
       mediaLegacy: false,
     };
     let persisted: MessageRecord | undefined;
+    let created = false;
     await withApprovedMedia(senderId, mediaBinding(options?.mediaId, "message", "mediaUrl"), { type: "messages", id: message.id }, async media => {
       const attachment = media.mediaUrl?.[0];
       await this.requireConversationContacts(members,'send',conversationId);
@@ -335,6 +336,7 @@ export class MessageService {
         () => this.lockConversationContacts(members,'send',conversationId),
       );
       persisted = result.message;
+      created = result.created;
       // Conflict losers return the winning row without creating or replacing
       // its attachment references, including a text-only winning message.
       return result.created ? result.message : undefined;
@@ -343,9 +345,13 @@ export class MessageService {
     if (persisted.senderId !== senderId || persisted.conversationId !== conversationId) {
       throw new UnauthorizedError("This message key is already in use");
     }
-    // A replayed idempotency key must never resurrect expired or deleted content,
-    // including after the earlier visible-row lookup misses it.
-    return this.isMessageVisible(persisted) ? persisted : toMessageTombstone(persisted);
+    // A replayed idempotency key must never resurrect expired, deleted or
+    // moderated content, including after the earlier visible-row lookup misses
+    // it. Moderation enforcement lives in SQL, so a conflict winner is re-read
+    // through the visibility predicate rather than trusted from memory.
+    if (!this.isMessageVisible(persisted)) return toMessageTombstone(persisted);
+    if (created) return persisted;
+    return await this.messageRepository.findVisibleById(persisted.id) ?? toMessageTombstone(persisted);
   }
 
   async listConversation(conversationId: string, userId: string): Promise<MessageRecord[]> {
