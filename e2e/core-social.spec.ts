@@ -2703,28 +2703,20 @@ test('Studio camera blocks duplicate recording starts, stops access on close, an
         if (stats.hold) await new Promise<void>(resolve => { stats.releases.push(resolve); });
         return stream;
       },
-    });
-    Object.defineProperty(window, 'MediaRecorder', {
-      configurable: true,
-      value: class {
-        static isTypeSupported() { return true; }
-        state = 'inactive';
-        mimeType = 'video/webm';
-        ondataavailable: ((event: { data: Blob }) => void) | null = null;
-        onstop: (() => void) | null = null;
-        constructor(_stream: MediaStream) {}
-        start() {
-          window.__recordingStarts += 1;
-          this.state = 'recording';
-        }
-        stop() {
-          window.__recordingStops += 1;
-          this.state = 'inactive';
-          this.ondataavailable?.({ data: new Blob(['clip'], { type: 'video/webm' }) });
-          this.onstop?.();
-        }
-      },
-    });
+    } });
+    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: class {
+      static isTypeSupported() { return true; }
+      state = 'inactive';
+      mimeType = 'video/webm';
+      ondataavailable: ((event: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      start() { stats.starts++; this.state = 'recording'; }
+      stop() {
+        stats.stops++; this.state = 'inactive';
+        this.ondataavailable?.({ data: new Blob(['synthetic recording'], { type: this.mimeType }) });
+        this.onstop?.();
+      }
+    } });
   });
   await page.route('**/api/videos', route => json(route, [{ id: 'synthetic-camera-audit', authorId: user.id, title: 'Camera lifecycle audit',
     videoUrl: 'data:video/mp4;base64,', thumbnailUrl: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', type: 'short', views: 0, likes: 0, createdAt: user.createdAt }]));
@@ -2768,16 +2760,23 @@ test('Studio camera blocks duplicate recording starts, stops access on close, an
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
-  await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible();
-  expect(await page.evaluate(() => window.__recordingStarts)).toBe(1);
-  await page.getByRole('button', { name: 'Stop recording' }).click();
-  await expect(page.getByRole('button', { name: 'Record video' })).toBeVisible();
-  expect(await page.evaluate(() => window.__recordingStops)).toBe(1);
-  await page.getByRole('button', { name: 'Close studio camera' }).click();
-  await expect(page.getByRole('button', { name: 'Close studio camera' })).toHaveCount(0);
-  expect(await page.evaluate(() => window.__cameraTracksStopped)).toBe(1);
-  await page.waitForTimeout(1_100);
-  expect(await page.evaluate(() => window.__recordingStops)).toBe(1);
+  await expect(page.getByRole('button', { name: 'Stop recording', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as any).__studioCameraAudit.starts)).toBe(1);
+  await page.getByRole('button', { name: 'Stop recording', exact: true }).click();
+  await expect(record).toBeEnabled();
+  expect(await page.evaluate(() => (window as any).__studioCameraAudit.stops)).toBe(1);
+  await page.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__studioCameraAudit.tracksStopped)).toBe(1);
+  await page.evaluate(() => { (window as any).__studioCameraAudit.hold = true; });
+  await useSound.click();
+  await expect.poll(() => page.evaluate(() => (window as any).__studioCameraAudit.releases.length)).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Close Studio Camera', exact: true }).click();
+  await page.evaluate(() => { (window as any).__studioCameraAudit.releases.forEach((release: () => void) => release()); });
+  await expect.poll(() => page.evaluate(() => {
+    const stats = (window as any).__studioCameraAudit;
+    return stats.tracksStopped === stats.cameraRequests;
+  })).toBe(true);
+  expect(await page.evaluate(() => (window as any).__studioCameraAudit.stops)).toBe(1);
 });
 
 test('account deletion supports keyboard cancellation, field feedback, and a retained failed draft before one synthetic retry', async ({ page }) => {
