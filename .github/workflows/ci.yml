@@ -99,10 +99,8 @@ jobs:
         run: pnpm --filter @workspace/api-server typecheck
 
       - name: Install media verification runtime
-        timeout-minutes: 8
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: sudo -E apt-get update && sudo -E apt-get install --yes --no-install-recommends ffmpeg postgresql-client-16
+        timeout-minutes: 12
+        run: bash .github/scripts/apt-install.sh ffmpeg postgresql-client-16
 
       - name: Verify full-schema privacy recovery from a historical database dump
         run: node --test ops/backup/privacy-recovery-database.test.mjs
@@ -304,10 +302,8 @@ jobs:
           pnpm --filter @workspace/social typecheck
 
       - name: Install media verification runtime
-        timeout-minutes: 8
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: sudo -E apt-get update && sudo -E apt-get install --yes --no-install-recommends ffmpeg
+        timeout-minutes: 12
+        run: bash .github/scripts/apt-install.sh ffmpeg
 
       - name: Run API tests serially
         run: node --import tsx --test --test-concurrency=1 src/__tests__/*.test.ts
