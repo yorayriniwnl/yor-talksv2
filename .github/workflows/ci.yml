@@ -218,7 +218,9 @@ jobs:
 
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # API tests plus the full browser suite take ~23 minutes after the merged
+    # readiness work; leave headroom for slow package mirrors.
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16-alpine
