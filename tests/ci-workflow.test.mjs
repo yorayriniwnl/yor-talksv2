@@ -75,7 +75,7 @@ test('production infrastructure and encrypted restore run independently as manda
   for (const property of ['needs', 'if', 'continue-on-error']) {
     assert.equal(infrastructure[property], undefined, `${property} must not hide infrastructure failures`);
   }
-  assert.equal(infrastructure['runs-on'], 'ubuntu-latest', 'Linux permissions and Docker must execute on Linux');
+  assert.match(infrastructure['runs-on'], /^ubuntu-/, 'Linux permissions and Docker must execute on Linux');
   for (const step of infrastructure.steps) {
     assert.equal(step['continue-on-error'], undefined, step.name);
     assert.equal(step.if, undefined, step.name);
