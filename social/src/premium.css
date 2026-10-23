@@ -158,6 +158,10 @@ body {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
   bottom: calc(1.5rem + var(--yor-ambient-player-height, 0px) + 0.75rem);
+  /* Reposition instantly when the audio player resizes. The global
+     reduced-motion rule otherwise turns every property into a transition,
+     leaving the companion briefly covering the player's controls. */
+  transition-property: none;
   z-index: 40;
   display: flex;
   flex-direction: column;

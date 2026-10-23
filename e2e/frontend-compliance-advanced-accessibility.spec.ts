@@ -203,6 +203,8 @@ for (const scheme of ['light', 'dark'] as const) {
       const controls = page.getByRole('dialog', { name: 'Sky companion controls', exact: true });
       await expect(controls.getByRole('button', { name: 'Close companion controls' })).toBeFocused();
       await controls.getByRole('button', { name: 'Hide companion', exact: true }).focus();
+      // Radix parks the popover off-screen until its first positioning frame.
+      await expect.poll(async () => (await controls.boundingBox())!.y).toBeGreaterThanOrEqual(0);
       const panelBounds = await controls.boundingBox();
       expect(panelBounds!.y).toBeGreaterThanOrEqual(0);
       expect(panelBounds!.y + panelBounds!.height).toBeLessThanOrEqual(await page.evaluate(() => innerHeight));
