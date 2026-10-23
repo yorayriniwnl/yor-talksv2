@@ -125,10 +125,14 @@ test('stories support keyboard navigation, image failure retry, focus containmen
   const viewer = page.getByRole('dialog', { name: "Ada Lovelace's story", exact: true });
   await expect(viewer.getByRole('button', { name: 'Close stories', exact: true })).toBeFocused();
   await expect(viewer.getByText('A keyboard-accessible story.', { exact: true })).toBeVisible();
-  const pause = viewer.getByRole('button', { name: 'Pause story', exact: true });
-  await pause.focus();
+  // With reduced motion the story opens paused; the control still toggles by keyboard.
+  const resume = viewer.getByRole('button', { name: 'Resume story', exact: true });
+  await expect(resume).toHaveAttribute('aria-pressed', 'true');
+  await resume.focus();
   await page.keyboard.press('Enter');
-  await expect(viewer.getByRole('button', { name: 'Resume story', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(viewer.getByRole('button', { name: 'Pause story', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('Enter');
+  await expect(resume).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('ArrowRight');
   await expect(viewer.getByText('Story 2 of 2', { exact: true })).toBeVisible();
   await expect(viewer.getByText('This story could not be loaded.', { exact: true })).toBeVisible();

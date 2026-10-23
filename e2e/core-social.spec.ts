@@ -712,7 +712,7 @@ test('Studio Post captures camera pixels as a bounded approved JPEG and rejects 
   await page.getByRole('button', { name: 'Use this sound', exact: true }).click();
   const studio = page.getByRole('dialog', { name: 'Studio Camera' });
   await expect(studio.getByRole('button', { name: 'Flip camera' })).toBeVisible();
-  await expect(studio.getByRole('button', { name: 'Add interactive stickers' })).toBeVisible();
+  await expect(studio.getByRole('button', { name: 'Preview stickers' })).toBeVisible();
   await studio.locator('#studio-content-category').selectOption('technology');
   await expect(studio.getByRole('button', { name: /Publish REEL/ })).toBeDisabled();
   await expect(studio.getByRole('button', { name: 'Record video', exact: true })).toBeEnabled();
@@ -847,8 +847,13 @@ for (const status of ['free', 'active', 'pending', 'failed', 'expired', 'cancell
     if (status === 'active') await expect(page.getByText('Yor Premium · active', { exact: true })).toBeVisible();
     if (status === 'free') {
       await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeDisabled();
-      await page.getByRole('checkbox').check();
-      await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeEnabled();
+      if (process.env.FRONTEND_COMPLIANCE_PAYMENTS === 'true') {
+        await page.getByRole('checkbox').check();
+        await expect(page.getByRole('button', { name: 'Upgrade to Yor Premium' })).toBeEnabled();
+      } else {
+        // The default build has payments disabled: no purchase consent is offered.
+        await expect(page.getByRole('checkbox')).toHaveCount(0);
+      }
       const violations = await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa']).analyze();
       expect(violations.violations).toEqual([]);
     }
@@ -1541,7 +1546,7 @@ test('pending follows preserve existing relationships and favorites across reloa
   await expect(page.getByRole('button', { name: 'Remove Private Creator from Favorites' })).toBeVisible();
   await page.getByRole('link', { name: /Ada Lovelace.*@ada/ }).first().click();
   await page.getByRole('button', { name: '1 Following', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: /^following$/i }).getByRole('button', { name: 'Following', exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /^following$/i }).getByRole('button', { name: 'Unfollow Known Creator', exact: true })).toHaveText('Following');
   await page.goto(`/profile/${target.id}`);
   await expect(page.getByRole('button', { name: 'Requested', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Requested', exact: true }).click();
@@ -1969,7 +1974,7 @@ test('projects list filters persisted records and lets members answer real invit
   });
   await page.goto('/projects');
 
-  await expect(page.getByRole('heading', { name: 'Projects', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('#main-content').getByRole('heading', { name: 'Projects', exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: /Compiler Notes/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Community Archive', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Accept', exact: true }).click();
@@ -2865,7 +2870,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         ['/grievance', 'Trust & Safety Report Portal'], ['/projects', 'Projects'],
       ]) {
         await page.goto(path);
-        const headingScope = path === '/settings' ? page.locator('#main-content') : page;
+        const headingScope = path === '/settings' || path === '/projects' ? page.locator('#main-content') : page;
         await expect(headingScope.getByRole('heading', { name: heading, exact: true })).toBeVisible();
         if (path === '/') {
           await expect(page.getByRole('article')).toBeVisible();

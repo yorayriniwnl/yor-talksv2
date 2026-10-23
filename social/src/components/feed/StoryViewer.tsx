@@ -465,7 +465,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors: 
             ) : currentStory.type === 'image' ? (
               <>
                 {loadedStoryId !== currentStory.id && <span role="status" className="text-white"><Loader2 className="mx-auto h-6 w-6 animate-spin" /><span className="sr-only">Loading story</span></span>}
-                <img key={`${currentStory.id}-${mediaRetry}`} src={currentStoryMedia} className="absolute inset-0 w-full h-full object-contain" alt={`${displayName}'s story`} onLoad={() => setLoadedStoryId(currentStory.id)} onError={mediaFailed} />
+                <img key={`${currentStory.id}-${mediaRetry}`} src={currentStoryMedia} className="absolute inset-0 w-full h-full object-contain" alt={currentStory.textContent?.trim() ? `${displayName}'s story: ${currentStory.textContent.trim()}` : `${displayName}'s story`} onLoad={() => setLoadedStoryId(currentStory.id)} onError={mediaFailed} />
               </>
             ) : currentStory.type === 'video' ? (
               <video key={`${currentStory.id}-${mediaRetry}`} ref={(element) => { mediaRef.current = element; }} controls playsInline preload="metadata" src={currentStoryMedia} className="story-controls absolute inset-0 h-full w-full object-contain" aria-label={`${displayName}'s video story`} onError={mediaFailed} onEnded={handleNext} onClick={(event) => event.stopPropagation()} />

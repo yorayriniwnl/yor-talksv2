@@ -363,7 +363,9 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[92vh] max-h-[850px] p-0 overflow-hidden rounded-3xl glass-heavy border border-primary/40 flex flex-col font-sans">
+      <DialogContent className="max-w-4xl h-[92vh] max-h-[850px] p-0 overflow-hidden rounded-3xl glass-heavy border border-primary/40 flex flex-col font-sans" onEscapeKeyDown={(event) => {
+        if (stickersDrawerOpen) { event.preventDefault(); closeStickers(); }
+      }}>
         <DialogTitle className="sr-only">Studio Camera</DialogTitle>
         
         {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
@@ -407,6 +409,7 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={publishing || capturing || isRecording}
+            aria-label="Close Studio Camera"
             className="w-8 h-8 rounded-full hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
@@ -551,12 +554,13 @@ export function StudioCameraModal({ isOpen, onOpenChange, defaultMode = 'reel', 
               {isRecording && <button type="button" onClick={handleStopRecording} aria-label="Stop recording" className="rounded-full bg-red-600 p-3 text-white"><Square className="h-6 w-6" /></button>}
 
               <button
+                ref={stickerTriggerRef}
                 type="button"
                 onClick={() => setStickersDrawerOpen(true)}
                 aria-expanded={stickersDrawerOpen}
                 aria-controls="studio-sticker-previews"
                 className="w-11 h-11 rounded-full surface-1/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer"
-                aria-label="Add interactive stickers"
+                aria-label="Preview stickers"
               >
                 <Smile className="w-5 h-5 text-amber-400" />
               </button>
