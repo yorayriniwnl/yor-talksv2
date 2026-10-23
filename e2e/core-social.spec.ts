@@ -107,6 +107,8 @@ async function installApiBoundary(page: Page, profile = user, eligibility: unkno
     if (request.method() === 'GET' && emptyLists.includes(path)) return json(route, []);
     if (request.method() === 'GET' && ['/posts/liked', '/posts/saved'].includes(path)) return json(route, [], { hasMore: false, nextCursor: null });
     if (request.method() === 'GET' && path === '/users/' + user.id + '/posts') return json(route, [], { hasMore: false, nextCursor: null });
+    // Moderators load any active enforcement per reported item; none is active unless a test says so.
+    if (request.method() === 'GET' && path.startsWith('/moderation/enforcements/')) return json(route, null);
     unhandled.push(`${request.method()} ${path}`);
     await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: `Unhandled test route: ${request.method()} ${path}` }) });
     throw new Error(`Unhandled test route: ${request.method()} ${path}`);
@@ -2429,7 +2431,7 @@ test('moderation discards history reads started before a new decision', async ({
   await historyStarted;
   await card.getByLabel('Decision reason (required to resolve or dismiss)').fill(decisionReason);
   await card.getByRole('button', { name: 'resolved', exact: true }).click();
-  await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+  await expect(card.getByText('· case: resolved', { exact: true })).toBeVisible();
   const obsoleteResponse = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/history`));
   releaseHistory();
   await (await obsoleteResponse).finished();
@@ -2549,7 +2551,7 @@ test('moderation keeps pending case mutations locked across filter and queue cha
     const reportFinished = page.waitForResponse(response => response.url().endsWith(`/reports/${reportId}/status`));
     releaseReport();
     await (await reportFinished).finished();
-    await expect(reportCard.getByText('post · reviewed', { exact: true })).toBeVisible();
+    await expect(reportCard.getByText('· case: reviewed', { exact: true })).toBeVisible();
     await expect(reportCard.getByRole('button', { name: 'pending', exact: true })).toBeEnabled();
 
     await page.getByRole('group', { name: 'Staff queue' }).getByRole('button', { name: 'grievances', exact: true }).click();
@@ -2649,7 +2651,7 @@ test('moderation refresh preserves a later external decision after an older muta
     const beforeRefresh = queueReads;
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
     await expect.poll(() => queueReads).toBe(beforeRefresh + 1);
-    await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
+    await expect(card.getByText('· case: resolved', { exact: true })).toBeVisible();
     await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toHaveValue(currentRationale);
 
     const beforeCompletion = queueReads;
@@ -2659,8 +2661,8 @@ test('moderation refresh preserves a later external decision after an older muta
     await (await oldResponseFinished).finished();
     await expect.poll(() => queueReads).toBe(beforeCompletion + 1);
     await (await freshQueueResponse).finished();
-    await expect(card.getByText('post · resolved', { exact: true })).toBeVisible();
-    await expect(card.getByText('post · reviewed', { exact: true })).toHaveCount(0);
+    await expect(card.getByText('· case: resolved', { exact: true })).toBeVisible();
+    await expect(card.getByText('· case: reviewed', { exact: true })).toHaveCount(0);
     await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toHaveValue(currentRationale);
     await expect(card.getByLabel('Decision reason (required to resolve or dismiss)')).toBeEnabled();
   } finally {

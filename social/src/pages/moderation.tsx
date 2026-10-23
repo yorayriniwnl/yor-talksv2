@@ -553,8 +553,11 @@ export default function Moderation() {
                             {/* Case Triage Transition Section */}
                             <div className="mt-4 pt-3 border-t border-border/40">
                               <label className="block text-xs font-bold" htmlFor={`decision-reason-${report.id}`}>
-                                Case Disposition Status
+                                Decision reason (required to resolve or dismiss)
                               </label>
+                              <textarea id={`decision-reason-${report.id}`} maxLength={2000} disabled={updating.has(report.id)} value={decisionReasons[report.id] ?? report.decisionReason ?? ''} onChange={event => setDecisionReasons(previous => ({ ...previous, [report.id]: event.target.value }))} className="mt-1 min-h-20 w-full rounded-xl border border-border bg-background p-3 text-sm" />
+                              <p className="mt-1 text-xs text-muted-foreground">Final decisions need at least 10 characters. This staff-only reason is retained with the case history.</p>
+                              <p className="mt-3 text-xs font-bold">Case Disposition Status</p>
                               <div className="mt-2 flex flex-wrap gap-2">
                                 {STATUS_OPTIONS.map(status => {
                                   const finalDecision = status === 'resolved' || status === 'dismissed';
