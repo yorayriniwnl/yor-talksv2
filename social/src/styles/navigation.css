@@ -65,7 +65,10 @@
   .operator-ui .premium-icon-button, .operator-ui .premium-search { min-width: 2.75rem; min-height: 2.75rem; }
 }
 @media (max-width: 359px) {
-  .operator-ui .premium-topbar__title > div { display: none; }
+  /* Keep the page name for narrow phones; let it shrink instead of disappearing. */
+  .operator-ui .premium-topbar__title { min-width: 0; flex: 1 1 auto; }
+  .operator-ui .premium-topbar__title > div { min-width: 0; overflow: hidden; }
+  .operator-ui .premium-topbar__heading { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
   .operator-ui .premium-topbar__actions { gap: .15rem; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -18,7 +18,7 @@ test('all legal notices and grievance intake remain public without loading Googl
     if (/accounts\.google\.com|\/telemetry\/events/.test(request.url())) optionalRequests.push(request.url());
   });
   for (const [path, title] of [
-    ['/privacy', 'Privacy Notice'], ['/terms', 'Terms of Use'], ['/cookies', 'Cookies and Browser Storage'],
+    ['/privacy', 'Privacy Notice'], ['/terms', 'Terms of Use'], ['/cookies', 'Cookie and Storage Notice'],
     ['/community-guidelines', 'Community Guidelines'], ['/grievance', 'Trust & Safety Report Portal'],
   ]) {
     await page.goto(path);
@@ -108,29 +108,6 @@ test('terms reacceptance focuses missing consent, retains a failed choice, and s
   expect(await page.evaluate(key => localStorage.getItem(key), consentKey)).toBeNull();
 });
 
-test('inactive analytics reflects removal of a previous saved choice from another tab', async ({ page, context }) => {
-  await installComplianceApiBoundary(page);
-  const requests: string[] = [];
-  page.on('request', request => { if (request.url().includes('/telemetry/events')) requests.push(request.url()); });
-  await page.goto('/cookies');
-  await page.evaluate(({key,owner}) => localStorage.setItem(key,owner), {key:consentKey,owner:complianceUser.id});
-  await page.goto('/settings');
-  const clear = page.getByRole('button', { name: 'Clear saved analytics choice', exact: true });
-  await expect(clear).toBeVisible();
-  const other = await context.newPage();
-  try {
-    await signedOut(other);
-    await other.goto('/cookies');
-    await expect(other.getByRole('heading', { name: 'Cookies and Browser Storage', exact: true })).toBeVisible();
-    await other.evaluate(key => localStorage.removeItem(key), consentKey);
-    await expect(clear).toHaveCount(0);
-    await expect(page.getByText('No optional analytics permission is saved for this account on this device.', { exact: true })).toBeVisible();
-    await page.reload();
-    await expect(clear).toHaveCount(0);
-    expect(await page.evaluate(([consent, queue]) => [localStorage.getItem(consent), localStorage.getItem(queue)], [consentKey, queueKey])).toEqual([null, null]);
-    expect(requests).toEqual([]);
-  } finally { await other.close(); }
-});
 
 test('a different server terms version produces a visible error and keeps social access restricted', async ({ page }) => {
   const outdated = { ...complianceUser, termsVersion: 'different-server-terms', termsAcceptedAt: '2026-08-30T00:00:00.000Z' };

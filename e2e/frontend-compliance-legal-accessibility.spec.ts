@@ -22,7 +22,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.route('**/api/projects/invitations', route => complianceJson(route, { invitations: [] }));
       const scans = [];
       for (const [route, heading] of [
-        ['/settings', 'Settings'], ['/cookies', 'Cookies and Browser Storage'], ['/privacy', 'Privacy Notice'],
+        ['/settings', 'Settings'], ['/cookies', 'Cookie and Storage Notice'], ['/privacy', 'Privacy Notice'],
         ['/terms', 'Terms of Use'], ['/community-guidelines', 'Community Guidelines'],
         ['/grievance', 'Trust & Safety Report Portal'], ['/projects', 'Projects'],
       ]) {
@@ -30,7 +30,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         const scope = route === '/settings' || route === '/projects' ? page.locator('#main-content') : page;
         // Wait for the page's own content, rather than a matching shell title.
         await expect(scope.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-        if (route === '/settings') await expect(page.getByText('Optional analytics are off in this release', { exact: true })).toBeVisible();
+        if (route === '/settings') await expect(page.getByRole('switch', { name: 'Allow optional analytics', exact: true })).toBeVisible();
         if (route === '/projects') await expect(page.getByText('No projects yet', { exact: true })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Overflow at ${route}`).toBe(true);
         const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();

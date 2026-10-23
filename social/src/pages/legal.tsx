@@ -151,7 +151,7 @@ export default function LegalPage() {
             </section>}
           </div>
         </article>
-        <nav className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground"><Link href="/privacy" className="hover:text-primary">Privacy</Link><Link href="/terms" className="hover:text-primary">Terms</Link><Link href="/community-guidelines" className="hover:text-primary">Guidelines</Link><Link href="/cookies" className="hover:text-primary">Cookies and storage</Link><Link href="/refund-policy" className="hover:text-primary">Refund policy</Link><Link href="/grievance" className="hover:text-primary">Grievance portal</Link></nav>
+        <nav aria-label="Legal information" className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground"><Link href="/privacy" className="hover:text-primary">Privacy</Link><Link href="/terms" className="hover:text-primary">Terms</Link><Link href="/community-guidelines" className="hover:text-primary">Guidelines</Link><Link href="/cookies" className="hover:text-primary">Cookies and storage</Link><Link href="/refund-policy" className="hover:text-primary">Refund policy</Link><Link href="/grievance" className="hover:text-primary">Grievance portal</Link></nav>
       </div>
     </main>
   );

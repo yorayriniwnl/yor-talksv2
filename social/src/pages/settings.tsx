@@ -794,7 +794,7 @@ export default function Settings() {
               }}
             />
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> and <a href="/cookies" className="font-semibold text-primary underline-offset-4 hover:underline">Cookie and Storage Notice</a> for details.</p>
+          <p className="text-xs leading-5 text-muted-foreground">Required account, security, moderation, and service data is separate. Read the <a href="/privacy" className="font-semibold text-primary underline-offset-4 hover:underline">Privacy Notice</a> and <a href="/cookies" className="font-semibold text-primary underline-offset-4 hover:underline">Cookies and storage notice</a> for details.</p>
         </section>
 
         <CompanionPetSettings />

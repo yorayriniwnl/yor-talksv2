@@ -2669,9 +2669,9 @@ test('storage notice is public, linked from sign-in and Settings, and optional a
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: `window.google={accounts:{id:{initialize(){},renderButton(parent){const button=document.createElement('button');button.textContent='Sign in with Google';parent.append(button)}}}};` }));
   await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not signed in' }) }));
   await page.goto('/cookies');
-  await expect(page.getByRole('heading', { name: 'Cookies and Browser Storage', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Optional analytics', exact: true })).toBeVisible();
-  await expect(page.getByText(/this release does not currently collect optional navigation or profiling events/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cookie and Storage Notice', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Optional analytics storage', exact: true })).toBeVisible();
+  await expect(page.getByText(/No analytics queue or request is created before consent/i)).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Legal information' }).getByRole('link', { name: 'Privacy', exact: true })).toBeVisible();
   await page.goto('/auth');
   await expect(page.getByRole('link', { name: 'Cookies and storage notice', exact: true })).toBeVisible();
@@ -2855,7 +2855,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.route('**/api/projects', route => json(route, { projects: [] }));
       await page.route('**/api/projects/invitations', route => json(route, { invitations: [] }));
       for (const [path, heading] of [
-        ['/', 'Home'], ['/settings', 'Settings'], ['/cookies', 'Cookies and Browser Storage'],
+        ['/', 'Home'], ['/settings', 'Settings'], ['/cookies', 'Cookie and Storage Notice'],
         ['/grievance', 'Trust & Safety Report Portal'], ['/projects', 'Projects'],
       ]) {
         await page.goto(path);
