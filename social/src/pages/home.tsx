@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import {
@@ -27,7 +27,6 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { staggerContainer } from '@/lib/motion';
-import { sounds } from '@/lib/sound';
 import { cn } from '@/lib/utils';
 import { FeedSkeleton } from '@/components/ui/Skeletons';
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
@@ -101,6 +100,9 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pendingFollows, setPendingFollows] = useState<Set<string>>(new Set());
+  const followRequests = useRef(new Set<string>());
+  const [failedRequest, setFailedRequest] = useState<'refresh' | 'more'>('refresh');
 
   const displayName = currentUser?.displayName || currentUser?.username || 'there';
   const firstName = displayName.split(/\s+/)[0];
@@ -108,10 +110,10 @@ export default function Home() {
 
   const suggestedUsers = useMemo(
     () => Object.values(users)
-      .filter((user) => user.id !== currentUser?.id && !followingIds.includes(user.id))
+      .filter((user) => user.id !== currentUser?.id && !followingIds.includes(user.id) && !currentUser?.blockedUserIds?.includes(user.id))
       .sort((a, b) => b.followers - a.followers)
       .slice(0, 3),
-    [currentUser?.id, followingIds, users],
+    [currentUser?.id, currentUser?.blockedUserIds, followingIds, users],
   );
 
   const filteredPosts = useMemo(() => {
@@ -150,7 +152,9 @@ export default function Home() {
       : 'following' as const;
 
   const changeMode = (nextMode: OrbitMode) => {
+    if (nextMode === mode) return;
     setMode(nextMode);
+    setFailedRequest('refresh');
     setTopic('all');
     setContentCategory('all');
     setVisibleCount(8);
@@ -158,6 +162,8 @@ export default function Home() {
   };
 
   const refresh = useCallback(async () => {
+    if (useAppStore.getState().feedLoading) return;
+    setFailedRequest('refresh');
     setIsRefreshing(true);
     try {
       await loadFeed(modeToFeed(mode));
@@ -173,6 +179,7 @@ export default function Home() {
       return;
     }
     if (!hasMoreFeed || isLoadingMore) return;
+    setFailedRequest('more');
     setIsLoadingMore(true);
     try {
       await loadMoreFeed();
@@ -182,11 +189,16 @@ export default function Home() {
     }
   }, [filteredPosts.length, hasMoreFeed, isLoadingMore, loadMoreFeed, visibleCount]);
 
-  const toggleFollow = (userId: string) => {
-    if (followingIds.includes(userId)) unfollowUser(userId);
-    else {
-      followUser(userId);
-      sounds.playPop();
+  const toggleFollow = async (userId: string) => {
+    if (followRequests.current.has(userId)) return;
+    followRequests.current.add(userId);
+    setPendingFollows(new Set(followRequests.current));
+    try {
+      if (followingIds.includes(userId)) await unfollowUser(userId);
+      else await followUser(userId);
+    } finally {
+      followRequests.current.delete(userId);
+      setPendingFollows(new Set(followRequests.current));
     }
   };
 
@@ -272,7 +284,7 @@ export default function Home() {
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span>{filtersOpen ? 'Hide filters' : 'Tune'}</span>
                 </button>
-                <button type="button" onClick={refresh} disabled={isRefreshing} aria-label="Refresh feed">
+                <button type="button" onClick={refresh} disabled={feedLoading || isLoadingMore} aria-label="Refresh feed">
                   <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
                   <span>{isRefreshing ? 'Refreshing' : 'Refresh'}</span>
                 </button>
@@ -316,12 +328,13 @@ export default function Home() {
               </div>
             )}
 
-            <div id="feed-posts" role="tabpanel" aria-labelledby={`feed-${mode}`} aria-busy={feedLoading} className="home-feed-results">
+            <div id="feed-posts" role="tabpanel" tabIndex={0} aria-labelledby={`feed-${mode}`} aria-busy={feedLoading || isLoadingMore} className="home-feed-results">
+            <p className="sr-only" role="status">{feedLoading ? 'Loading posts.' : isLoadingMore ? 'Loading more posts.' : `${visiblePosts.length} posts shown${hasMore ? '. More posts are available.' : '.'}`}</p>
             {feedError && (
               <div role="alert" className="home-feed-error">
                 <AlertCircle className="h-5 w-5 shrink-0" />
                 <div><strong>Let’s try that again.</strong><p>{feedError}</p></div>
-                <Button variant="outline" onClick={refresh} disabled={feedLoading}>Retry feed</Button>
+                <Button variant="outline" onClick={failedRequest === 'more' ? openNextChapter : refresh} disabled={feedLoading || isLoadingMore}>{failedRequest === 'more' ? 'Retry loading more' : 'Retry feed'}</Button>
               </div>
             )}
 
@@ -338,8 +351,8 @@ export default function Home() {
             ) : !feedError ? (
               <section className="orbit-empty operator-panel">
                 {mode === 'build' ? <Zap className="h-7 w-7" /> : mode === 'favorites' ? <Star className="h-7 w-7" /> : <Compass className="h-7 w-7" />}
-                <h2>{contentCategory !== 'all' || topic !== 'all' ? 'No posts match these filters.' : mode === 'build' ? 'Every great project starts somewhere.' : mode === 'favorites' ? 'Keep your favorite people close.' : 'Your people are out there.'}</h2>
-                <p>{contentCategory !== 'all' || topic !== 'all' ? 'Try another category or clear your filters to see more.' : mode === 'build' ? 'Share what you’re making and find someone to make it with.' : mode === 'favorites' ? 'Add favorites from a profile to bring their latest posts here.' : 'Follow a few creators and their latest posts will appear here.'}</p>
+                <h2>{contentCategory !== 'all' || topic !== 'all' ? 'No matches in these posts.' : mode === 'build' ? 'Every great project starts somewhere.' : mode === 'favorites' ? 'Keep your favorite people close.' : mode === 'discover' ? 'Something new is on its way.' : 'Your people are out there.'}</h2>
+                <p>{contentCategory !== 'all' || topic !== 'all' ? hasMoreFeed ? 'Load more posts to keep looking, or clear your filters.' : 'Try another category or clear your filters to see more.' : mode === 'build' ? 'Share what you’re making and find someone to make it with.' : mode === 'favorites' ? 'Add favorites from a profile to bring their latest posts here.' : mode === 'discover' ? 'There are no recommended posts yet. Discover creators and check back for fresh conversations.' : 'Follow a few creators and their latest posts will appear here.'}</p>
                 {(contentCategory !== 'all' || topic !== 'all') && <Button variant="outline" onClick={() => { setContentCategory('all'); setTopic('all'); }}>Clear filters</Button>}
                 <Link href={mode === 'build' || mode === 'favorites' ? (mode === 'build' ? '/dream' : '/explore') : '/explore'} className="yor-primary-action">
                   {mode === 'build' ? 'Start a project' : mode === 'favorites' ? 'Discover creators' : 'Find your people'} <ArrowRight className="h-4 w-4" />
@@ -347,7 +360,7 @@ export default function Home() {
               </section>
             ) : null}
 
-            {visiblePosts.length > 0 && !feedError && !feedLoading && (
+            {(visiblePosts.length > 0 || hasMoreFeed) && !feedError && !feedLoading && (
               <section className="orbit-complete operator-panel">
                 <span><CircleCheck className="h-5 w-5" /></span>
                 <div>
@@ -463,7 +476,9 @@ export default function Home() {
                         <Avatar className="h-8 w-8"><AvatarImage src={user.avatarUrl} alt="" /><AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback></Avatar>
                         <span><strong>{user.displayName}</strong><small>@{user.username}</small></span>
                       </Link>
-                      <button onClick={() => toggleFollow(user.id)} aria-label={`Follow ${user.displayName}`}>Follow</button>
+                      <button type="button" disabled={pendingFollows.has(user.id) || currentUser?.pendingFollowIds?.includes(user.id)} onClick={() => void toggleFollow(user.id)} aria-label={currentUser?.pendingFollowIds?.includes(user.id) ? `Follow request pending for ${user.displayName}` : `Follow ${user.displayName}`}>
+                        {pendingFollows.has(user.id) ? 'Following…' : currentUser?.pendingFollowIds?.includes(user.id) ? 'Requested' : 'Follow'}
+                      </button>
                     </div>
                   ))}
                 </div>

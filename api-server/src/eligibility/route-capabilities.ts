@@ -31,6 +31,8 @@ const tagCapability: Readonly<Record<string, Capability>> = {
   invites: "social",
   media: "social",
   messages: "messaging",
+  "private-messages": "messaging",
+  moderation: "social",
   notes: "social",
   notifications: "social",
   onboarding: "social",
@@ -66,6 +68,18 @@ const marketplacePaymentsOperations = new Set([
 const marketplaceSocialOperations = new Set(["postProductsByIdSave"]);
 const marketplaceSellerOperations = new Set(["postProducts", "deleteProductsById", "postProductsOrdersByOrderIdFulfill"]);
 const UUID = "3d6f2f91-32bb-45bc-bf1f-7f0e40a3b8a0";
+
+// Explicit reviewed endpoints for the additive encrypted relay. There is no
+// wildcard grant: future paths and mutations still fail closed.
+const privateChatOperations = [
+  ['get', '/private-messages/identity'],
+  ['put', '/private-messages/identity'],
+  ['get', '/private-messages/threads'],
+  ['post', '/private-messages/threads'],
+  ['get', '/private-messages/threads/{threadId}'],
+  ['get', '/private-messages/threads/{threadId}/messages'],
+  ['post', '/private-messages/threads/{threadId}/messages'],
+] as const;
 
 function pathOnly(originalUrl: string): string | undefined {
   const path = originalUrl.split(/[?#]/, 1)[0];
@@ -119,6 +133,10 @@ function findCatalogRoute(method: string, originalUrl: string): ApiRouteDefiniti
 
 /** Resolve only routes present in the generated API catalog. Unmapped is deny. */
 export function classifyApiRoute(method: string, originalUrl: string): RouteAuthority | undefined {
+  const path = pathOnly(originalUrl);
+  if (path && privateChatOperations.some(([verb, template]) => verb === method.toLowerCase() && templateMatches(template, path))) {
+    return { kind: 'capability', capability: 'messaging' };
+  }
   const route = findCatalogRoute(method, originalUrl);
   return route ? authorityFor(route) : undefined;
 }

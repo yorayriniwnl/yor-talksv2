@@ -6,12 +6,12 @@
                      "run_id":  38980926025,
                      "workflow_name":  "CI",
                      "head_branch":  "codex/compliance-audit-20261017",
-                     "run_url":  "https://api.github.com/repos/yorayriniwnl/yor-talksv2/actions/runs/38980926025",
+                     "run_url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/actions/runs/38980926025",
                      "run_attempt":  1,
                      "node_id":  "CR_kwDOTQJbrs8AAAAbTCEdTA",
                      "head_sha":  "62920ade36e6310f3dc449c8dfc6da07a2585f05",
-                     "url":  "https://api.github.com/repos/yorayriniwnl/yor-talksv2/actions/jobs/117241355596",
-                     "html_url":  "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/38980926025/job/117241355596",
+                     "url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/actions/jobs/117241355596",
+                     "html_url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/38980926025/job/117241355596",
                      "status":  "completed",
                      "conclusion":  "failure",
                      "created_at":  "2026-10-16T23:20:45Z",
@@ -268,7 +268,7 @@
                                        "completed_at":  "2026-10-16T23:21:29Z"
                                    }
                                ],
-                     "check_run_url":  "https://api.github.com/repos/yorayriniwnl/yor-talksv2/check-runs/117241355596",
+                     "check_run_url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/check-runs/117241355596",
                      "labels":  [
                                     "ubuntu-latest"
                                 ],

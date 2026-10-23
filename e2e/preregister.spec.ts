@@ -111,9 +111,10 @@ for (const path of ['/preregister', '/launch']) {
     preregistrationApi.stallAuthentication = true;
     await page.goto(path);
     await expect.poll(() => preregistrationApi.authenticationRequests).toBe(1);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Your world\.\s*Your privacy\.\s*Rooted in India\./);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Life[’']s personal\.\s*Keep it that way\./);
     await expect(page).toHaveTitle(/Yor Talks/);
-    await expect(page.locator('.pr-hero-description')).toContainText('A premium social experience');
+    await expect(page.locator('.pr-hero-description')).toContainText(/premium social space/i);
+    await expect(page.locator('.pr-hero-description')).toContainText(/commitment to keep your personal data in India/i);
     await expect(page.locator('header').getByText('Aditi & Ayush.', { exact: true })).toBeInViewport();
     await expect(page.getByText(/0?1(?:st)? December 2026/i).first()).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Email address', exact: true })).toBeVisible();
@@ -130,7 +131,7 @@ for (const path of ['/preregister', '/launch']) {
   });
 }
 
-test('India residency and EU-inspired privacy are clear commitments without staged friends imagery', async ({ page, preregistrationApi }) => {
+test('privacy claims distinguish private chats, standard messages and unverified residency and EU compliance', async ({ page, preregistrationApi }) => {
   const friendsImageRequests: string[] = [];
   page.on('request', (request) => {
     if (/yor-talks-friends/i.test(request.url())) friendsImageRequests.push(request.url());
@@ -138,10 +139,10 @@ test('India residency and EU-inspired privacy are clear commitments without stag
   await page.goto('/preregister');
 
   const commitments = page.locator('#pr-commitments');
-  await expect(commitments.getByRole('heading', { name: /starts with trust/i })).toBeVisible();
-  await expect(commitments.getByRole('heading', { name: /data.*India/i })).toBeVisible();
-  await expect(commitments.getByRole('heading', { name: /Privacy with substance/i })).toBeVisible();
-  await expect(commitments.getByRole('heading', { name: /Premium in every detail/i })).toBeVisible();
+  await expect(commitments.getByRole('heading', { name: /Good connections\.\s*Stronger foundations\./i })).toBeVisible();
+  await expect(page.locator('#pr-india')).toContainText(/India/i);
+  await expect(page.locator('#pr-privacy')).toContainText(/privacy/i);
+  await expect(page.locator('#pr-premium')).toContainText(/consent.*transparency.*control/i);
   await expect(commitments).toContainText(/EU.*principles/i);
   const privacyPolicy = commitments.getByRole('link', { name: 'Read our privacy approach', exact: true });
   const privacyControls = commitments.getByRole('link', { name: 'Your privacy controls', exact: true });
@@ -149,6 +150,9 @@ test('India residency and EU-inspired privacy are clear commitments without stag
   await expect(privacyControls).toHaveAttribute('href', '/privacy');
   await expect(privacyPolicy).toBeVisible();
   await expect(privacyControls).toBeVisible();
+  await expect(commitments.getByRole('link', { name: 'Open private chats', exact: true })).toHaveAttribute('href', '/private-messages');
+  await expect(page.locator('#pr-privacy')).toContainText(/one-to-one messages and small files are encrypted on your device/i);
+  await expect(page.locator('#pr-privacy')).toContainText(/Standard messages still use server processing/i);
 
   const residency = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: 'Will my data stay in India?' }) });
   await residency.locator('summary').click();
@@ -162,12 +166,27 @@ test('India residency and EU-inspired privacy are clear commitments without stag
   await expect(compliance.locator('p')).toContainText(/EU.*principles/i);
   await expect(compliance.locator('p')).toContainText(/not.*(?:claim|certif|complian)|no.*(?:claim|certif)/i);
 
+  const chatPrivacy = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: 'Can Yor Talks read my personal chats?' }) });
+  await chatPrivacy.locator('summary').click();
+  await expect(chatPrivacy.locator('p').first()).toBeVisible();
+  await expect(chatPrivacy.locator('p').first()).toContainText(/without the private keys/i);
+  await expect(chatPrivacy.locator('p').first()).toContainText(/Standard messages are not end-to-end encrypted/i);
+  await expect(chatPrivacy.locator('p').first()).toContainText(/moderation|provider/i);
+  await expect(chatPrivacy.locator('p').last()).toContainText(/cannot recover your private key/i);
+  await expect(chatPrivacy.locator('p').last()).toContainText(/does not cover group chats or calls/i);
+  await expect(chatPrivacy.locator('p').last()).toContainText(/not undergone an independent security audit/i);
+
+  const deliveryDetails = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: 'What does Yor still see with private delivery?' }) });
+  await deliveryDetails.locator('summary').click();
+  await expect(deliveryDetails.locator('p')).toContainText(/accounts.*when messages are sent/i);
+  await expect(deliveryDetails.locator('p')).toContainText(/does not.*anonymous/i);
+
   await privacyControls.click();
   await expect(page).toHaveURL(/\/privacy$/);
   await expect(page.getByRole('heading', { name: 'Privacy Notice', exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/preregister$/);
-  await expect(commitments.getByRole('heading', { name: /starts with trust/i })).toBeVisible();
+  await expect(commitments.getByRole('heading', { name: /Good connections\.\s*Stronger foundations\./i })).toBeVisible();
 
   await expect(page.locator('img[src*="yor-talks-friends"], source[srcset*="yor-talks-friends"]')).toHaveCount(0);
   await expect(page.getByRole('img', { name: /three friends.*rooftop/i })).toHaveCount(0);
@@ -250,7 +269,7 @@ test('successful pre-registration normalizes identity and preserves a referral f
   await expect(page.getByText('@ada_lovelace', { exact: true }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Invite your people', exact: true }).click();
-  await expect(page.getByRole('status')).toHaveText('Invite link copied');
+  await expect(page.locator('#pr-signup').getByRole('status')).toHaveText('Invite link copied');
   const copiedInvite = await page.evaluate(() => (window as Window & { copiedInvite?: string }).copiedInvite);
   expect(copiedInvite).toBe(new URL('/preregister?ref=YOR-DEF456', page.url()).toString());
 
@@ -428,113 +447,85 @@ test('a timed-out signup explains how to retry without losing details', async ({
   expect(preregistrationApi.submissions).toHaveLength(1);
 });
 
-test('the social preview shows posts, conversations and communities without submitting a signup', async ({ page, preregistrationApi }) => {
+test('the launch countdown appears above the main message on desktop and mobile', async ({ page, preregistrationApi }) => {
   await page.goto('/preregister');
-  const preview = page.getByRole('region', { name: 'Yor Talks social preview' });
-  const views = preview.getByRole('group', { name: 'Preview Yor Talks features' });
-  await preview.getByRole('button', { name: 'Like sample post' }).click();
-  await expect(preview.getByRole('button', { name: 'Like sample post' })).toHaveAttribute('aria-pressed', 'true');
-  await preview.getByRole('button', { name: 'Show sample replies' }).click();
-  await expect(preview.locator('#ys-sample-replies')).toBeVisible();
-  await expect(preview.locator('#ys-sample-replies')).toContainText('A little more of this, please.');
-  await preview.getByRole('button', { name: 'Save sample post' }).click();
-  await views.getByRole('button', { name: 'Messages', exact: true }).click();
-  await expect(preview.getByText('A sample group conversation')).toBeVisible();
-  await expect(preview.getByRole('link', { name: 'Join Yor Talks to start a conversation' })).toHaveAttribute('href', '#pr-signup');
-  await views.getByRole('button', { name: 'Communities', exact: true }).click();
-  await preview.getByRole('button', { name: /On repeat/ }).click();
-  await expect(preview.locator('.ys-community-note')).toContainText('For the track you cannot stop playing');
-  await views.getByRole('button', { name: 'Your feed', exact: true }).click();
-  await expect(preview.getByRole('button', { name: 'Save sample post' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(preview.getByRole('button', { name: 'Like sample post' })).toHaveAttribute('aria-pressed', 'true');
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const timer = page.getByRole('timer', { name: 'Time until the launch date' });
+    await expect(timer).toBeInViewport();
+    const timerBounds = await timer.boundingBox();
+    const headlineBounds = await page.getByRole('heading', { level: 1 }).boundingBox();
+    expect(timerBounds).not.toBeNull();
+    expect(headlineBounds).not.toBeNull();
+    expect(timerBounds!.y + timerBounds!.height).toBeLessThanOrEqual(headlineBounds!.y);
+  }
   expect(preregistrationApi.submissions).toEqual([]);
 });
 
-test('world districts work with keyboard navigation and keep their panels in sync', async ({ page, preregistrationApi }) => {
-  await page.goto('/preregister');
-  const commons = page.getByRole('tab', { name: /The Commons/ });
-  const studio = page.getByRole('tab', { name: /Creator Studio/ });
-  const dream = page.getByRole('tab', { name: /Dream Dock/ });
-  await commons.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(studio).toBeFocused();
-  await expect(studio).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tabpanel')).toContainText('Your ideas deserve a first take.');
-  await page.keyboard.press('End');
-  await expect(dream).toBeFocused();
-  await expect(page.getByRole('tabpanel')).toContainText('Give a thought somewhere to go.');
-  await page.keyboard.press('Home');
-  await expect(commons).toBeFocused();
-  await expect(page.getByRole('tabpanel')).toContainText('Your people have a place.');
-  expect(preregistrationApi.submissions).toEqual([]);
-});
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test(`the private delivery concept works with a keyboard (${reducedMotion}) without sending a message`, async ({ page, preregistrationApi }) => {
+    await page.emulateMedia({ reducedMotion });
+    await page.goto('/preregister');
+    await page.waitForLoadState('networkidle');
+    const messageRequests: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST') messageRequests.push(new URL(request.url()).pathname);
+    });
 
-test('the world preview waits until its section approaches the viewport', async ({ page, preregistrationApi }) => {
-  const worldRequests: string[] = [];
+    const preview = page.getByRole('region', { name: 'How private delivery works' });
+    const journey = preview.getByRole('list', { name: 'Message journey' });
+    await expect(preview.getByText('ILLUSTRATED EXAMPLE', { exact: true })).toBeVisible();
+    await expect(preview.locator('.yr-preview-note')).toContainText(/sample conversation.*Nothing is encrypted or sent/i);
+    await expect(preview.getByText('Your words start with you.', { exact: true })).toBeVisible();
+    await expect(journey.getByRole('listitem').filter({ hasText: 'On your device' })).toHaveAttribute('aria-current', 'step');
+    await expect(preview.locator('.yr-message--received')).toHaveCount(0);
+    await expect(preview.locator('.yr-message-waiting')).toContainText('No message yet');
+    await expect(preview.locator('.yr-sealed-packet')).toBeHidden();
+
+    const follow = preview.getByRole('button', { name: 'Seal the message', exact: true });
+    await follow.focus();
+    await page.keyboard.press('Enter');
+    await expect(preview.getByText('We carry the connection.', { exact: true })).toBeVisible();
+    await expect(preview.locator('.yr-journey-copy')).toContainText('Yor routes the sealed message. It sees delivery details, but the contents stay encrypted.');
+    await expect(journey.getByRole('listitem').filter({ hasText: 'Sealed in transit' })).toHaveAttribute('aria-current', 'step');
+    await expect(preview.locator('.yr-message--received')).toHaveCount(0);
+    await expect(preview.locator('.yr-message-waiting')).toContainText('Waiting to open');
+    await expect(preview.locator('.yr-sealed-packet')).toBeVisible();
+
+    await page.keyboard.press('Space');
+    await expect(preview.getByText('Their eyes. Your conversation.', { exact: true })).toBeVisible();
+    await expect(journey.getByRole('listitem').filter({ hasText: 'With your person' })).toHaveAttribute('aria-current', 'step');
+    await expect(preview.getByRole('button', { name: 'Replay the message journey', exact: true })).toBeFocused();
+    await expect(preview.locator('.yr-message--received')).toContainText('Coffee at 6?');
+    await expect(preview.locator('.yr-message-waiting')).toHaveCount(0);
+    await expect(preview.locator('.yr-sealed-packet')).toBeHidden();
+
+    await page.keyboard.press('Enter');
+    await expect(preview.getByText('Your words start with you.', { exact: true })).toBeVisible();
+    await expect(follow).toBeFocused();
+    await expect(preview.locator('.yr-message--received')).toHaveCount(0);
+    if (reducedMotion === 'reduce') {
+      await expect(preview.locator('.yr-sealed-packet')).toHaveCSS('transition-duration', '0s');
+    }
+    expect(messageRequests, 'The concept must not send a real message').toEqual([]);
+    expect(preregistrationApi.submissions).toEqual([]);
+  });
+}
+
+test('the privacy landing page does not load the retired 3D world', async ({ page, preregistrationApi }) => {
+  const engineRequests: string[] = [];
   page.on('request', request => {
-    if (/YorWorldPreview(?:[-.]|\.tsx)/i.test(request.url())) worldRequests.push(request.url());
+    if (/(?:YorWorldPreview|DeferredYorWorldPreview|(?:^|\/)three(?:[./_-]|$))/i.test(new URL(request.url()).pathname)) {
+      engineRequests.push(request.url());
+    }
   });
   await page.goto('/preregister');
   await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+  await page.locator('footer').scrollIntoViewIfNeeded();
   await page.waitForLoadState('networkidle');
-  expect(worldRequests, 'The initial view must not fetch the 3D world module').toEqual([]);
-  await expect(page.locator('.yw-world')).toHaveCount(0);
-  await expect(page.locator('.yw-canvas-host canvas')).toHaveCount(0);
-
-  await page.locator('#pr-world').scrollIntoViewIfNeeded();
-  await expect(page.locator('.yw-world')).toBeVisible();
-  expect(worldRequests.length, 'Approaching the section must load its interactive module').toBeGreaterThan(0);
-  expect(preregistrationApi.submissions).toEqual([]);
-});
-
-test('the world keeps an illustrated preview and working districts without WebGL', async ({ page, preregistrationApi }) => {
-  await page.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
-      value: function (this: HTMLCanvasElement, contextId: string, ...args: unknown[]) {
-        if (/webgl/i.test(contextId)) return null;
-        return Reflect.apply(original, this, [contextId, ...args]);
-      },
-    });
-  });
-  await page.goto('/preregister');
-  await page.locator('#pr-world').scrollIntoViewIfNeeded();
-  await expect(page.locator('.yw-world')).toHaveAttribute('data-world-renderer', 'fallback');
-  await expect(page.getByRole('img', { name: 'Yor World concept environment with a monumental illuminated portal' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'World camera controls' })).toHaveCount(0);
-  await page.getByRole('tab', { name: /Dream Dock/ }).click();
-  await expect(page.getByRole('tabpanel')).toContainText('Give a thought somewhere to go.');
-  expect(preregistrationApi.submissions).toEqual([]);
-});
-
-test('Studio applies the selected visual filter to its sample media', async ({ page, preregistrationApi }) => {
-  await page.goto('/preregister');
-  const controls = page.getByRole('group', { name: 'Try a Studio visual filter' });
-  const sample = page.getByRole('img', { name: 'Sample photo with blue glassware, a camera and flowers' });
-  await controls.getByRole('button', { name: 'Noir', exact: true }).click();
-  await expect(controls.getByRole('button', { name: 'Noir', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(sample).toHaveCSS('filter', 'grayscale(1) contrast(1.6)');
-  await controls.getByRole('button', { name: 'Original', exact: true }).click();
-  await expect(sample).toHaveCSS('filter', 'none');
-  expect(preregistrationApi.submissions).toEqual([]);
-});
-
-test('Dream shapes a visitor idea into relevant roles and next steps', async ({ page, preregistrationApi }) => {
-  await page.goto('/preregister');
-  const idea = page.getByRole('textbox', { name: 'What would you make with the right people?' });
-  const shape = page.getByRole('button', { name: 'Shape this idea' });
-  await idea.fill('tiny');
-  await shape.click();
-  await expect(page.getByRole('alert')).toHaveText('Give your idea a little more detail.');
-  await idea.fill('Build an app that helps neighbours share gardening tools.');
-  await shape.click();
-  await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByText('Product designer', { exact: true })).toBeVisible();
-  await expect(page.getByRole('listitem').filter({ hasText: 'Build the smallest working prototype' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start a podcast', exact: true }).click();
-  await expect(idea).toHaveValue(/Start a podcast/);
-  await expect(page.getByText('Producer + sound', { exact: true })).toBeVisible();
-  await expect(page.getByRole('listitem').filter({ hasText: 'Record a rough first session' })).toBeVisible();
+  await expect(page.locator('#pr-world, .yw-world, canvas')).toHaveCount(0);
+  expect(engineRequests, 'Scrolling the entire page must not load the retired world or Three.js').toEqual([]);
   expect(preregistrationApi.submissions).toEqual([]);
 });
 

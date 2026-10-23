@@ -1040,6 +1040,102 @@ export const apiRouteCatalog = [
   },
   {
     "method": "get",
+    "path": "/moderation/appeals",
+    "operationId": "getModerationAppeals",
+    "tag": "moderation",
+    "summary": "Get /moderation/appeals",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/moderation/appeals",
+    "operationId": "postModerationAppeals",
+    "tag": "moderation",
+    "summary": "Post /moderation/appeals",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "patch",
+    "path": "/moderation/appeals/{appealId}/review",
+    "operationId": "patchModerationAppealsByAppealIdReview",
+    "tag": "moderation",
+    "summary": "Patch /moderation/appeals/{appealId}/review",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/moderation/appeals/mine",
+    "operationId": "getModerationAppealsMine",
+    "tag": "moderation",
+    "summary": "Get /moderation/appeals/mine",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/moderation/decisions",
+    "operationId": "getModerationDecisions",
+    "tag": "moderation",
+    "summary": "Get /moderation/decisions",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "post",
+    "path": "/moderation/decisions",
+    "operationId": "postModerationDecisions",
+    "tag": "moderation",
+    "summary": "Post /moderation/decisions",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/moderation/enforcements/{targetType}/{targetId}",
+    "operationId": "getModerationEnforcementsByTargetTypeByTargetId",
+    "tag": "moderation",
+    "summary": "Get /moderation/enforcements/{targetType}/{targetId}",
+    "authenticated": true,
+    "roles": [
+      "admin",
+      "moderator"
+    ]
+  },
+  {
+    "method": "get",
+    "path": "/moderation/notices",
+    "operationId": "getModerationNotices",
+    "tag": "moderation",
+    "summary": "Get /moderation/notices",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/moderation/notices/{noticeId}/acknowledge",
+    "operationId": "postModerationNoticesByNoticeIdAcknowledge",
+    "tag": "moderation",
+    "summary": "Post /moderation/notices/{noticeId}/acknowledge",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
     "path": "/notes",
     "operationId": "getNotes",
     "tag": "notes",
@@ -1438,6 +1534,78 @@ export const apiRouteCatalog = [
     "tag": "privacy",
     "summary": "Post /privacy/request",
     "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/privacy/verify",
+    "operationId": "postPrivacyVerify",
+    "tag": "privacy",
+    "summary": "Post /privacy/verify",
+    "authenticated": false,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/identity",
+    "operationId": "getPrivateMessagesIdentity",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/identity",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "put",
+    "path": "/private-messages/identity",
+    "operationId": "putPrivateMessagesIdentity",
+    "tag": "private-messages",
+    "summary": "Put /private-messages/identity",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/threads",
+    "operationId": "getPrivateMessagesThreads",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/threads",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/private-messages/threads",
+    "operationId": "postPrivateMessagesThreads",
+    "tag": "private-messages",
+    "summary": "Post /private-messages/threads",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/threads/{threadId}",
+    "operationId": "getPrivateMessagesThreadsByThreadId",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/threads/{threadId}",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "get",
+    "path": "/private-messages/threads/{threadId}/messages",
+    "operationId": "getPrivateMessagesThreadsByThreadIdMessages",
+    "tag": "private-messages",
+    "summary": "Get /private-messages/threads/{threadId}/messages",
+    "authenticated": true,
+    "roles": []
+  },
+  {
+    "method": "post",
+    "path": "/private-messages/threads/{threadId}/messages",
+    "operationId": "postPrivateMessagesThreadsByThreadIdMessages",
+    "tag": "private-messages",
+    "summary": "Post /private-messages/threads/{threadId}/messages",
+    "authenticated": true,
     "roles": []
   },
   {

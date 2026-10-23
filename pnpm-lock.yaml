@@ -76,10 +76,10 @@ overrides:
   esbuild: 0.28.1
   qs: 6.16.0
   engine.io: 6.6.10
-  ip-address: 10.7.1
+  ip-address: 10.7.4
   proxy-addr: 2.0.8
   fast-uri: 3.1.8
-  markdown-it: 14.3.2
+  markdown-it: 14.3.3
   brace-expansion@^5: 5.0.12
   source-map-js: 1.2.2
   '@tailwindcss/typography>postcss-selector-parser': 7.1.6
@@ -199,6 +199,9 @@ importers:
       multer:
         specifier: ^2.4.0
         version: 2.4.0
+      openpgp:
+        specifier: 6.3.2
+        version: 6.3.2
       otplib:
         specifier: ^12.0.1
         version: 12.0.1
@@ -351,6 +354,9 @@ importers:
       livekit-client:
         specifier: ^2.22.0
         version: 2.22.0(@types/dom-mediacapture-record@1.0.22)
+      openpgp:
+        specifier: 6.3.2
+        version: 6.3.2
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -2683,8 +2689,8 @@ packages:
     resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
     engines: {node: '>=12.22.0'}
 
-  ip-address@10.7.1:
-    resolution: {integrity: sha512-4OUAqU9Z1i3vCnS05hzGiFnEMDpQ+62pAD/MVQOp83fYyNC8GleCqaS0QikQBmcWCrKFiUs/B8ztRRiYOAXuCA==}
+  ip-address@10.7.4:
+    resolution: {integrity: sha512-DWBMKyeM25D70nrIiTkgQth59/G+naKOTep6huF9j+GmeK3DMD60Zvxg5d5qQnz+38AHgou6ean2LECX+lrKDg==}
     engines: {node: '>= 12'}
 
   ipaddr.js@1.9.1:
@@ -2885,8 +2891,8 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  markdown-it@14.3.2:
-    resolution: {integrity: sha512-sHHjZ5fJKlgrG4qns2YwVcdNep35h5fERrfkD2YNsb9UFk0UIHarbiTaHKVMlPuWAoiilyK8Fv/jAm11slsY7Q==}
+  markdown-it@14.3.3:
+    resolution: {integrity: sha512-L//tDAkjTjJCU6pBUSBTgs3Kg4InVaZuUZog/b6V12UKhcDQ7S78877ibbCanRExwPuYP1CZD7Gd2dxSy1GXRg==}
     hasBin: true
 
   math-intrinsics@1.1.0:
@@ -3058,6 +3064,15 @@ packages:
   open@8.4.2:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
+
+  openpgp@6.3.2:
+    resolution: {integrity: sha512-wcZTzHz41LV8Y48zH/JlD1JT8YdNmpWOuMAjQ/podvvCwsjBEU37K3znJh4UQcj3hksE5z9TzvhbUbwzsGvlLQ==}
+    engines: {node: '>= 18.0.0', typescript: '>= 5.0.0'}
+    peerDependencies:
+      '@openpgp/web-stream-tools': ~0.3.0
+    peerDependenciesMeta:
+      '@openpgp/web-stream-tools':
+        optional: true
 
   orval@8.22.0:
     resolution: {integrity: sha512-N8UmB4DOhW+Z2SzVq4oS/pN3DsRPq+msrRU8NyRldP1i0yiqT6qo8mUxHPk2umqYjyY0FlR2mvPbi/Jf5CiP7A==}
@@ -5959,7 +5974,7 @@ snapshots:
     dependencies:
       debug: 4.4.3
       express: 5.2.1
-      ip-address: 10.7.1
+      ip-address: 10.7.4
     transitivePeerDependencies:
       - supports-color
 
@@ -6214,7 +6229,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ip-address@10.7.1: {}
+  ip-address@10.7.4: {}
 
   ipaddr.js@1.9.1: {}
 
@@ -6386,7 +6401,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  markdown-it@14.3.2:
+  markdown-it@14.3.3:
     dependencies:
       argparse: 2.0.1
       entities: 4.5.0
@@ -6545,6 +6560,8 @@ snapshots:
       define-lazy-prop: 2.0.0
       is-docker: 2.2.1
       is-wsl: 2.2.0
+
+  openpgp@6.3.2: {}
 
   orval@8.22.0(typescript@5.6.3):
     dependencies:
@@ -7249,7 +7266,7 @@ snapshots:
     dependencies:
       '@gerrit0/mini-shiki': 3.23.0
       lunr: 2.3.9
-      markdown-it: 14.3.2
+      markdown-it: 14.3.3
       minimatch: 10.2.5
       typescript: 5.6.3
       yaml: 2.9.0

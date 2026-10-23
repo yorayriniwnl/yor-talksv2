@@ -112,10 +112,10 @@ overrides:
 
   qs: 6.16.0
   engine.io: 6.6.10
-  ip-address: 10.7.1
+  ip-address: 10.7.4
   proxy-addr: 2.0.8
   fast-uri: 3.1.8
-  markdown-it: 14.3.2
+  markdown-it: 14.3.3
   "brace-expansion@^5": 5.0.12
   source-map-js: 1.2.2
   "@tailwindcss/typography>postcss-selector-parser": 7.1.6

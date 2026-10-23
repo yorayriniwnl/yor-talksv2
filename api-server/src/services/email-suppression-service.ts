@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { db } from "@workspace/db";
-import { emailSuppressionsTable, preregistrationsTable, consentRecordsTable } from "@workspace/db/schema";
+import { emailSuppressionsTable, consentRecordsTable } from "@workspace/db/schema";
 import { eq, or, and, sql } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
@@ -164,23 +164,8 @@ export class EmailSuppressionService {
 
   private async hasActiveConsent(email: string, purpose: string): Promise<boolean> {
     const emailHash = this.hashEmail(email);
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Check preregistrations for launch_updates
-    if (purpose === "launch_updates") {
-      const rows = await db
-        .select({
-          consentedAt: preregistrationsTable.launchUpdatesConsentedAt,
-          unsubscribedAt: preregistrationsTable.unsubscribedAt,
-        })
-        .from(preregistrationsTable)
-        .where(sql`lower(${preregistrationsTable.email}) = ${normalizedEmail}`)
-        .limit(1);
-
-      if (rows.length > 0) {
-        return Boolean(rows[0].consentedAt && !rows[0].unsubscribedAt);
-      }
-    }
+    // The versioned ledger is authoritative. A legacy signup timestamp must
+    // never override a later withdrawal. The migration backfills old grants.
 
     // Check consent_records table
     const records = await db
@@ -192,7 +177,7 @@ export class EmailSuppressionService {
           eq(consentRecordsTable.purpose, purpose)
         )
       )
-      .orderBy(sql`${consentRecordsTable.grantedAt} DESC`)
+      .orderBy(sql`${consentRecordsTable.grantedAt} DESC`,sql`${consentRecordsTable.granted} ASC`,sql`${consentRecordsTable.id} DESC`)
       .limit(1);
 
     if (records.length > 0) {

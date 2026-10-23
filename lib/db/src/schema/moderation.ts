@@ -87,12 +87,14 @@ export const moderationAppealsTable = pgTable('moderation_appeals', {
   status: text('status').notNull().default('pending'),
   reviewerId: uuid('reviewer_id').references(() => usersTable.id, { onDelete: 'set null' }),
   reviewerNotes: text('reviewer_notes'),
+  publicRationale: text('public_rationale'),
   outcomeDecisionId: uuid('outcome_decision_id').references(() => moderationDecisionsTable.id, { onDelete: 'set null' }),
   reviewedAt: instant('reviewed_at'),
   createdAt: instant('created_at').notNull().defaultNow(),
   updatedAt: instant('updated_at').notNull().defaultNow(),
 }, (table) => ({
   decisionAppellantIdx: index('moderation_appeals_decision_appellant_idx').on(table.decisionId, table.appellantUserId),
+  decisionAppellantUnique: uniqueIndex('moderation_appeals_decision_appellant_unique_idx').on(table.decisionId, table.appellantUserId),
   appellantIdx: index('moderation_appeals_appellant_idx').on(table.appellantUserId, table.createdAt),
   statusIdx: index('moderation_appeals_status_idx').on(table.status, table.createdAt),
   validConstraint: check(

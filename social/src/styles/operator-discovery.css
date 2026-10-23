@@ -36,7 +36,7 @@
   gap: 0.8rem;
 }
 
-.operator-discovery-hero__copy h2 {
+.operator-discovery-hero__copy h1 {
   max-width: 48rem;
   font-family: var(--app-font-serif);
   font-size: clamp(2.3rem, 4vw, 3.5rem);
@@ -46,7 +46,7 @@
   text-wrap: balance;
 }
 
-.operator-discovery-hero__copy h2 em { color: hsl(var(--signal)); }
+.operator-discovery-hero__copy h1 em { color: hsl(var(--signal)); }
 
 .operator-discovery-hero__copy > p {
   max-width: 39rem;
@@ -729,7 +729,7 @@
 }
 
 @media (max-width: 520px) {
-  .operator-discovery-hero__copy h2 { font-size: 2.45rem; }
+  .operator-discovery-hero__copy h1 { font-size: 2.45rem; }
   .operator-discovery-search { min-height: 3.7rem; padding-left: 0.8rem; }
   .operator-discovery-search input { font-size: 0.78rem; }
   .operator-discovery-hero__metrics .operator-status-badge { display: none; }

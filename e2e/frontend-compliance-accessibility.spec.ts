@@ -104,7 +104,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await search.focus();
     await page.keyboard.press('Enter');
     const palette = page.getByRole('dialog', { name: 'Search Yor', exact: true });
-    await expect(palette.getByRole('combobox', { name: 'Search Yor', exact: true })).toBeFocused();
+    await expect(palette.getByRole('combobox', { name: 'Search people, posts, and features', exact: true })).toBeFocused();
     await expectFocusTrapped(page, palette);
     await audit(page, testInfo, `search-${colorScheme}`);
     await page.keyboard.press('Escape');

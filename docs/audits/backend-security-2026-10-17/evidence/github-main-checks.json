@@ -7,9 +7,9 @@
                            "node_id":  "CR_kwDOTQJbrs8AAAAbZRot4g",
                            "head_sha":  "8c5a763893a53bad412946888a3c965deec46598",
                            "external_id":  "f1465c26-d78b-5756-b764-2f129f45719e",
-                           "url":  "https://api.github.com/repos/yorayriniwnl/yor-talksv2/check-runs/117660331490",
-                           "html_url":  "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/39122349281/job/117660331490",
-                           "details_url":  "https://github.com/yorayriniwnl/yor-talksv2/actions/runs/39122349281/job/117660331490",
+                           "url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/check-runs/117660331490",
+                           "html_url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39122349281/job/117660331490",
+                           "details_url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39122349281/job/117660331490",
                            "status":  "completed",
                            "conclusion":  "failure",
                            "started_at":  "2026-10-18T11:13:17Z",
@@ -19,7 +19,7 @@
                                           "summary":  null,
                                           "text":  null,
                                           "annotations_count":  3,
-                                          "annotations_url":  "https://api.github.com/repos/yorayriniwnl/yor-talksv2/check-runs/117660331490/annotations"
+                                          "annotations_url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/check-runs/117660331490/annotations"
                                       },
                            "check_suite":  {
                                                "id":  106018007420

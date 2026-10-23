@@ -6,4 +6,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type PostPrivacyChallengeBody = { [key: string]: unknown };
+export type PostPrivateMessagesThreadsByThreadIdMessagesBody = { [key: string]: unknown };

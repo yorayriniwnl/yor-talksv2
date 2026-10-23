@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { api, type BackendPost, type BackendUser } from '@/lib/api-client';
-import { mapPost, useAppStore, type Community, type User, type Post } from '@/lib/store';
+import { mapPost, useAppStore, type Post } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { OperatorPanel, SectionHeader, SignalLabel } from '@/components/system';
 import '@/styles/operator-discovery.css';
 import { ProtectedMediaImage, ProtectedMediaVideo } from '@/lib/protected-media';
+import { useFollowAction } from '@/hooks/use-follow-action';
 
 type SearchResults = { users: BackendUser[]; posts: BackendPost[] };
 
@@ -105,7 +106,7 @@ function matchesExploreGenre(text: string, genre: string): boolean {
   const t = text.toLowerCase();
   switch (genre) {
     case 'tech':
-      return t.includes('ai') || t.includes('tensor') || t.includes('shader') || t.includes('gpu') || t.includes('neural') || t.includes('code') || t.includes('hft') || t.includes('fpga') || t.includes('webgpu');
+      return /\bai\b/u.test(t) || t.includes('tensor') || t.includes('shader') || t.includes('gpu') || t.includes('neural') || t.includes('code') || t.includes('hft') || t.includes('fpga') || t.includes('webgpu');
     case 'gaming':
       return t.includes('game') || t.includes('esport') || t.includes('clutch') || t.includes('radiant') || t.includes('arcade') || t.includes('fightstick') || t.includes('scrim') || t.includes('steam');
     case 'music':
@@ -127,32 +128,48 @@ function matchesExploreGenre(text: string, genre: string): boolean {
 
 export default function Explore() {
   const [, setLocation] = useLocation();
-  const users = useAppStore((s: any) => s.users || {}) as Record<string, User>;
+  const users = useAppStore((s) => s.users);
   const [posts, setPosts] = useState<Post[]>([]);
-  const communities = useAppStore((s: any) => s.communities || []) as Community[];
-  const currentUser = useAppStore((s: any) => s.currentUser);
-  const followUser = useAppStore((s: any) => s.followUser);
-  const unfollowUser = useAppStore((s: any) => s.unfollowUser);
+  const communities = useAppStore((s) => s.communities);
+  const currentUser = useAppStore((s) => s.currentUser);
+  const { toggleFollow, pendingIds } = useFollowAction();
   const cachePublicProfiles = useAppStore((s) => s.cachePublicProfiles);
   const loadUserProfile = useAppStore((s) => s.loadUserProfile);
   const [discoveryLoading, setDiscoveryLoading] = useState(true);
   const [discoveryError, setDiscoveryError] = useState('');
   const [discoveryAttempt, setDiscoveryAttempt] = useState(0);
   const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string>();
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState('');
+  const discoveryGeneration = useRef(0);
+  const moreBusy = useRef(false);
 
   useEffect(() => {
     let active = true;
+    discoveryGeneration.current++;
+    moreBusy.current = false;
+    setLoadingMore(false);
+    setLoadMoreError('');
+    setNextCursor(undefined);
     setDiscoveryLoading(true);
     setDiscoveryError('');
-    void Promise.all([api.getFeed('for_you'), api.searchUsers('')]).then(([feed, profiles]) => {
+    void Promise.allSettled([api.getFeed('for_you', undefined, 36), api.searchUsers('')]).then(([feedResult, profileResult]) => {
       if (!active) return;
+      if (profileResult.status === 'fulfilled') cachePublicProfiles(profileResult.value);
+      if (feedResult.status !== 'fulfilled') {
+        setDiscoveryError('Discovery could not load. Please try again.');
+        return;
+      }
+      const feed = feedResult.value;
       setPosts(feed.data.map((post) => mapPost(post, currentUser?.id)));
-      cachePublicProfiles(profiles);
+      setNextCursor(feed.hasMore ? feed.nextCursor : undefined);
       for (const id of new Set(feed.data.map((post) => post.authorId))) void loadUserProfile(id);
     }).catch(() => {
       if (active) setDiscoveryError('Discovery could not load. Please try again.');
     }).finally(() => { if (active) setDiscoveryLoading(false); });
-    return () => { active = false; };
+    return () => { active = false; discoveryGeneration.current++; };
   }, [currentUser?.id, cachePublicProfiles, loadUserProfile, discoveryAttempt]);
 
   const [query, setQuery] = useState('');
@@ -194,29 +211,40 @@ export default function Explore() {
 
   const GRID_PAGE_SIZE = 18;
   const [visibleGridCount, setVisibleGridCount] = useState(GRID_PAGE_SIZE);
-  const gridLoadMoreRef = useRef<HTMLDivElement>(null);
 
   const visibleGridPosts = useMemo(() => visualPosts.slice(0, visibleGridCount), [visualPosts, visibleGridCount]);
   const hasMoreGrid = visibleGridCount < visualPosts.length;
 
-  const loadMoreGrid = useCallback(() => {
-    setVisibleGridCount(prev => Math.min(prev + GRID_PAGE_SIZE, visualPosts.length));
-  }, [visualPosts.length]);
+  const loadMoreGrid = useCallback(async () => {
+    if (hasMoreGrid) {
+      setVisibleGridCount(prev => Math.min(prev + GRID_PAGE_SIZE, visualPosts.length));
+      return;
+    }
+    if (!nextCursor || moreBusy.current) return;
+    const generation = discoveryGeneration.current;
+    moreBusy.current = true;
+    setLoadingMore(true);
+    setLoadMoreError('');
+    try {
+      const feed = await api.getFeed('for_you', nextCursor, 36);
+      if (generation !== discoveryGeneration.current) return;
+      setPosts(previous => [...new Map([...previous, ...feed.data.map(post => mapPost(post, currentUser?.id))].map(post => [post.id, post])).values()]);
+      setNextCursor(feed.hasMore && feed.nextCursor !== nextCursor ? feed.nextCursor : undefined);
+      setVisibleGridCount(previous => previous + GRID_PAGE_SIZE);
+      for (const id of new Set(feed.data.map(post => post.authorId))) void loadUserProfile(id);
+    } catch {
+      if (generation === discoveryGeneration.current) setLoadMoreError('More posts could not load. Your discoveries are still here.');
+    } finally {
+      if (generation === discoveryGeneration.current) {
+        moreBusy.current = false;
+        setLoadingMore(false);
+      }
+    }
+  }, [hasMoreGrid, visualPosts.length, nextCursor, currentUser?.id, loadUserProfile]);
 
   useEffect(() => {
     setVisibleGridCount(GRID_PAGE_SIZE);
   }, [selectedGenre]);
-
-  useEffect(() => {
-    const el = gridLoadMoreRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0]?.isIntersecting && hasMoreGrid) loadMoreGrid(); },
-      { rootMargin: '200px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMoreGrid, loadMoreGrid]);
 
   const rooms = useMemo(() => {
     return communities
@@ -253,12 +281,7 @@ export default function Explore() {
       }
     }, 250);
     return () => { active = false; clearTimeout(timer); };
-  }, [query, cachePublicProfiles, loadUserProfile]);
-
-  const handleToggleFollow = (targetId: string) => {
-    if (!currentUser) return;
-    currentUser.followingIds?.includes(targetId) || currentUser.pendingFollowIds?.includes(targetId) ? unfollowUser(targetId) : followUser(targetId);
-  };
+  }, [query, cachePublicProfiles, loadUserProfile, searchAttempt]);
 
   const isSearching = query.trim().length >= 2;
 
@@ -267,7 +290,7 @@ export default function Explore() {
       <section className="operator-discovery-hero" aria-labelledby="discovery-title">
         <div className="operator-discovery-hero__copy">
           <SignalLabel>Follow your curiosity</SignalLabel>
-          <h2 id="discovery-title">Your next <em>good find.</em></h2>
+          <h1 id="discovery-title" className="!text-[clamp(2rem,6vw,4rem)] !font-bold !leading-[1.05] !tracking-tight">Your next <em>good find.</em></h1>
           <p>New perspectives, interesting people, and ideas that stay with you.</p>
         </div>
 
@@ -280,6 +303,10 @@ export default function Explore() {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             aria-label="Search people and posts"
+            type="search"
+            autoComplete="off"
+            maxLength={200}
+            aria-describedby="discovery-search-help"
             placeholder="Search people, ideas, and posts"
           />
           {query ? (
@@ -290,6 +317,7 @@ export default function Explore() {
             <kbd aria-hidden="true">/</kbd>
           )}
         </div>
+        <p id="discovery-search-help" className="text-xs text-muted-foreground">{query.trim().length === 1 ? 'Type at least 2 characters to search.' : 'Search by name, username, or topic.'}</p>
 
       </section>
 
@@ -314,13 +342,13 @@ export default function Explore() {
             /* ── SEARCH RESULTS STATE ─────────────────────────────────────── */
             <motion.div key="search" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="operator-discovery-search-state">
               {searching ? (
-                <OperatorPanel className="operator-discovery-empty">
+                <OperatorPanel className="operator-discovery-empty" role="status" aria-live="polite">
                   <Loader2 className="operator-discovery-spinner" aria-hidden="true" />
                   <h2>Scanning the network</h2>
                   <p>Looking through people and published signals.</p>
                 </OperatorPanel>
               ) : searchError ? (
-                <OperatorPanel className="operator-discovery-empty" role="alert"><Search aria-hidden="true" /><h2>Let’s try that again.</h2><p>{searchError}</p><button type="button" onClick={() => { setQuery(''); searchInputRef.current?.focus(); }}>Search again</button></OperatorPanel>
+                <OperatorPanel className="operator-discovery-empty" role="alert"><Search aria-hidden="true" /><h2>Let’s try that again.</h2><p>{searchError}</p><button type="button" onClick={() => setSearchAttempt(attempt => attempt + 1)}>Retry search</button></OperatorPanel>
               ) : !results || (!results.users.length && !results.posts.length) ? (
                 <OperatorPanel className="operator-discovery-empty">
                   <Search aria-hidden="true" />
@@ -390,19 +418,23 @@ export default function Explore() {
                         return <ExploreGridItem key={post.id} post={post} isLarge={isLarge} onClick={() => setLocation(`/post/${post.id}`)} />;
                       })}
                     </motion.div>
-                    {hasMoreGrid && (
-                      <div ref={gridLoadMoreRef} className="operator-discovery-load-more" role="status">
-                        <Loader2 aria-hidden="true" /> Indexing more dispatches
-                      </div>
-                    )}
                   </>
-                ) : (
+                ) : !discoveryError && !nextCursor ? (
                   <OperatorPanel className="operator-discovery-empty">
                     <Compass aria-hidden="true" />
                     <h3>A new perspective is around the corner.</h3>
                     <p>Try another interest or search for a creator you know.</p>
                     <button type="button" onClick={() => setSelectedGenre('all')}>Show all posts</button>
                   </OperatorPanel>
+                ) : null}
+                {loadMoreError && <p role="alert" className="mt-4 text-sm text-destructive">{loadMoreError}</p>}
+                {!discoveryLoading && (hasMoreGrid || nextCursor) && (
+                  <div className="mt-5 flex justify-center">
+                    <Button variant="outline" onClick={() => void loadMoreGrid()} disabled={loadingMore}>
+                      {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                      {loadingMore ? 'Loading more posts…' : loadMoreError ? 'Retry loading posts' : 'Discover more posts'}
+                    </Button>
+                  </div>
                 )}
               </section>
 
@@ -426,7 +458,7 @@ export default function Explore() {
                     <OperatorPanel className="operator-discovery-directory__panel">
                       <SectionHeader eyebrow="People" title="Creators to know" description="Profiles adjacent to the channel you are scanning." />
                       <div className="operator-discovery-creator-list">
-                        {people.map((person: any) => {
+                        {people.map((person) => {
                           const isFollowed = currentUser?.followingIds?.includes(person.id);
                           const isFollowPending = currentUser?.pendingFollowIds?.includes(person.id);
                           const displayName = person.displayName || person.username || 'User';
@@ -437,8 +469,8 @@ export default function Explore() {
                                 <span><strong>{displayName}</strong><small>@{person.username}</small></span>
                               </Link>
                               <p>{person.bio || 'Building and sharing on Yor Talks.'}</p>
-                              <button type="button" data-following={isFollowed || isFollowPending || undefined} onClick={() => handleToggleFollow(person.id)}>
-                                {isFollowed ? 'Following' : isFollowPending ? 'Requested' : 'Follow'}
+                              <button type="button" data-following={isFollowed || isFollowPending || undefined} disabled={pendingIds.has(person.id)} aria-label={`${isFollowed ? 'Unfollow' : isFollowPending ? 'Cancel follow request to' : 'Follow'} ${displayName}`} onClick={() => void toggleFollow(person.id)}>
+                                {pendingIds.has(person.id) ? 'Saving…' : isFollowed ? 'Following' : isFollowPending ? 'Requested' : 'Follow'}
                               </button>
                             </article>
                           );

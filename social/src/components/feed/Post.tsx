@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart2, Bookmark, Globe2, Heart, ImagePlus, LockKeyhole, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Smile, UsersRound, X, Plus } from 'lucide-react';
+import { BarChart2, Bookmark, ChevronLeft, ChevronRight, Globe2, Heart, ImagePlus, LockKeyhole, MessageCircle, MoreHorizontal, Repeat2, SendHorizonal, Smile, UsersRound, X, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { useAppStore, Post as PostType } from '@/lib/store';
@@ -23,12 +23,15 @@ import { useHeartBurst, HeartBurstLayer } from '@/components/ui/HeartBurst';
 import { RichCommentComposer, type RichCommentData } from '@/components/comments/RichCommentComposer';
 import { uploadApprovedMedia } from '@/lib/media-upload';
 import { ContentRatingSelect } from '@/components/content/ContentRatingSelect';
-import { DEFAULT_CONTENT_RATING, contentRatingLabel, type ContentRating } from '@/lib/content-rating';
+import { contentRatingLabel } from '@/lib/content-rating';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
 import { type ContentCategory } from '@/lib/content-category';
 import { ContentCategoryBadge } from '@/components/content/ContentCategoryBadge';
 import { ProtectedMediaImage, ProtectedMediaVideo } from '@/lib/protected-media';
 import { FounderBadge } from '@/components/system/FounderBadge';
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
+import { useComposerDraft } from './use-composer-draft';
+import './feed-experience.css';
 
 const MAX_POST_LENGTH = 500;
 const QUICK_EMOJIS = ['✨', '💡', '👏', '🔥', '💬', '❤️'];
@@ -40,94 +43,43 @@ interface CreatePostProps {
 
 export function CreatePost({ onPublished, compact = false }: CreatePostProps = {}) {
   const instanceId = React.useId();
-  const fieldId = (name: string) => compact ? `${instanceId}-${name}` : name;
   const currentUser = useAppStore((state) => state.currentUser);
   const closeFriends = useAppStore((state) => state.closeFriends);
   const addPost = useAppStore((state) => state.addPost);
-  const [content, setContent] = useState('');
-  const [media, setMedia] = useState<string[]>([]);
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [pollOpen, setPollOpen] = useState(false);
-  const [pollOptions, setPollOptions] = useState(['', '']);
+  const composer = useComposerDraft();
+  const { content, pollOpen, pollOptions, contentRating, contentCategory, audience, distributionMode } = composer.draft;
+  const isUploading = composer.draft.isPublishing;
+  const media = composer.draft.attachments.map(({ url }) => url);
+  const mediaFiles = composer.draft.attachments.map(({ file }) => file);
+  const setContent = (value: React.SetStateAction<string>) => composer.setField('content', value);
+  const setPollOpen = (value: React.SetStateAction<boolean>) => composer.setField('pollOpen', value);
+  const setPollOptions = (value: React.SetStateAction<string[]>) => composer.setField('pollOptions', value);
+  const setContentCategory = (value: typeof contentCategory) => composer.setField('contentCategory', value);
+  const setContentRating = (value: typeof contentRating) => composer.setField('contentRating', value);
+  const setAudience = (value: typeof audience) => composer.setField('audience', value);
+  const setDistributionMode = (value: typeof distributionMode) => composer.setField('distributionMode', value);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [draftReady, setDraftReady] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
-  const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
-  const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
-  const [audience, setAudience] = useState<'followers' | 'close_friends' | 'public'>('public');
-  const [distributionMode, setDistributionMode] = useState<'feed_and_profile' | 'profile_only'>('feed_and_profile');
-  const [isExpanded, setIsExpanded] = useState(!compact);
-  
+  const [isExpanded, setIsExpanded] = useState(!compact || composer.hasDraft);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const mediaRef = useRef<string[]>([]);
-  const draftStorageKey = `yor-composer-draft:${currentUser?.id ?? 'anonymous'}`;
-  useEffect(() => {
-    mediaRef.current = media;
-  }, [media]);
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composerHelpId = React.useId();
+  const composerId = compact ? 'home-post' : 'post';
 
   useEffect(() => {
-    return () => {
-      mediaRef.current.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, []);
+    if (composer.hasDraft) setIsExpanded(true);
+  }, [composer.hasDraft]);
+
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current); }, []);
 
   useEffect(() => {
-    try {
-      const savedDraft = window.localStorage.getItem(draftStorageKey);
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft) as { content?: string; pollOpen?: boolean; pollOptions?: string[]; contentCategory?: ContentCategory | ''; contentRating?: ContentRating; audience?: 'followers' | 'close_friends' | 'public'; distributionMode?: 'feed_and_profile' | 'profile_only' };
-        if (draft.content || draft.pollOpen || draft.contentCategory || draft.audience || draft.distributionMode === 'profile_only') {
-          setContent(typeof draft.content === 'string' ? draft.content : '');
-          setPollOpen(Boolean(draft.pollOpen));
-          setPollOptions(Array.isArray(draft.pollOptions) && draft.pollOptions.length >= 2 ? draft.pollOptions.slice(0, 4) : ['', '']);
-          setContentCategory(draft.contentCategory ?? '');
-          setContentRating(draft.contentRating ?? DEFAULT_CONTENT_RATING);
-          setAudience(draft.audience ?? 'public');
-          setDistributionMode(draft.distributionMode ?? 'feed_and_profile');
-          setDraftSaved(true);
-        }
-      }
-    } catch {
-      // Local draft restoration is best-effort in restricted browser contexts.
-    } finally {
-      setDraftReady(true);
-    }
-  }, [draftStorageKey]);
-
-  useEffect(() => {
-    if (!draftReady) return;
-    const hasDraft = Boolean(content.trim() || pollOpen || contentCategory || media.length || audience !== 'public' || distributionMode !== 'feed_and_profile');
-    try {
-      if (hasDraft) {
-        window.localStorage.setItem(draftStorageKey, JSON.stringify({
-          content,
-          pollOpen,
-          pollOptions,
-          contentCategory,
-          contentRating,
-          audience,
-          distributionMode,
-          savedAt: new Date().toISOString(),
-        }));
-        setDraftSaved(true);
-      } else {
-        window.localStorage.removeItem(draftStorageKey);
-        setDraftSaved(false);
-      }
-    } catch {
-      // Draft persistence is an enhancement; posting must work without storage.
-    }
-  }, [audience, content, contentCategory, contentRating, distributionMode, draftReady, draftStorageKey, media.length, pollOpen, pollOptions]);
+    if (!textareaRef.current) return;
+    textareaRef.current.style.height = 'auto';
+    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 280)}px`;
+  }, [content, isExpanded]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
   };
 
   if (!currentUser) return null;
@@ -146,21 +98,13 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
     if (selectedFiles.length < imageFiles.length) {
       toast({ title: 'You can add up to four images', description: 'Remove an image to choose another.' });
     }
-    setMedia((existing) => [...existing, ...selectedFiles.map((file) => URL.createObjectURL(file))]);
-    setMediaFiles((existing) => [...existing, ...selectedFiles]);
+    composer.addAttachments(selectedFiles);
   };
 
-  const removeMedia = (url: string) => {
-    const index = media.indexOf(url);
-    if (index < 0) return;
-    URL.revokeObjectURL(url);
-    setMedia((existing) => existing.filter((item) => item !== url));
-    setMediaFiles((files) => files.filter((_, fileIndex) => fileIndex !== index));
-  };
+  const removeMedia = (url: string) => composer.removeAttachment(url);
 
   const publish = async () => {
-    if (!canPublish) return;
-    setIsUploading(true);
+    if (!canPublish || !composer.beginPublishing()) return;
     const poll = pollOpen ? {
       question: content.trim(),
       options: validPollOptions.map((text, index) => ({ id: `option_${Date.now()}_${index}`, text, votes: 0 })),
@@ -170,36 +114,27 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
       const uploadedMedia = mediaFiles.length
         ? (await Promise.all(mediaFiles.map((file) => uploadApprovedMedia(file, 'post')))).map(({ mediaId }) => mediaId)
         : undefined;
+      if (!composer.isCurrent()) return;
       await addPost(content.trim(), uploadedMedia, poll, contentRating, contentCategory as ContentCategory, audience, distributionMode);
     } catch (error) {
+      if (!composer.isCurrent()) return;
+      composer.finishPublishing(false);
       toast({ title: 'Could not publish your thought', description: error instanceof Error ? error.message : 'Try again in a moment.' });
-      setIsUploading(false);
       return;
     }
-    media.forEach((url) => URL.revokeObjectURL(url));
-    setMedia([]);
-    setMediaFiles([]);
-    setContent('');
-    setPollOpen(false);
-    setPollOptions(['', '']);
-    setContentCategory('');
-    setContentRating(DEFAULT_CONTENT_RATING);
-    setAudience('public');
-    setDistributionMode('feed_and_profile');
+    if (!composer.isCurrent()) return;
+    composer.finishPublishing(true);
     if (compact) setIsExpanded(false);
-    try { window.localStorage.removeItem(draftStorageKey); } catch { /* Ignore storage failures. */ }
-    setDraftSaved(false);
-    
+
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
     
     setIsSuccess(true);
-    setTimeout(() => setIsSuccess(false), 800);
-    setIsUploading(false);
+    successTimer.current = setTimeout(() => setIsSuccess(false), 800);
     onPublished?.();
     
-    toast({ title: 'Your thought is live', description: 'It is now part of your community’s pulse.' });
+    toast({ title: 'Your post is published', description: distributionMode === 'profile_only' ? 'You can find it on your profile.' : audience === 'close_friends' ? 'Shared with your close friends.' : audience === 'followers' ? 'Shared with your followers.' : 'Your community can now join the conversation.' });
   };
 
   const isNearingLimit = content.length > MAX_POST_LENGTH * 0.8;
@@ -208,7 +143,8 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
   const currentDisplayName = currentUser.displayName || currentUser.username || 'User';
 
   return (
-    <div className="yor-composer border-b border-border/40 pb-4 pt-5 px-5 sm:px-6" data-compact={compact ? 'true' : undefined} data-expanded={isExpanded ? 'true' : 'false'}>
+    <fieldset disabled={isUploading} aria-busy={isUploading} className="yor-composer min-w-0 border-b border-border/40 pb-4 pt-5 px-5 sm:px-6" data-compact={compact ? 'true' : undefined} data-expanded={isExpanded ? 'true' : 'false'}>
+      <legend className="sr-only">Create a post</legend>
       <div className="flex gap-4">
         <Avatar className="h-10 w-10 shrink-0 ring-1 ring-primary/20">
           <AvatarImage src={currentUser.avatarUrl} />
@@ -217,19 +153,21 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
         <div className="min-w-0 flex-1">
           <textarea
             ref={textareaRef}
-            id={fieldId('post-composer')}
+            id={`${composerId}-composer`}
             aria-label="Write a post"
+            aria-describedby={composerHelpId}
+            aria-invalid={isOverLimit}
             placeholder={pollOpen ? 'Ask a question…' : "What's on your mind?"}
             value={content}
             onChange={handleInput}
             onFocus={() => setIsExpanded(true)}
             onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) {
                 event.preventDefault();
                 publish();
               }
             }}
-            className="min-h-[56px] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-muted-foreground/70 py-1.5"
+            className="min-h-[56px] max-h-[280px] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-muted-foreground/70 py-1.5"
             rows={1}
           />
 
@@ -241,7 +179,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                   <button 
                     type="button" 
                     onClick={() => removeMedia(url)} 
-                    className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white shadow-sm transition-opacity"
                     aria-label="Remove image"
                   >
                     <X className="h-4 w-4" />
@@ -255,7 +193,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
             <div className="mb-3 mt-2 rounded-2xl border border-border/40 bg-surface-2/50 p-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-semibold">Poll options</p>
-                <button type="button" onClick={() => setPollOpen(false)} className="text-xs font-medium text-muted-foreground hover:text-foreground">Remove poll</button>
+                <button type="button" onClick={() => setPollOpen(false)} className="min-h-11 text-xs font-medium text-muted-foreground hover:text-foreground">Remove poll</button>
               </div>
               <div className="space-y-2.5">
                 {pollOptions.map((option, index) => (
@@ -265,6 +203,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                       onChange={(event) => setPollOptions((options) => options.map((value, optionIndex) => optionIndex === index ? event.target.value : value))} 
                       placeholder={`Option ${index + 1}`} 
                       aria-label={`Poll option ${index + 1}`}
+                      maxLength={100}
                       className="h-10 rounded-xl bg-surface-1" 
                     />
                     {pollOptions.length > 2 && (
@@ -284,20 +223,20 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
           )}
 
           <div className="yor-composer__publishing-controls">
-            <ContentCategorySelect id={fieldId('post-content-category')} value={contentCategory} onChange={setContentCategory} />
-            <ContentRatingSelect id={fieldId('post-content-rating')} value={contentRating} onChange={setContentRating} />
-            <label htmlFor={fieldId('post-audience')} className="mt-2 block text-xs font-semibold">
+            <ContentCategorySelect id={`${composerId}-content-category`} value={contentCategory} onChange={setContentCategory} />
+            <ContentRatingSelect id={`${composerId}-content-rating`} value={contentRating} onChange={setContentRating} />
+            <label htmlFor={`${composerId}-audience`} className="mt-2 block text-xs font-semibold">
               <span className="mb-1.5 flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-primary" /> Audience</span>
-              <select id={fieldId('post-audience')} value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+              <select id={`${composerId}-audience`} value={audience} onChange={(event) => setAudience(event.target.value as typeof audience)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
                 <option value="public">Public · Everyone can see this</option>
                 <option value="followers">Followers · Your followers only</option>
                 <option value="close_friends" disabled={closeFriends.length === 0}>Close Friends · {closeFriends.length} people</option>
               </select>
               {audience === 'close_friends' && closeFriends.length === 0 && <span className="mt-1 block text-[0.68rem] font-normal text-muted-foreground">Add people in Settings → Close Friends first.</span>}
             </label>
-            <label htmlFor={fieldId('post-distribution')} className="mt-2 block text-xs font-semibold">
+            <label htmlFor={`${composerId}-distribution`} className="mt-2 block text-xs font-semibold">
               <span className="mb-1.5 flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5 text-primary" /> Distribution</span>
-              <select id={fieldId('post-distribution')} value={distributionMode} onChange={(event) => setDistributionMode(event.target.value as typeof distributionMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
+              <select id={`${composerId}-distribution`} value={distributionMode} onChange={(event) => setDistributionMode(event.target.value as typeof distributionMode)} className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
                 <option value="feed_and_profile">Feed + profile · Everyone</option>
                 <option value="profile_only">Profile only · Premium</option>
               </select>
@@ -323,7 +262,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                 <PopoverContent align="start" className="w-auto rounded-2xl p-2">
                   <div className="flex gap-1">
                     {QUICK_EMOJIS.map((emoji) => (
-                      <button type="button" key={emoji} onClick={() => { setContent((value) => `${value}${emoji}`); if(textareaRef.current) handleInput({target: {value: content + emoji}} as any); }} className="grid h-9 w-9 place-items-center rounded-lg text-lg transition-colors hover:bg-muted" aria-label={`Add ${emoji}`}>
+                      <button type="button" key={emoji} disabled={isUploading} onClick={() => { setContent((value) => `${value}${emoji}`); textareaRef.current?.focus(); }} className="grid h-11 w-11 place-items-center rounded-lg text-lg transition-colors hover:bg-muted" aria-label={`Add ${emoji}`}>
                         {emoji}
                       </button>
                     ))}
@@ -337,7 +276,7 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
                   {content.length}/{MAX_POST_LENGTH}
                 </span>
               )}
-              {draftSaved && !isUploading && <span className="yor-composer__draft-status">Draft saved</span>}
+              {composer.hasDraft && !isUploading && <span className="yor-composer__draft-status">{composer.draft.persisted ? 'Text draft saved' : 'Draft kept in this tab'}</span>}
               <Button 
                 type="button" 
                 className={cn("h-9 rounded-full px-5 font-semibold transition-all duration-300", isSuccess && "shadow-[0_0_15px_rgba(var(--primary),0.6)] bg-primary scale-105")} 
@@ -348,9 +287,13 @@ export function CreatePost({ onPublished, compact = false }: CreatePostProps = {
               </Button>
             </div>
           </div>
+          <p id={composerHelpId} className="yor-composer__help mt-2 text-xs text-muted-foreground">
+            {isOverLimit ? `Remove ${content.length - MAX_POST_LENGTH} characters to publish.` : !contentCategory ? 'Choose a category before posting.' : pollOpen && validPollOptions.length < 2 ? 'Add at least two poll options before posting.' : 'Ctrl or ⌘ + Enter to post.'}
+            {media.length > 0 ? ' Images stay in this tab as you browse. Reloading or closing this tab removes them.' : ''}
+          </p>
         </div>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -361,18 +304,21 @@ export function PostCard({ post }: { post: PostType }) {
   const loadUserProfile = useAppStore((state) => state.loadUserProfile);
   const votePoll = useAppStore((state) => state.votePoll);
   const toggleSavePost = useAppStore((state) => state.toggleSavePost);
-  const sharePost = useAppStore((state) => state.sharePost);
   const syncPostFromBackend = useAppStore((state) => state.syncPostFromBackend);
   const toggleRepost = useAppStore((state) => state.toggleRepost);
   const toggleBlockUser = useAppStore((state) => state.toggleBlockUser);
   const [, setLocation] = useLocation();
   const { particles, burst: heartBurst } = useHeartBurst();
-  const [commentText, setCommentText] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
   const [showHeartOverlay, setShowHeartOverlay] = useState(false);
   const [authorLoading, setAuthorLoading] = useState(true);
+  const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
+  const pendingActionRef = useRef(new Set<string>());
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const heartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduceMotion = useAppReducedMotion();
   const author = users[post.authorId];
   const handleOpen = useCallback(() => setLocation(`/post/${post.id}`), [post.id, setLocation]);
   const retryAuthor = useCallback(async () => {
@@ -383,6 +329,22 @@ export function PostCard({ post }: { post: PostType }) {
   useEffect(() => {
     if (!author) void retryAuthor();
   }, [author, retryAuthor]);
+
+  useEffect(() => () => { if (heartTimer.current) clearTimeout(heartTimer.current); }, []);
+
+  const runAction = async (key: string, action: () => Promise<void>) => {
+    if (pendingActionRef.current.has(key)) return;
+    pendingActionRef.current.add(key);
+    setPendingActions(new Set(pendingActionRef.current));
+    try {
+      await action();
+    } catch (error) {
+      toast({ title: 'That action could not be completed', description: error instanceof Error ? error.message : 'Please try again.' });
+    } finally {
+      pendingActionRef.current.delete(key);
+      setPendingActions(new Set(pendingActionRef.current));
+    }
+  };
 
   if (!author) return (
     <article className="p-5" aria-label="Post awaiting creator details">
@@ -397,8 +359,11 @@ export function PostCard({ post }: { post: PostType }) {
     try {
       if (!navigator.clipboard) throw new Error('Copy is unavailable in this browser. Open the post and copy its address.');
       await navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
-      void sharePost(post.id);
       toast({ title: 'Link copied', description: 'Share the conversation anywhere.' });
+      const viewerId = currentUser?.id;
+      void api.sharePost(post.id).then((updated) => {
+        if (useAppStore.getState().currentUser?.id === viewerId) syncPostFromBackend(updated);
+      }).catch(() => { /* A copied link stays usable if recording the share fails. */ });
     } catch (error) {
       toast({ title: 'Could not copy this link', description: error instanceof Error ? error.message : 'Open the post and copy its address.' });
     }
@@ -438,16 +403,26 @@ export function PostCard({ post }: { post: PostType }) {
   const handleDoubleTap = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (!post.likedByMe) {
-      likePost(post.id);
+      void runAction('like', () => likePost(post.id));
     }
     setShowHeartOverlay(true);
-    setTimeout(() => setShowHeartOverlay(false), 900);
+    if (heartTimer.current) clearTimeout(heartTimer.current);
+    heartTimer.current = setTimeout(() => setShowHeartOverlay(false), 900);
   };
 
   const openMediaViewer = (event: React.MouseEvent, index: number) => {
     event.stopPropagation();
     setActiveMediaIndex(index);
     setMediaViewerOpen(true);
+  };
+
+  const moveMedia = (index: number, focus = false) => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    const next = Math.max(0, Math.min(index, (post.media?.length ?? 1) - 1));
+    setActiveMediaIndex(next);
+    if (focus) carousel.querySelectorAll<HTMLButtonElement>('[data-gallery-item]')[next]?.focus({ preventScroll: true });
+    carousel.scrollTo({ left: next * carousel.clientWidth, behavior: reduceMotion ? 'instant' : 'smooth' });
   };
 
   const renderMedia = () => {
@@ -457,7 +432,7 @@ export function PostCard({ post }: { post: PostType }) {
     const authorDisplayName = author.displayName || author.username || 'User';
     const isVideo = (url: string) => /\.(?:mp4|webm|mov)(?:[?#]|$)/i.test(url);
     if (post.media.some(isVideo)) {
-      return <div className="yor-post-media mt-3 flex overflow-x-auto snap-x snap-mandatory rounded-2xl border border-border/20">
+      return <div className="yor-post-media mt-3 flex overflow-x-auto snap-x snap-mandatory rounded-2xl border border-border/20" onClick={(event) => event.stopPropagation()}>
         {post.media.map((url, index) => <div key={url} className="min-w-full snap-center bg-muted">
           {isVideo(url)
             ? <ProtectedMediaVideo src={url} controls playsInline preload="metadata" aria-label={`${authorDisplayName}'s video`} className="w-full max-h-[480px]" />
@@ -510,19 +485,29 @@ export function PostCard({ post }: { post: PostType }) {
           </div>
         )}
         <div 
+          ref={carouselRef}
           className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar"
+          role="group"
+          aria-label="Post images"
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            event.preventDefault();
+            moveMedia(activeMediaIndex + (event.key === 'ArrowRight' ? 1 : -1), true);
+          }}
           onScroll={(e) => {
             const el = e.currentTarget;
-            const index = Math.round(el.scrollLeft / el.clientWidth);
+            const index = Math.max(0, Math.min(len - 1, Math.round(el.scrollLeft / Math.max(el.clientWidth, 1))));
             setActiveMediaIndex(index);
           }}
         >
           {post.media.map((url, index) => (
             <button
               type="button"
+              data-gallery-item
               key={index}
               onClick={(event) => openMediaViewer(event, index)}
-              className="min-w-full snap-center flex-shrink-0 relative bg-muted select-none text-left focus-visible:outline-none"
+              className="min-w-full snap-center flex-shrink-0 relative bg-muted select-none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+              tabIndex={index === activeMediaIndex ? 0 : -1}
               aria-label={`Image ${index + 1} of ${len}`}
             >
               <ProtectedMediaImage
@@ -534,8 +519,13 @@ export function PostCard({ post }: { post: PostType }) {
             </button>
           ))}
         </div>
+        <div className="absolute inset-x-2 top-1/2 flex -translate-y-1/2 justify-between pointer-events-none">
+          <button type="button" aria-label="Previous image" disabled={activeMediaIndex === 0} className="feed-gallery-arrow" onClick={(event) => { event.stopPropagation(); moveMedia(activeMediaIndex - 1); }}><ChevronLeft className="h-5 w-5" /></button>
+          <button type="button" aria-label="Next image" disabled={activeMediaIndex === len - 1} className="feed-gallery-arrow" onClick={(event) => { event.stopPropagation(); moveMedia(activeMediaIndex + 1); }}><ChevronRight className="h-5 w-5" /></button>
+        </div>
+        <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs tabular-nums text-white" aria-live="polite">{activeMediaIndex + 1} / {len}</span>
         {/* Dot indicators */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10" aria-hidden="true">
           {post.media.map((_, index) => (
             <span
               key={index}
@@ -566,13 +556,16 @@ export function PostCard({ post }: { post: PostType }) {
           100% { transform: scale(1); opacity: 0; }
         }
       `}</style>
-      {post.media && post.media.length > 0 && (
+      {mediaViewerOpen && post.media && post.media.length > 0 && (
         <CinematicMediaLightbox
           media={post.media}
           activeIndex={activeMediaIndex}
           onActiveIndexChange={setActiveMediaIndex}
           open={mediaViewerOpen}
-          onOpenChange={setMediaViewerOpen}
+          onOpenChange={(open) => {
+            setMediaViewerOpen(open);
+            if (!open) requestAnimationFrame(() => moveMedia(activeMediaIndex, true));
+          }}
           authorName={authorDisplayName}
           caption={post.content}
         />
@@ -582,6 +575,7 @@ export function PostCard({ post }: { post: PostType }) {
         initial="initial"
         animate="animate"
         tabIndex={0}
+        aria-label={`Post by ${authorDisplayName}`}
         className="yor-post group cursor-pointer px-5 py-5 transition-colors sm:px-6"
         onClick={handleOpen}
         onKeyDown={(event) => {
@@ -616,14 +610,14 @@ export function PostCard({ post }: { post: PostType }) {
                 <svg className="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
               )}
               <FounderBadge
-                isFounder={Boolean((author as any).isFounder || (currentUser?.id === author.id && localStorage.getItem('yor:founder:pass:v1')))}
+                isFounder={Boolean(author.isFounder)}
                 variant="compact"
               />
               <span className="truncate text-[0.78rem] text-muted-foreground font-mono ml-0.5">@{author.username}</span>
               <span className="shrink-0 text-[0.78rem] text-muted-foreground">&middot;</span>
-              <span className="shrink-0 text-[0.72rem] text-muted-foreground font-mono hover:underline">
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: false })}
-              </span>
+              <time dateTime={post.createdAt} title={Number.isNaN(Date.parse(post.createdAt)) ? undefined : new Date(post.createdAt).toLocaleString()} className="shrink-0 text-[0.72rem] text-muted-foreground font-mono hover:underline">
+                {Number.isNaN(Date.parse(post.createdAt)) ? 'Recently' : formatDistanceToNow(new Date(post.createdAt), { addSuffix: false })}
+              </time>
               <span className="shrink-0 rounded-full border border-border/50 px-1.5 py-0.5 text-[0.58rem] font-semibold text-muted-foreground">
                 {contentRatingLabel(post.contentRating)}
               </span>
@@ -672,7 +666,9 @@ export function PostCard({ post }: { post: PostType }) {
                         post.poll!.votedOptionId ? 'border-transparent' : 'border-border/60 hover:bg-surface-2', 
                         isVoted && 'font-medium'
                       )} 
-                      onClick={() => !post.poll!.votedOptionId && votePoll(post.id, option.id)}
+                      disabled={Boolean(post.poll!.votedOptionId) || pendingActions.has('vote')}
+                      aria-pressed={isVoted}
+                      onClick={() => void runAction('vote', () => votePoll(post.id, option.id))}
                     >
                       {post.poll!.votedOptionId && (
                         <motion.span 
@@ -693,7 +689,7 @@ export function PostCard({ post }: { post: PostType }) {
               <div className="mt-3 flex items-center gap-2 text-[0.72rem] text-muted-foreground font-mono">
                 <span>{post.poll.totalVotes.toLocaleString()} votes</span>
                 <span>&middot;</span>
-                <span>Final results</span>
+                <span>{pendingActions.has('vote') ? 'Submitting vote…' : post.poll.votedOptionId ? 'You voted' : 'Choose an option'}</span>
               </div>
             </div>
           )}
@@ -705,8 +701,10 @@ export function PostCard({ post }: { post: PostType }) {
                   <motion.button 
                     {...tapScale}
                     aria-label={post.likedByMe ? 'Unlike post' : 'Like post'}
+                    aria-pressed={post.likedByMe}
+                    disabled={pendingActions.has('like')}
                     className="group relative flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); sounds.playPop(); likePost(post.id); heartBurst(event); }}
+                    onClick={(event) => { event.stopPropagation(); if (!post.likedByMe) { sounds.playPop(); if (!reduceMotion) heartBurst(event); } void runAction('like', () => likePost(post.id)); }}
                   >
                     <RippleEffect className="rounded-full">
                     <div className="relative p-1.5 -ml-1.5 rounded-full group-hover:bg-primary/10 transition-colors">
@@ -735,6 +733,8 @@ export function PostCard({ post }: { post: PostType }) {
                   <motion.button 
                     {...tapScale}
                     aria-label="Reply to post"
+                    aria-expanded={showCommentInput}
+                    aria-controls={`post-reply-${post.id}`}
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
                     onClick={(event) => { event.stopPropagation(); setShowCommentInput(prev => !prev); }}
                   >
@@ -769,7 +769,7 @@ export function PostCard({ post }: { post: PostType }) {
                   <TooltipContent>Share</TooltipContent>
                 </Tooltip>
                 <DropdownMenuContent align="start" className="rounded-xl data-[state=closed]:animate-none">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void toggleRepost(post.id); }}>
+                  <DropdownMenuItem disabled={pendingActions.has('repost')} onClick={(e) => { e.stopPropagation(); void runAction('repost', () => toggleRepost(post.id)); }}>
                     {post.repostedByMe ? 'Remove repost' : 'Repost to feed'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={copyPostLink}>
@@ -779,7 +779,11 @@ export function PostCard({ post }: { post: PostType }) {
                     e.stopPropagation();
                     const url = window.location.origin + '/post/' + post.id;
                     if (navigator.share) {
-                      navigator.share({ title: 'Check this post on Yor Talks', url }).catch(() => {});
+                      try {
+                        await navigator.share({ title: 'A conversation on Yor', url });
+                      } catch (error) {
+                        if (!(error instanceof Error && error.name === 'AbortError')) toast({ title: 'Could not share this post', description: 'Try copying the link instead.' });
+                      }
                     } else {
                       await copyPostLink(e);
                     }
@@ -794,8 +798,10 @@ export function PostCard({ post }: { post: PostType }) {
                   <motion.button
                     {...tapScale}
                     aria-label={post.repostedByMe ? 'Remove repost' : 'Repost'}
+                    aria-pressed={post.repostedByMe}
+                    disabled={pendingActions.has('repost')}
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); void toggleRepost(post.id); }}
+                    onClick={(event) => { event.stopPropagation(); void runAction('repost', () => toggleRepost(post.id)); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-emerald-500/10 transition-colors">
                       <Repeat2 className={cn('h-[18px] w-[18px] transition-colors', post.repostedByMe ? 'text-emerald-500' : 'group-hover:text-foreground')} />
@@ -811,8 +817,10 @@ export function PostCard({ post }: { post: PostType }) {
                   <motion.button 
                     {...tapScale}
                     aria-label={post.savedByMe ? 'Remove from saved' : 'Save post'}
+                    aria-pressed={post.savedByMe}
+                    disabled={pendingActions.has('save')}
                     className="group flex items-center gap-1.5 focus-visible:outline-none"
-                    onClick={(event) => { event.stopPropagation(); toggleSavePost(post.id); toast({ title: post.savedByMe ? 'Removed from saved' : 'Saved for later' }); }}
+                    onClick={(event) => { event.stopPropagation(); void runAction('save', () => toggleSavePost(post.id)); }}
                   >
                     <div className="p-1.5 rounded-full group-hover:bg-amber-500/10 transition-colors">
                       <Bookmark className={cn('h-[18px] w-[18px] transition-colors', post.savedByMe ? 'fill-accent text-accent' : 'group-hover:text-foreground')} />
@@ -838,7 +846,7 @@ export function PostCard({ post }: { post: PostType }) {
 
       {/* Inline Rich Comment Composer (Photos, GIFs, Voice Memos, Super Comments) */}
       {showCommentInput && (
-        <div className="px-5 pb-4 pt-1 sm:px-6" onClick={(e) => e.stopPropagation()}>
+        <div id={`post-reply-${post.id}`} className="px-5 pb-4 pt-1 sm:px-6" onClick={(e) => e.stopPropagation()}>
           <RichCommentComposer
             postId={post.id}
             creatorUser={author}

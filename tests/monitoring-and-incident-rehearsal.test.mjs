@@ -1,14 +1,34 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test, after } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'node:http';
 import { readFile, writeFile, rm, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { metricsTokenMatches, readMetricsToken } from '../api-server/src/lib/metrics-auth.js';
-import { OperationalMetricsService } from '../api-server/src/services/operational-metrics-service.js';
-import { createReadinessHandler } from '../api-server/src/routes/health.js';
 import { renderAlertmanagerConfig } from '../ops/prometheus/render-alertmanager-config.mjs';
+
+if (process.env.YOR_TYPED_MONITORING_REHEARSAL !== 'true') {
+  test('monitoring and incident checks run with the API TypeScript loader',()=>{
+    const apiRequire=createRequire(new URL('../api-server/package.json',import.meta.url));
+    const environment={...process.env,NODE_ENV:'test',YOR_TYPED_MONITORING_REHEARSAL:'true'};
+    delete environment.NODE_TEST_CONTEXT;
+    const run=spawnSync(process.execPath,['--import',pathToFileURL(apiRequire.resolve('tsx')).href,'--test','--test-reporter=tap',fileURLToPath(import.meta.url)],
+      {cwd:fileURLToPath(new URL('..',import.meta.url)),encoding:'utf8',timeout:60000,
+        env:environment});
+    assert.equal(run.status,0,run.stdout+'\n'+run.stderr);
+    assert.match(run.stdout,/# tests 5\b/);
+    assert.match(run.stdout,/# fail 0\b/);
+  });
+} else {
+const {metricsTokenMatches,readMetricsToken}=await import('../api-server/src/lib/metrics-auth.ts');
+const {OperationalMetricsService,operationalMetrics}=await import('../api-server/src/services/operational-metrics-service.ts');
+const {createReadinessHandler}=await import('../api-server/src/routes/health.ts');
+const {env}=await import('../api-server/src/config/env.ts');
+const {pool}=await import('../lib/db/src/index.ts');
+after(async()=>{await operationalMetrics.close();await pool.end();});
 
 test('OPERATIONAL MONITORING 1: Authenticated metrics scraping and bearer token verification', async () => {
   const tempDir = await mkdtemp(path.join(tmpdir(), 'yor-metrics-auth-'));
@@ -364,8 +384,8 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
 
   // Rehearsal E: Recovery Replay Gate - Unreplayed Restored Target Blocks Traffic
   {
-    const originalEnv = process.env.RECOVERY_REPLAY_GATE;
-    process.env.RECOVERY_REPLAY_GATE = 'true';
+    const originalEnv = env.RECOVERY_REPLAY_GATE;
+    env.RECOVERY_REPLAY_GATE = true;
     try {
       const replayBlockedHandler = createReadinessHandler({
         media: () => ({ ready: true }),
@@ -405,7 +425,9 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
       assert.equal(resBody.status, 'healthy');
       assert.equal(resBody.services.recoveryReplay, 'up');
     } finally {
-      process.env.RECOVERY_REPLAY_GATE = originalEnv;
+      env.RECOVERY_REPLAY_GATE = originalEnv;
     }
   }
 });
+
+}

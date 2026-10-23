@@ -11,7 +11,7 @@ import { api, type ContactShield, type PremiumProfileOptions, type PremiumProfil
 import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/motion';
 import { toast } from 'sonner';
-import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, KeyRound, Copy, Smartphone, Search, UserPlus, UsersRound, Crown } from 'lucide-react';
+import { Palette, Shield, Bell, User, LogOut, Trash2, Sliders, ContactRound, Fingerprint, Loader2, Plus, X, Download, Copy, Smartphone, Search, UserPlus, UsersRound, Crown } from 'lucide-react';
 import { DEFAULT_CONTENT_RATING, type ContentRating } from '@/lib/content-rating';
 import QRCode from 'qrcode';
 import { CompanionPetSettings } from '@/components/ui/CompanionPet';
@@ -34,24 +34,38 @@ function ContactShieldPanel() {
   const [emailInput, setEmailInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const mutationPending = useRef(false);
+  const [loadError, setLoadError] = useState('');
+  const [mutationError, setMutationError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [pickerAvailable, setPickerAvailable] = useState(false);
 
   useEffect(() => {
     setPickerAvailable(typeof navigator !== 'undefined' && Boolean((navigator as ContactPickerNavigator).contacts?.select));
     let cancelled = false;
+    setLoading(true);
+    setLoadError('');
     api.getContactShields()
       .then((items) => { if (!cancelled) setShields(items); })
-      .catch(() => { if (!cancelled) toast.error('Could not load your IRL Shield list'); })
+      .catch(() => { if (!cancelled) setLoadError('Could not load your IRL Shield list. Your existing protections have not changed.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [loadAttempt]);
 
   const addEmails = async (emails: string[]) => {
-    const uniqueEmails = [...new Set(emails.map((email) => email.trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
+    if (mutationPending.current || loading || loadError) return;
+    setMutationError('');
+    const uniqueEmails = [...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean))];
     if (uniqueEmails.length === 0) {
-      toast.error('Add a valid email address to shield');
+      setMutationError('Add a valid email address to shield.');
       return;
     }
+    if (uniqueEmails.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      setMutationError('Check each email address before adding your contacts. No contacts have been added.');
+      return;
+    }
+    mutationPending.current = true;
     setAdding(true);
     try {
       const updated = await api.addContactShields(uniqueEmails.map((value) => ({ type: 'email' as const, value })));
@@ -59,8 +73,9 @@ function ContactShieldPanel() {
       setEmailInput('');
       toast.success(`${uniqueEmails.length} contact${uniqueEmails.length === 1 ? '' : 's'} shielded`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not update your shield');
+      setMutationError(error instanceof Error ? error.message : 'Could not update your shield. Your email is still here to try again.');
     } finally {
+      mutationPending.current = false;
       setAdding(false);
     }
   };
@@ -82,17 +97,24 @@ function ContactShieldPanel() {
   };
 
   const removeShield = async (shield: ContactShield) => {
+    if (mutationPending.current || loading || loadError) return;
+    mutationPending.current = true;
+    setRemovingId(shield.id);
+    setMutationError('');
     try {
       await api.removeContactShield(shield.id);
       setShields((current) => current.filter((item) => item.id !== shield.id));
       toast.success('Contact shield removed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not remove contact shield');
+      setMutationError(error instanceof Error ? error.message : 'Could not remove contact shield. Please try again.');
+    } finally {
+      mutationPending.current = false;
+      setRemovingId(null);
     }
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.12] via-card to-accent/[0.08] p-6 shadow-[0_20px_80px_-40px_hsl(var(--primary)/0.55)]">
+    <section aria-labelledby="contact-shield-heading" className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.12] via-card to-accent/[0.08] p-6 shadow-[0_20px_80px_-40px_hsl(var(--primary)/0.55)]">
       <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
       <div className="relative space-y-5">
         <div className="flex items-start justify-between gap-4">
@@ -102,14 +124,14 @@ function ContactShieldPanel() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-display text-base font-bold">IRL Shield</h3>
+                <h3 id="contact-shield-heading" className="font-display text-base font-bold">IRL Shield</h3>
                 <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.16em] text-primary">Private beta</span>
               </div>
               <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">Keep selected people from finding your profile, posts or recommendations. They will never be told.</p>
             </div>
           </div>
           <div className="hidden shrink-0 text-right sm:block">
-            <p className="font-display text-2xl font-bold text-primary">{loading ? '—' : shields.length}</p>
+            <p className="font-display text-2xl font-bold text-primary">{loading || loadError ? '—' : shields.length}</p>
             <p className="text-[0.58rem] font-bold uppercase tracking-[0.15em] text-muted-foreground">shielded</p>
           </div>
         </div>
@@ -118,23 +140,30 @@ function ContactShieldPanel() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={emailInput}
+              disabled={adding}
               onChange={(event) => setEmailInput(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') handleManualAdd(); }}
+              onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); handleManualAdd(); } }}
               placeholder="Paste an email from your contacts"
               aria-label="Email to shield"
               className="h-11 rounded-2xl border-primary/15 bg-background/60"
             />
-            <Button type="button" aria-label="Shield email contacts" onClick={handleManualAdd} disabled={adding} className="h-11 w-full shrink-0 rounded-2xl px-3 sm:w-auto sm:px-4">
+            <Button type="button" aria-label="Shield email contacts" onClick={handleManualAdd} disabled={loading || Boolean(loadError) || adding || Boolean(removingId)} className="h-11 w-full shrink-0 rounded-2xl px-3 sm:w-auto sm:px-4">
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               <span className="hidden sm:inline">Shield</span>
             </Button>
           </div>
           {pickerAvailable && (
-            <Button type="button" variant="outline" onClick={handlePickContacts} disabled={adding} className="h-11 w-full rounded-2xl border-primary/20 bg-background/40 font-bold sm:w-auto">
+            <Button type="button" variant="outline" onClick={handlePickContacts} disabled={loading || Boolean(loadError) || adding || Boolean(removingId)} className="h-11 w-full rounded-2xl border-primary/20 bg-background/40 font-bold sm:w-auto">
               <ContactRound className="h-4 w-4" /> Pick contacts
             </Button>
           )}
         </div>
+
+        {loading && <p role="status" className="text-sm text-muted-foreground">Loading your protected contacts…</p>}
+        {loadError && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"><p>{loadError}</p><Button type="button" variant="outline" className="mt-3" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry IRL Shield</Button></div>}
+        {mutationError && <p role="alert" className="text-sm text-destructive">{mutationError}</p>}
+        {(adding || removingId) && <p role="status" className="text-sm text-muted-foreground">{adding ? 'Protecting your contacts…' : 'Removing contact protection…'}</p>}
+        {!loading && !loadError && shields.length === 0 && <p className="text-sm text-muted-foreground">No protected contacts yet. Add an email to start your shield list.</p>}
 
         <div className="flex items-start gap-2 rounded-2xl border border-border/40 bg-background/35 px-3 py-2.5 text-[0.68rem] leading-relaxed text-muted-foreground">
           <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
@@ -154,8 +183,8 @@ function ContactShieldPanel() {
                       <p className="text-[0.62rem] text-muted-foreground">{shield.type === 'email' ? 'Email match' : 'Phone match'}</p>
                     </div>
                   </div>
-                  <button type="button" onClick={() => void removeShield(shield)} aria-label={`Remove protected contact ${index + 1}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
-                    <X className="h-3.5 w-3.5" />
+                  <button type="button" onClick={() => void removeShield(shield)} disabled={loading || Boolean(loadError) || adding || Boolean(removingId)} aria-label={`Remove protected contact ${index + 1}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                    {removingId === shield.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               ))}
@@ -169,27 +198,44 @@ function ContactShieldPanel() {
 
 function CloseFriendsPanel() {
   const currentUser = useAppStore((state) => state.currentUser);
-  const closeFriends = useAppStore((state) => state.closeFriends);
   const loadCloseFriends = useAppStore((state) => state.loadCloseFriends);
+  const [closeFriends, setCloseFriends] = useState<Awaited<ReturnType<typeof api.getCloseFriends>>>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
+  const [friendsError, setFriendsError] = useState('');
+  const [friendsAttempt, setFriendsAttempt] = useState(0);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Awaited<ReturnType<typeof api.searchUsers>>>([]);
   const [loading, setLoading] = useState(false);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState('');
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  const [mutationError, setMutationError] = useState('');
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const pendingIds = useRef(new Set<string>());
 
   useEffect(() => {
     let active = true;
+    setFriendsLoading(true);
+    setFriendsError('');
+    void api.getCloseFriends()
+      .then((friends) => { if (active) setCloseFriends(friends); })
+      .catch(() => { if (active) setFriendsError('Could not load your Close Friends. Your private circle has not changed.'); })
+      .finally(() => { if (active) setFriendsLoading(false); });
+    return () => { active = false; };
+  }, [currentUser?.id, friendsAttempt]);
+
+  useEffect(() => {
+    let active = true;
+    const normalized = query.trim();
+    setResults([]);
+    setSearchError('');
+    setLoading(normalized.length >= 2);
+    if (normalized.length < 2) return;
     const search = async () => {
-      const normalized = query.trim();
-      if (normalized.length < 2) {
-        setResults([]);
-        return;
-      }
-      setLoading(true);
       try {
         const users = await api.searchUsers(normalized);
         if (active) setResults(users.filter((user) => user.id !== currentUser?.id));
       } catch {
-        if (active) setResults([]);
+        if (active) setSearchError('Could not search people. Please try again.');
       } finally {
         if (active) setLoading(false);
       }
@@ -199,41 +245,52 @@ function CloseFriendsPanel() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [currentUser?.id, query]);
+  }, [currentUser?.id, query, searchAttempt]);
 
   const toggle = async (user: Awaited<ReturnType<typeof api.searchUsers>>[number]) => {
+    if (pendingIds.current.has(user.id) || friendsLoading || friendsError) return;
     const isCloseFriend = closeFriends.some((friend) => friend.id === user.id);
-    setUpdatingId(user.id);
+    pendingIds.current.add(user.id);
+    setUpdatingIds(new Set(pendingIds.current));
+    setMutationError('');
     try {
       if (isCloseFriend) await api.removeCloseFriend(user.id);
       else await api.addCloseFriend(user.id);
-      await loadCloseFriends();
+      setCloseFriends((friends) => isCloseFriend ? friends.filter((friend) => friend.id !== user.id) : [...friends.filter((friend) => friend.id !== user.id), user]);
+      void loadCloseFriends();
       toast.success(isCloseFriend ? `Removed @${user.username} from Close Friends` : `Added @${user.username} to Close Friends`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not update Close Friends');
+      setMutationError(error instanceof Error ? error.message : 'Could not update Close Friends. Your private circle has not changed.');
     } finally {
-      setUpdatingId(null);
+      pendingIds.current.delete(user.id);
+      setUpdatingIds(new Set(pendingIds.current));
     }
   };
 
   return (
-    <section className="surface-1 rounded-2xl border border-border/40 p-6 space-y-5">
+    <section aria-labelledby="close-friends-heading" className="surface-1 rounded-2xl border border-border/40 p-6 space-y-5">
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600"><UsersRound className="h-5 w-5" /></div>
         <div>
-          <h3 className="font-display text-base font-bold">Close Friends</h3>
+          <h3 id="close-friends-heading" className="font-display text-base font-bold">Close Friends</h3>
           <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Create a private circle for Stories and Notes. People are never notified when you add or remove them.</p>
         </div>
-        <span className="ml-auto shrink-0 text-sm font-bold text-emerald-600">{closeFriends.length}</span>
+        <span className="ml-auto shrink-0 text-sm font-bold text-emerald-600">{friendsLoading || friendsError ? '—' : closeFriends.length}</span>
       </div>
+
+      {friendsLoading && <p role="status" className="text-sm text-muted-foreground">Loading your Close Friends…</p>}
+      {friendsError && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"><p>{friendsError}</p><Button type="button" variant="outline" className="mt-3" onClick={() => setFriendsAttempt((attempt) => attempt + 1)}>Retry Close Friends</Button></div>}
+      {mutationError && <p role="alert" className="text-sm text-destructive">{mutationError}</p>}
+      {updatingIds.size > 0 && <p role="status" className="text-sm text-muted-foreground">Updating your private circle…</p>}
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search people by name or username" className="h-11 rounded-2xl pl-9" aria-label="Search people for Close Friends" />
       </div>
 
-      {loading && <p className="text-xs text-muted-foreground">Searching…</p>}
-      {!loading && query.trim().length >= 2 && results.length === 0 && <p className="text-xs text-muted-foreground">No people found. Try a different name or username.</p>}
+      {loading && <p role="status" className="text-sm text-muted-foreground">Searching people…</p>}
+      {searchError && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"><p>{searchError}</p><Button type="button" variant="outline" className="mt-3" onClick={() => setSearchAttempt((attempt) => attempt + 1)}>Retry people search</Button></div>}
+      {!loading && !searchError && query.trim().length >= 2 && results.length === 0 && <p role="status" className="text-sm text-muted-foreground">No people found. Try a different name or username.</p>}
       {results.length > 0 && (
         <div className="space-y-2 border-t border-border/40 pt-4">
           {results.slice(0, 12).map((user) => {
@@ -241,11 +298,11 @@ function CloseFriendsPanel() {
             return (
               <div key={user.id} className="flex items-center gap-3 rounded-2xl border border-border/40 bg-background/35 px-3 py-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {user.avatarUrl ? <ProtectedMediaImage src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : user.fullName.charAt(0).toUpperCase()}
+                  {user.avatarUrl ? <ProtectedMediaImage src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : (user.fullName || user.username).charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{user.fullName || user.username}</p><p className="truncate text-xs text-muted-foreground">@{user.username}</p></div>
-                <Button type="button" variant={isCloseFriend ? 'outline' : 'default'} onClick={() => void toggle(user)} disabled={updatingId === user.id} className="rounded-xl text-xs">
-                  {updatingId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isCloseFriend ? <X className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
+                <Button type="button" aria-label={`${isCloseFriend ? 'Remove' : 'Add'} @${user.username} ${isCloseFriend ? 'from' : 'to'} Close Friends`} variant={isCloseFriend ? 'outline' : 'default'} onClick={() => void toggle(user)} disabled={friendsLoading || Boolean(friendsError) || updatingIds.has(user.id)} className="rounded-xl text-xs">
+                  {updatingIds.has(user.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isCloseFriend ? <X className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
                   {isCloseFriend ? 'Remove' : 'Add'}
                 </Button>
               </div>
@@ -258,10 +315,11 @@ function CloseFriendsPanel() {
         <div className="border-t border-border/40 pt-4">
           <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Your private circle</p>
           <div className="flex flex-wrap gap-2">
-            {closeFriends.map((friend) => <span key={friend.id} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><span className="max-w-32 truncate">@{friend.username}</span><span aria-hidden="true">·</span><span className="text-[0.65rem] font-normal">private</span></span>)}
+            {closeFriends.map((friend) => <span key={friend.id} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 pl-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><span className="max-w-32 truncate">@{friend.username}</span><button type="button" aria-label={`Remove @${friend.username} from your private circle`} disabled={friendsLoading || Boolean(friendsError) || updatingIds.has(friend.id)} onClick={() => void toggle(friend)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-emerald-500/15 disabled:opacity-50">{updatingIds.has(friend.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}</button></span>)}
           </div>
         </div>
       )}
+      {!friendsLoading && !friendsError && closeFriends.length === 0 && <p className="text-sm text-muted-foreground">Your private circle is empty. Search for people to add your first Close Friend.</p>}
     </section>
   );
 }
@@ -275,6 +333,8 @@ function PremiumProfilePanel() {
   const [selection, setSelection] = useState<PremiumProfileSelection | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingField, setSavingField] = useState<keyof PremiumProfileSelection | null>(null);
+  const savePending = useRef(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -307,6 +367,9 @@ function PremiumProfilePanel() {
   };
   const enabled = (feature: string) => catalog?.enabledFeatures?.[feature] === true;
   const save = async <K extends keyof PremiumProfileSelection>(field: K, value: PremiumProfileSelection[K]) => {
+    if (savePending.current || loading || !catalog || currentSelection[field] === value) return;
+    savePending.current = true;
+    setSaveError('');
     const previous = currentSelection[field];
     setSelection((current) => ({ ...(current ?? currentSelection), [field]: value }));
     setSavingField(field);
@@ -315,8 +378,9 @@ function PremiumProfilePanel() {
       toast.success('Premium profile updated');
     } catch (error) {
       setSelection((current) => ({ ...(current ?? currentSelection), [field]: previous }));
-      toast.error(error instanceof Error ? error.message : 'Could not update your premium profile');
+      setSaveError(error instanceof Error ? error.message : 'Could not update your premium profile. Your previous style is still selected.');
     } finally {
+      savePending.current = false;
       setSavingField(null);
     }
   };
@@ -324,25 +388,27 @@ function PremiumProfilePanel() {
   const optionIsDisabled = (id: string, feature: string) => id !== 'default' && !enabled(feature);
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.12] via-card to-accent/[0.08] p-6 shadow-[0_20px_80px_-40px_hsl(var(--primary)/0.55)]">
+    <section aria-labelledby="premium-identity-heading" className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.12] via-card to-accent/[0.08] p-6 shadow-[0_20px_80px_-40px_hsl(var(--primary)/0.55)]">
       <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
       <div className="relative space-y-5">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-background/70 text-primary shadow-inner ring-1 ring-primary/20"><Crown className="h-5 w-5" /></div>
           <div>
-            <div className="flex flex-wrap items-center gap-2"><h3 className="font-display text-base font-bold">Premium identity</h3><span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.16em] text-primary">Curated styles</span></div>
-            <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Choose the typography and app identity that make your profile feel like yours. Options are catalog-controlled; no arbitrary CSS or remote icon URLs are accepted.</p>
+            <div className="flex flex-wrap items-center gap-2"><h3 id="premium-identity-heading" className="font-display text-base font-bold">Premium identity</h3><span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.16em] text-primary">Curated styles</span></div>
+            <p className="mt-1 max-w-lg text-xs leading-relaxed text-muted-foreground">Make your profile feel like yours with curated fonts and app icons.</p>
           </div>
         </div>
 
         {loading && <p role="status" className="text-xs text-muted-foreground">Loading your premium identity options…</p>}
+        {savingField && <p role="status" className="text-sm text-muted-foreground">Saving your style…</p>}
+        {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
         {catalogError && <p role="status" className="text-sm text-muted-foreground">Premium options are temporarily unavailable. Your privacy settings remain available. <button type="button" className="underline" onClick={() => setCatalogAttempt(value => value + 1)}>Retry Premium options</button></p>}
         {!loading && catalog && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Bio style</span><Select value={currentSelection.bioStyleId} disabled={savingField === 'bioStyleId'} onValueChange={(value) => void save('bioStyleId', value)}><SelectTrigger aria-label="Bio style" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.bioStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'CUSTOM_BIO_FONT')}>{option.label}{option.id !== 'default' && !enabled('CUSTOM_BIO_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
-            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Message font</span><Select value={currentSelection.messageFontId} disabled={savingField === 'messageFontId'} onValueChange={(value) => void save('messageFontId', value)}><SelectTrigger aria-label="Message font" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.messageStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'MESSAGE_FONT')}>{option.label}{option.id !== 'default' && !enabled('MESSAGE_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
-            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Story font</span><Select value={currentSelection.storyFontId} disabled={savingField === 'storyFontId'} onValueChange={(value) => void save('storyFontId', value)}><SelectTrigger aria-label="Story font" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.storyStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'STORY_FONT')}>{option.label}{option.id !== 'default' && !enabled('STORY_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
-            <div className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">App icon</span><div className="grid grid-cols-2 gap-2">{catalog.options.appIcons.map((option) => { const locked = option.id !== 'yor-default' && !enabled('CUSTOM_APP_ICON'); const selected = currentSelection.appIconId === option.id; return <button key={option.id} type="button" disabled={locked || savingField === 'appIconId'} onClick={() => void save('appIconId', option.id)} className={`rounded-xl border px-3 py-2 text-left text-xs transition-colors ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 bg-background/35 hover:border-primary/40'} ${locked ? 'cursor-not-allowed opacity-45' : ''}`}><span className="block font-semibold">{option.label}</span><span className="text-[0.62rem] text-muted-foreground">{locked ? 'Premium locked' : option.platforms?.join(' · ')}</span></button>; })}</div><p className="text-[0.68rem] leading-relaxed text-muted-foreground">Applies now to this browser tab, Apple-touch icon, and the next web/PWA install. Native iOS and Android shells keep their build-time icon.</p></div>
+            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Bio style</span><Select value={currentSelection.bioStyleId} disabled={Boolean(savingField)} onValueChange={(value) => void save('bioStyleId', value)}><SelectTrigger aria-label="Bio style" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.bioStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'CUSTOM_BIO_FONT')}>{option.label}{option.id !== 'default' && !enabled('CUSTOM_BIO_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
+            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Message font</span><Select value={currentSelection.messageFontId} disabled={Boolean(savingField)} onValueChange={(value) => void save('messageFontId', value)}><SelectTrigger aria-label="Message font" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.messageStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'MESSAGE_FONT')}>{option.label}{option.id !== 'default' && !enabled('MESSAGE_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
+            <label className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Story font</span><Select value={currentSelection.storyFontId} disabled={Boolean(savingField)} onValueChange={(value) => void save('storyFontId', value)}><SelectTrigger aria-label="Story font" className="rounded-xl bg-background/50"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{catalog.options.storyStyles.map((option) => <SelectItem key={option.id} value={option.id} disabled={optionIsDisabled(option.id, 'STORY_FONT')}>{option.label}{option.id !== 'default' && !enabled('STORY_FONT') ? ' · locked' : ''}</SelectItem>)}</SelectContent></Select></label>
+            <div className="space-y-1.5"><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">App icon</span><div className="grid grid-cols-2 gap-2">{catalog.options.appIcons.map((option) => { const locked = option.id !== 'yor-default' && !enabled('CUSTOM_APP_ICON'); const selected = currentSelection.appIconId === option.id; return <button key={option.id} type="button" disabled={locked || Boolean(savingField)} onClick={() => void save('appIconId', option.id)} className={`rounded-xl border px-3 py-2 text-left text-xs transition-colors ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 bg-background/35 hover:border-primary/40'} ${locked ? 'cursor-not-allowed opacity-45' : ''}`}><span className="block font-semibold">{option.label}</span><span className="text-[0.62rem] text-muted-foreground">{locked ? 'Premium locked' : option.platforms?.join(' · ')}</span></button>; })}</div><p className="text-[0.68rem] leading-relaxed text-muted-foreground">Applies now to this browser tab, Apple-touch icon, and the next web/PWA install. Native iOS and Android shells keep their build-time icon.</p></div>
           </div>
         )}
         <p className="border-t border-border/40 pt-3 text-[0.68rem] leading-relaxed text-muted-foreground">Bio copy stays separate from its presentation style. Switching a style never rewrites your text, and returning to the default style is always available.</p>
@@ -361,6 +427,7 @@ export default function Settings() {
   const updateProfile = useAppStore((s) => s.updateProfile);
   const [avatarFiles, setAvatarFiles] = useState<File[]>([]);
   const [avatarSaving, setAvatarSaving] = useState(false);
+  const avatarPending = useRef(false);
   const updateContentFilter = useAppStore((s) => s.updateContentFilter);
   const updateTwoFactorEnabled = useAppStore((s) => s.setTwoFactorEnabled);
   const privacySettings = useAppStore((s) => s.privacy);
@@ -377,12 +444,17 @@ export default function Settings() {
   const [contentFilter, setContentFilter] = useState<ContentRating>(currentUser?.contentFilter ?? DEFAULT_CONTENT_RATING);
   const [storyViewMode, setStoryViewMode] = useState<'identified' | 'private'>(currentUser?.storyViewMode ?? 'identified');
   const [storyViewModeSaving, setStoryViewModeSaving] = useState(false);
+  const storyViewModePending = useRef(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(currentUser?.twoFactorEnabled));
   const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
   const [twoFactorQr, setTwoFactorQr] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorDisableMode, setTwoFactorDisableMode] = useState(false);
   const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const twoFactorPending = useRef(false);
+  const [twoFactorError, setTwoFactorError] = useState('');
+  const [twoFactorInvalid, setTwoFactorInvalid] = useState(false);
+  const twoFactorCodeInput = useRef<HTMLInputElement>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
@@ -393,6 +465,7 @@ export default function Settings() {
   const deletePending = useRef(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const exportPending = useRef(false);
   const [telemetryConsent, setTelemetryConsentState] = useState(() => hasSavedTelemetryConsent(currentUser?.id ?? null));
   const [telemetryError, setTelemetryError] = useState('');
   const [telemetryStatus, setTelemetryStatus] = useState('');
@@ -470,7 +543,8 @@ export default function Settings() {
   };
 
   const handleStoryViewModeChange = async (value: 'identified' | 'private') => {
-    if (storyViewModeSaving) return;
+    if (storyViewModePending.current) return;
+    storyViewModePending.current = true;
     const previous = storyViewMode;
     setStoryViewMode(value);
     setStoryViewModeSaving(true);
@@ -481,60 +555,99 @@ export default function Settings() {
       setStoryViewMode(previous);
       toast.error(error instanceof Error ? error.message : 'Could not update story viewing privacy');
     } finally {
+      storyViewModePending.current = false;
       setStoryViewModeSaving(false);
     }
   };
 
   const beginTwoFactorSetup = async () => {
+    if (twoFactorPending.current) return;
+    twoFactorPending.current = true;
+    setTwoFactorError('');
+    setTwoFactorInvalid(false);
     setTwoFactorBusy(true);
     try {
-      setTwoFactorSetup(await api.setupTwoFactor());
+      const setup = await api.setupTwoFactor();
+      if (useAppStore.getState().currentUser?.id !== currentUser?.id) return;
+      setTwoFactorSetup(setup);
       setTwoFactorCode('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not start two-factor setup');
+      setTwoFactorError(error instanceof Error ? error.message : 'Could not start two-factor setup. Please try again.');
     } finally {
+      twoFactorPending.current = false;
       setTwoFactorBusy(false);
     }
   };
 
   const confirmTwoFactorSetup = async () => {
+    if (twoFactorPending.current) return;
+    setTwoFactorError('');
+    setTwoFactorInvalid(false);
     if (!/^\d{6}$/.test(twoFactorCode)) {
-      toast.error('Enter the six-digit code from your authenticator app');
+      setTwoFactorError('Enter the six-digit code from your authenticator app.');
+      setTwoFactorInvalid(true);
+      twoFactorCodeInput.current?.focus();
       return;
     }
+    twoFactorPending.current = true;
     setTwoFactorBusy(true);
     try {
       await api.confirmTwoFactor(twoFactorCode);
+      if (useAppStore.getState().currentUser?.id !== currentUser?.id) return;
       setTwoFactorEnabled(true);
       updateTwoFactorEnabled(true);
       setTwoFactorSetup(null);
       setTwoFactorCode('');
       toast.success('Two-factor authentication enabled');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid authenticator code');
+      setTwoFactorError(error instanceof Error ? error.message : 'Invalid authenticator code. Please try again.');
     } finally {
+      twoFactorPending.current = false;
       setTwoFactorBusy(false);
     }
   };
 
   const disableTwoFactor = async () => {
+    if (twoFactorPending.current) return;
+    setTwoFactorError('');
+    setTwoFactorInvalid(false);
     if (!/^\d{6}$/.test(twoFactorCode)) {
-      toast.error('Enter your current six-digit authenticator code');
+      setTwoFactorError('Enter your current six-digit authenticator code.');
+      setTwoFactorInvalid(true);
+      twoFactorCodeInput.current?.focus();
       return;
     }
+    twoFactorPending.current = true;
     setTwoFactorBusy(true);
     try {
       await api.disableTwoFactor(twoFactorCode);
+      if (useAppStore.getState().currentUser?.id !== currentUser?.id) return;
       setTwoFactorEnabled(false);
       updateTwoFactorEnabled(false);
       setTwoFactorCode('');
       setTwoFactorDisableMode(false);
       toast.success('Two-factor authentication disabled');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid authenticator code');
+      setTwoFactorError(error instanceof Error ? error.message : 'Invalid authenticator code. Please try again.');
     } finally {
+      twoFactorPending.current = false;
       setTwoFactorBusy(false);
     }
+  };
+
+  const cancelTwoFactor = () => {
+    if (twoFactorPending.current) return;
+    setTwoFactorSetup(null);
+    setTwoFactorDisableMode(false);
+    setTwoFactorCode('');
+    setTwoFactorError('');
+    setTwoFactorInvalid(false);
+  };
+
+  const changeTwoFactorCode = (value: string) => {
+    setTwoFactorCode(value.replace(/\D/g, '').slice(0, 6));
+    setTwoFactorError('');
+    setTwoFactorInvalid(false);
   };
 
   const copyTwoFactorUri = async () => {
@@ -549,6 +662,8 @@ export default function Settings() {
   };
 
   const exportAccount = async () => {
+    if (exportPending.current) return;
+    exportPending.current = true;
     setExporting(true);
     try {
       const data = await api.exportMyData();
@@ -556,12 +671,15 @@ export default function Settings() {
       const link = document.createElement('a');
       link.href = url;
       link.download = 'yor-talks-account-export.json';
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success('Your account export is ready');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not export your data');
     } finally {
+      exportPending.current = false;
       setExporting(false);
     }
   };
@@ -620,6 +738,8 @@ export default function Settings() {
           {currentUser.avatarUrl && <ProtectedMediaImage src={currentUser.avatarUrl} alt="Current profile image" className="h-20 w-20 rounded-full object-cover" />}
           <MediaImageField id="profile-avatar" label="New profile image" files={avatarFiles} onChange={setAvatarFiles} disabled={avatarSaving} />
           <Button disabled={avatarSaving || avatarFiles.length === 0} onClick={async () => {
+            if (avatarPending.current || !avatarFiles[0]) return;
+            avatarPending.current = true;
             setAvatarSaving(true);
             try {
               const approved = await uploadApprovedMedia(avatarFiles[0], 'avatar');
@@ -628,7 +748,7 @@ export default function Settings() {
               toast.success('Profile image updated');
             } catch (error) {
               toast.error(error instanceof Error ? error.message : 'Could not update your profile image. Your selected file is still here.');
-            } finally { setAvatarSaving(false); }
+            } finally { avatarPending.current = false; setAvatarSaving(false); }
           }}>{avatarSaving ? 'Saving profile image…' : 'Save profile image'}</Button>
         </section>}
         {/* Appearance */}
@@ -771,10 +891,10 @@ export default function Settings() {
             </Select>
           </div>}
 
-          <div className="space-y-3 border-t border-border/30 pt-4">
+          <div role="group" aria-labelledby="two-factor-heading" aria-busy={twoFactorBusy} className="space-y-3 border-t border-border/30 pt-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold">Two-factor authentication</p>
+                <p id="two-factor-heading" className="text-sm font-semibold">Two-factor authentication</p>
                 <p className="text-xs text-muted-foreground">Approve new sign-ins from a trusted Yor app</p>
               </div>
               {!twoFactorEnabled && !twoFactorSetup && <Button type="button" variant="outline" onClick={() => void beginTwoFactorSetup()} disabled={twoFactorBusy} className="rounded-xl text-xs font-bold">Set up</Button>}
@@ -790,21 +910,25 @@ export default function Settings() {
                   <Button type="button" variant="outline" onClick={() => void copyTwoFactorUri()} className="w-full rounded-xl sm:w-auto"><Copy className="mr-2 h-4 w-4" />Copy URI</Button>
                 </div>
                 <a href={twoFactorSetup.otpauthUrl} className="inline-flex text-xs font-semibold text-primary hover:underline">Open setup URI on this phone</a>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input aria-label="Authenticator confirmation code" value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" inputMode="numeric" autoComplete="one-time-code" className="rounded-xl" />
-                  <Button type="button" onClick={() => void confirmTwoFactorSetup()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Confirm</Button>
-                </div>
+                <form onSubmit={(event) => { event.preventDefault(); void confirmTwoFactorSetup(); }} noValidate className="flex flex-col gap-2 sm:flex-row">
+                  <Input ref={twoFactorCodeInput} aria-label="Authenticator confirmation code" aria-invalid={twoFactorInvalid} aria-describedby={twoFactorError ? 'two-factor-error' : undefined} disabled={twoFactorBusy} value={twoFactorCode} onChange={(event) => changeTwoFactorCode(event.target.value)} placeholder="6-digit code" inputMode="numeric" autoComplete="one-time-code" className="rounded-xl" />
+                  <Button type="submit" disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Confirm</Button>
+                  <Button type="button" variant="ghost" disabled={twoFactorBusy} onClick={cancelTwoFactor} className="w-full rounded-xl sm:w-auto">Cancel setup</Button>
+                </form>
               </div>
             )}
             {twoFactorEnabled && !twoFactorSetup && !twoFactorDisableMode && (
-              <Button type="button" variant="ghost" onClick={() => setTwoFactorDisableMode(true)} className="h-auto justify-start p-0 text-xs text-destructive hover:text-destructive">Disable two-factor authentication</Button>
+              <Button type="button" variant="ghost" onClick={() => { setTwoFactorDisableMode(true); setTwoFactorError(''); setTwoFactorInvalid(false); setTwoFactorCode(''); }} className="h-auto justify-start p-0 text-xs text-destructive hover:text-destructive">Disable two-factor authentication</Button>
             )}
             {twoFactorEnabled && twoFactorDisableMode && (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input aria-label="Current authenticator code" value={twoFactorCode} onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Current 6-digit code" inputMode="numeric" autoComplete="one-time-code" className="rounded-xl" />
-                <Button type="button" variant="destructive" onClick={() => void disableTwoFactor()} disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Disable</Button>
-              </div>
+              <form onSubmit={(event) => { event.preventDefault(); void disableTwoFactor(); }} noValidate className="flex flex-col gap-2 sm:flex-row">
+                <Input ref={twoFactorCodeInput} aria-label="Current authenticator code" aria-invalid={twoFactorInvalid} aria-describedby={twoFactorError ? 'two-factor-error' : undefined} disabled={twoFactorBusy} value={twoFactorCode} onChange={(event) => changeTwoFactorCode(event.target.value)} placeholder="Current 6-digit code" inputMode="numeric" autoComplete="one-time-code" className="rounded-xl" />
+                <Button type="submit" variant="destructive" disabled={twoFactorBusy} className="w-full rounded-xl sm:w-auto">Disable</Button>
+                <Button type="button" variant="ghost" disabled={twoFactorBusy} onClick={cancelTwoFactor} className="w-full rounded-xl sm:w-auto">Cancel</Button>
+              </form>
             )}
+            {twoFactorBusy && <p role="status" className="text-sm text-muted-foreground">Updating two-factor authentication…</p>}
+            {twoFactorError && <p id="two-factor-error" role="alert" className="text-sm text-destructive">{twoFactorError}</p>}
           </div>
         </section>
 

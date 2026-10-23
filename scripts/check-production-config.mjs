@@ -239,8 +239,13 @@ if (rootPackage.packageManager !== "pnpm@11.28.5") {
 if (rootPackage.scripts?.build !== "node ./build.mjs") {
   failures.push("The root build script must invoke the monorepo release builder");
 }
-if (socialPackage.scripts?.build !== "vite build --config vite.config.ts") {
-  failures.push("The web build must use the explicit Vite configuration");
+// The web build either calls Vite directly or goes through social/scripts/build.mjs,
+// which pins NODE_ENV=production so React's development bundle cannot ship.
+const socialBuild = socialPackage.scripts?.build;
+const socialBuildWrapper = socialBuild === "node scripts/build.mjs" ? read("social/scripts/build.mjs") : "";
+if (socialBuild !== "vite build --config vite.config.ts"
+  && !(socialBuildWrapper.includes("'build'") && /NODE_ENV:\s*'production'/.test(socialBuildWrapper))) {
+  failures.push("The web build must use the explicit Vite configuration or the production build wrapper");
 }
 if (vercelConfig.framework !== null) {
   failures.push("Vercel must not autodetect the Express backend as the frontend framework");

@@ -21,6 +21,7 @@ export class ConsentService {
 
   async recordConsent(input: RecordConsentInput): Promise<string> {
     const subjectDigest = this.digest(input.email);
+    if (!input.subjectId && !subjectDigest) throw new Error('Consent requires an identified subject');
     const [inserted] = await db
       .insert(consentRecordsTable)
       .values({
@@ -48,6 +49,7 @@ export class ConsentService {
     purpose: string;
   }): Promise<number> {
     const subjectDigest = this.digest(params.email);
+    if (!params.subjectId && !subjectDigest) throw new Error('Consent withdrawal requires an identified subject');
 
     let whereClause = eq(consentRecordsTable.purpose, params.purpose);
     if (params.subjectId && subjectDigest) {
@@ -84,6 +86,7 @@ export class ConsentService {
     purpose: string;
   }): Promise<boolean> {
     const subjectDigest = this.digest(params.email);
+    if (!params.subjectId && !subjectDigest) return false;
     let whereClause = eq(consentRecordsTable.purpose, params.purpose);
 
     if (params.subjectId && subjectDigest) {
@@ -107,7 +110,7 @@ export class ConsentService {
       .select({ granted: consentRecordsTable.granted, withdrawnAt: consentRecordsTable.withdrawnAt })
       .from(consentRecordsTable)
       .where(whereClause)
-      .orderBy(sql`${consentRecordsTable.grantedAt} DESC`)
+      .orderBy(sql`${consentRecordsTable.grantedAt} DESC`,sql`${consentRecordsTable.granted} ASC`,sql`${consentRecordsTable.id} DESC`)
       .limit(1);
 
     if (rows.length === 0) return false;

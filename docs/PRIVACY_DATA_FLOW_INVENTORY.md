@@ -1,66 +1,66 @@
-# Privacy and data-flow inventory — 19 October 2026
+# Privacy and data-flow inventory - 22 October 2026
 
-This inventory describes observed implementation and its limits across account-bound and unbound data stores in Yor Talks. It does not assign statutory legal bases, invent arbitrary retention obligations, approve an operator or certify compliance. [SECURITY_FINDINGS.md](SECURITY_FINDINGS.md) records confirmed security repairs; the final compliance and release-gate reports record decisions requiring qualified legal and operational review.
+This inventory describes observed implementation, including its limits. It does
+not approve retention durations, assign legal bases or certify compliance. See
+the [retention worksheet](RETENTION_HOLDS_APPROVAL_WORKSHEET.md) for outstanding
+operator decisions and the [backend ledger](BACKEND_COMPLETION_2026-10-21.md) for
+executed evidence. Historical audit claims do not override current code.
 
-## Store-by-store inventory: account-bound and unbound records
+## Stores and boundaries
 
-| Data store | Record category & purpose | Ownership & binding | Retention schedule & controls | Deletion behavior & recovery replay | Unresolved policy & launch gates |
-| --- | --- | --- | --- | --- | --- |
-| **PostgreSQL** | Account credentials & profile (`users`, `user_terms_acceptances`) | Account-bound (authenticated subject). | Active account lifetime. Access tokens 15m; sessions 7d. | `DELETE /users/me` erases row, cascades FKs, writes `deletion_journal`, suppresses promotional emails. | Approved retention schedule for dormant/inactive accounts; statutory age assurance. |
-| **PostgreSQL** | Messages & direct/group conversations (`messages`, `conversations`, `conversation_members`) | Account-bound authored messages; shared group membership. | Active conversation duration. Disappearing messages vanish per expiry; unread previews exclude vanished text. | Departing member's authored messages are permanently deleted; surviving group members' conversations and messages are preserved intact. Replay script enforces identical preservation. | Expired message purge job schedule; statutory intercept / retention orders. |
-| **PostgreSQL** | Commerce & financial ledger (`payment_orders`, `subscriptions`, `marketplace_orders`, `ledger_transactions`) | Account-bound references with counterparty isolation. | Retained for financial audit. `ON DELETE SET NULL` prevents cascading financial ledger. | User ID nulled; shipping details minimized; product title snapshotted; counterparty transactions intact. | Statutory tax/accounting retention period (e.g. 7–10 years); financial regulator jurisdiction. |
-| **PostgreSQL** | Moderation & grievances (`reports`, `report_moderation_events`, `grievance_tickets`) | Mix: authenticated reporter (account-bound) vs public URL grievance (unbound). | Active review + dispute period. Staff internal notes private. | Reporter identity decoupled; lookup tokens hashed; resolved tickets retained for audit. | Statutory SLA deadline (dropped pending territorial approval); appeal notice retention. |
-| **PostgreSQL** | Pre-registration & waitlist (`preregistrations`, `waitlist`) | **Unbound** (visitor email + preferred username). Knowledge of email does not grant ownership. | Pre-launch through account activation or verified erasure request. | Verified challenge erasure (`POST /api/privacy/request`) or account deletion erases row. Unsubscribe marks `unsubscribed_at`. | Retention policy for unactivated reservations after launch (1 Dec 2026). |
-| **PostgreSQL** | Consent ledger & suppressions (`consent_records`, `email_suppressions`) | Mix: unbound (subject email hash) and account-bound (user UUID). | Permanent suppression list to honour unsubscribes and deletions. | Added on unsubscribe, account deletion, or verified objection. Never removed on backup restore. | Cross-border transfer of suppression hashes; regulator suppression list integration. |
-| **PostgreSQL** | Durable deletion journal (`deletion_journal`, `recovery_replay_log`) | System / audit store. Pseudonymous (UUID + stable SHA-256 digest). Minimal. | Permanent disaster-recovery authority. | Immutable audit log. Used by `replay-deletions.mjs` to re-erase resurrected accounts after backup restore. | Off-host replication security; cryptographic key custody for manifest signing. |
-| **Redis** | Sessions, rate limits, OTPs, verification nonces, socket mapping | Ephemeral account-bound sessions; unbound IP rate buckets. | Device sessions: 7d; email verification: 24h; login codes: 5m; privacy challenges: 15m; rate limits: 1m–1h. | Explicit logout / account deletion flushes user keys (`session:${userId}:*`). Background cleanup worker handles retries. | Cluster failover replication persistence; cold restart recovery protocol. |
-| **Queues (BullMQ / PostgreSQL)** | Background tasks (`background_jobs`, notification worker) | Account-bound delivery tasks (`account_cleanup`, `media_cleanup`, notifications). | Ephemeral execution. Lease tokens with expiry; dead-letter recording on persistent failure. | Completed tasks scrub payloads, retaining only dedup keys and failure diagnostic metadata. | Dead-letter queue retention period; cleanup of historical job metadata. |
-| **Application & Access Logs** | Pino JSON logs, HTTP request logs, Prometheus metrics | Ephemeral operational records. URLs sanitized via `requestLogPath`. | Query params and tokens stripped; credentials never logged. Deployment log retention external. | Logs not coupled to PostgreSQL transactions; retention must be enforced at aggregator. | Production log aggregator retention period (e.g. 30–90 days); access control audits. |
-| **Product Analytics** | Raw telemetry events & daily rollups (`creator_analytics_daily`) | Account-bound with explicit adult opt-in requirement. | Raw events pruned after daily rollup; aggregate rollups retained. | Withdrawal clears local pending queue and halts ingestion. | Aggregate re-identification assessment; complete retention schedule approval. |
-| **Media Providers (Cloudinary)** | Uploaded images, videos, audio clips, avatars | Account-bound media assets with provider public IDs. | Active asset lifetime. Unreferenced uploads held for review. | Account deletion writes `media_cleanup_holds` and queues `media_cleanup` background jobs for asynchronous provider API deletion. | Processor deletion SLA; provider-side backup retention; legacy URL ownership resolution. |
-| **Backups & Archives** | PostgreSQL pg_dump encrypted with Age; remote rclone sync | Full database snapshot at backup instant $T_0$. | Local encrypted artifacts: 14 days default. Remote lifecycle operator-configured (e.g. 35 days). | Restoring historical backup resurrects users deleted between $T_0$ and $T_{now}$. **Replay engine (`replay-deletions.mjs`) is mandatory before serving traffic.** | Remote object immutability / S3 Object Lock; off-host key custody; disaster recovery drills. |
+| Store | Records and authority | Cleanup and recovery | Remaining boundary |
+| --- | --- | --- | --- |
+| PostgreSQL accounts | Credentials, profiles, terms, eligibility and processing restrictions are bound to the authenticated subject. | Transactional account erasure, authored-content deletion and durable session cleanup. Only verified account email ownership permits deletion/suppression of matching unbound reservations. | Approved inactive-account retention and actual deployment operation. |
+| Standard messaging | Readable bodies, membership, reactions, read/preview receipts and media references. Current membership, contact policy, moderation, deletion and expiry apply to reads/delivery. | Hidden content is denied immediately. A bounded lifecycle job physically clears deleted/expired bodies and receipts, preserving minimal IDs for retry deduplication and surviving replies. Authored rows are erased on account deletion. | Recipient copies, legacy external media and historical backups cannot be recalled by a database update. |
+| Private messaging | Public identities, participants and encrypted envelopes in `private_chat_identities`, `private_chat_threads`, `private_chat_envelopes`. Recovery files and plaintext remain on participant devices. | Participant exports include their ciphertext; account erasure cascades the server records. | Timing, participant IDs, public keys and ciphertext sizes remain visible to the server. See [private-chat limits](PRIVATE_CHAT_SECURITY.md). |
+| Stories, notes and media references | Expiry and audience selection control access; highlights retain stories beyond ordinary expiry. | Managed media references are released for expired unhighlighted stories and hidden messages. | General record-retention and archive policy remain to be specified. |
+| Commerce | Orders, subscriptions, entitlements and the ledger contain counterparty records. | Erasure minimizes personal fields, nulls eligible identity references and preserves financial records. | Applicable retention policy and provider reconciliation are external acceptance items. |
+| Moderation and grievances | Reporter/account references, decisions, notices, public appeal outcomes and private staff notes. | Current staff authority, independent reviews and scoped appeal access; exports exclude internal review notes. | Retention, staffing and approved deadlines; no general preservation-hold mechanism. |
+| Preregistration and waitlist | Unbound address and requested username. Knowledge of an address grants no rights. | Verified purpose-bound proof supports erasure/correction/restriction. Unbound erasures have journal events with a null account ID. | Post-launch retention policy is pending; no automatic launch-date purge. |
+| Privacy requests | Email digest, requested purpose, hashed challenge, expiry and request audit. PostgreSQL is the authority. | Atomic single-use execution; failed delivery invalidates the proof; the expiry sweep clears pending token hashes after expiry. | Request-history retention and deployment verification of email delivery. |
+| Consent/suppression | Versioned purpose decisions, subject/email digests and current suppression state. | Withdrawal is authoritative even when an older preregistration has a consent timestamp. Recovery restores suppression and restrictions. | Policy for historical audit data; digests remain potentially linkable. |
+| Deletion/recovery journal | UUIDs, normalized-email digests, event times and exact replay checkpoints. | The same parameterized erasure implementation runs for live deletion and recovery, including legacy references and session cleanup. | Independent off-host replication, encryption, key custody and approved retention. No automatic signature authority is implied by a digest. |
+| Redis | Sessions, OTPs, rate buckets, socket routing and queue transport. | TTLs, logout/account invalidation and retryable cleanup. Privacy proofs do not rely on Redis. | Managed failover, persistence and isolation settings need a deployment drill. |
+| Durable jobs and logs | Database job leases/dedup keys, heartbeat metadata, sanitized request paths and operational metrics. | Finite completed jobs scrub payloads; permanent sweeps recover terminal states. | Metadata/log retention, actual alert delivery and access control. Provider errors need scrutiny before logging. |
+| Cloudinary and email providers | Managed media and transactional/promotional delivery data. | Managed assets use retryable last-reference cleanup. Unresolved legacy references are retained as cleanup exceptions. | Actual delivery/erasure, provider backup retention and processor terms remain unverified locally. |
+| Backups | Historical full database snapshots encrypted by the backup tooling. | Exact-manifest recovery gating and v2 replay restore erasures, suppressions and restrictions before serving application traffic. | Real off-host restore, retention/key custody and provider cleanup before cutover. |
 
----
+## Rights workflow
 
-## Verified rights-request workflows
+1. `POST /api/privacy/challenge` accepts an address and optional purpose. Its
+   successful response is generic regardless of account/record existence. The
+   database limits issuance per address; transactional email sends a random
+   32-byte token whose stored authority is only its hash, with a 15-minute expiry.
+2. `POST /api/privacy/verify` accepts the token in its body. A valid response
+   reveals only validity and the authorized purpose, and does not consume it.
+   It does not return an address or identity digest.
+3. `POST /api/privacy/request` consumes the proof and executes the matching
+   purpose in one transaction. A different purpose, reused token or expired
+   token cannot authorize a mutation. Execution failure rolls back consumption.
+4. Unbound erasure removes matching reservations, revokes consent, suppresses
+   promotional mail and records the erasure atomically. Current records are
+   resolved from PostgreSQL, including when Redis has restarted.
+5. An email challenge cannot erase an active registered account: that operation
+   returns 409 and requires authenticated account deletion with its existing
+   credential checks. Signed-in restriction/consent endpoints use server-owned
+   identity rather than a supplied address.
+6. Routes set `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. The
+   verification page is a frontend handoff outside this task; see the
+   [API integration notes](BACKEND_FRONTEND_HANDOFF.md).
 
-1. **Email Ownership Boundary**:
-   - Merely knowing or providing an email address **never establishes ownership** or confirms the existence of an account, waitlist reservation, or pre-registration.
-   - `POST /api/privacy/challenge` returns an identical, generic HTTP 200 response (`{ success: true, message: "If records exist for this address, a secure verification link has been sent.", data: { initiated: true } }`) regardless of whether records exist.
-   - A cryptographically random 32-byte single-use token with a 15-minute expiration is delivered exclusively to the target email address.
-   - Challenge tokens are single-use; once verified, they cannot be replayed.
+## Recovery and communication
 
-2. **Unbound Record Handling**:
-   - Pre-registration and waitlist entries are unbound until an account is registered and email ownership is confirmed via link verification.
-   - Verified rights requests (`POST /api/privacy/request`) allow subjects to:
-     - **Erasure**: Permanently delete unbound waitlist and pre-registration records, register email suppression, and revoke consent.
-     - **Restriction / Objection**: Suppress future communications, withdraw consent, and record restriction.
-     - **Correction**: Update pre-registration preferred handles (subject to uniqueness constraints).
-     - **Access**: Inspect pre-registration status or verify historical account deletion status.
+The recovery v2 manifest contains account/unbound erasure events, suppression
+state and processing-restricted account IDs. It is obtained independently of the
+snapshot being restored. Its exact external hash and cutoff must match the
+atomic replay completion record; a different or later marker does not open the
+gate. API startup, worker startup, HTTP application routes and Socket.IO startup
+enforce the gate; health probes remain available for diagnosis. Replay preserves
+later independent reservations and the history/financial records of survivors.
+See the [executed PostgreSQL recovery fixture](../ops/backup/privacy-recovery-database.test.mjs)
+and [operator procedure](../ops/backup/README.md).
 
-3. **Active Account Anti-Takeover Boundary**:
-   - An unauthenticated email challenge token **cannot delete an active registered user account**.
-   - If an active account exists, the rights workflow returns HTTP 409 explaining that full account deletion requires logging into the account and confirming the current password (`DELETE /users/me`). This prevents malicious account deletion via temporary email interception or shared mailbox access.
-
-4. **Account Deletion & Group History Preservation**:
-   - When an account is deleted via `DELETE /users/me`:
-     - The departing author's messages are permanently erased (`DELETE FROM messages WHERE sender_id = $userId`).
-     - Surviving group members' conversation history, messages, and membership are strictly preserved.
-     - Financial records are minimized, preserving ledger integrity.
-     - A permanent record is written to `deletion_journal` containing the account UUID and `stable_identity_digest` (`sha256(lower(email))`).
-     - Promotional and launch email suppressions are recorded automatically.
-     - All granted consents are marked withdrawn.
-
-5. **Disaster Recovery Erasure Replay Engine**:
-   - Restoring a historical PostgreSQL backup restores users deleted after the backup was created.
-   - Services are blocked from serving traffic (`/readyz` returns HTTP 503) when `RECOVERY_REPLAY_GATE=true` until the erasure replay has completed and verified.
-   - `ops/backup/replay-deletions.mjs` consumes an independently validated manifest (verified with external SHA-256 and cutoff timestamp), re-executing erasures on all resurrected accounts, minimizing financial data, and preserving surviving group messages.
-   - `ops/backup/verify-restored-deletions.mjs` verifies with a read-only repeatable-read transaction that 0 erased accounts remain before traffic cutover.
-
-6. **Email Consent & Suppression Enforcement**:
-   - Promotional email dispatch remains strictly disabled (`PROMOTIONAL_EMAIL_ENABLED=false`).
-   - 3-stage suppression and consent enforcement is applied at:
-     1. **Enqueue stage**: Rejects jobs if promotional sending is disabled, email is suppressed, or consent is absent/withdrawn.
-     2. **Worker retry stage**: Re-verifies live database suppression to drop jobs if a recipient unsubscribed while queued.
-     3. **Send execution stage**: Pre-flight verification in `EmailService` prior to provider dispatch.
-   - Transactional security emails (`sendVerificationEmail`, `sendPasswordResetEmail`, `sendEmailLoginCode`, `sendPrivacyChallengeEmail`) are completely independent of promotional suppression preferences.
+Promotional dispatch remains disabled by default. Enqueue, retry and send paths
+check the release flag, live consent and suppression. Transactional security and
+privacy emails have separate purposes. A passing local fixture does not prove
+provider delivery, inbox placement, provider erasure or remote backup durability.

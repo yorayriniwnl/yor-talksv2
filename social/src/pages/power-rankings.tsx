@@ -84,20 +84,29 @@ export default function PowerRankings() {
   const [selectedTier, setSelectedTier] = useState<'all' | 'tier1' | 'tier2'>('all');
   const [votedClan, setVotedClan] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem('yor-power-rankings-preview-vote');
+    try {
+      const stored = window.localStorage.getItem('yor-power-rankings-preview-vote');
+      return CLAN_RANKINGS.some((clan) => clan.name === stored) ? stored : null;
+    } catch {
+      return null;
+    }
   });
 
   const filtered = CLAN_RANKINGS.filter(c => selectedTier === 'all' || c.tier === selectedTier);
 
   const handleVoteMVP = (clanName: string) => {
     if (votedClan) {
-      toast.info(`Your preview vote is already saved for ${votedClan} on this device.`);
+      toast.info(`Your preview vote is already selected for ${votedClan}.`);
       return;
     }
     sounds.playChime();
-    window.localStorage.setItem('yor-power-rankings-preview-vote', clanName);
     setVotedClan(clanName);
-    toast.info(`Preview vote saved for ${clanName}. No national ranking or Karma ledger was updated.`);
+    try {
+      window.localStorage.setItem('yor-power-rankings-preview-vote', clanName);
+      toast.info(`Preview vote saved for ${clanName}. No national ranking or Karma ledger was updated.`);
+    } catch {
+      toast.info(`Preview vote selected for ${clanName} for this visit. This browser could not save it. No national ranking or Karma ledger was updated.`);
+    }
   };
 
   return (
@@ -194,7 +203,7 @@ export default function PowerRankings() {
                     disabled={Boolean(votedClan)}
                     className="rounded-xl font-bold text-xs h-9"
                   >
-                    <Star className="w-3.5 h-3.5 mr-1 text-amber-400 fill-amber-400" /> {votedClan === c.name ? 'Voted on this device' : 'Vote (Preview)'}
+                    <Star className="w-3.5 h-3.5 mr-1 text-amber-400 fill-amber-400" /> {votedClan === c.name ? 'Preview vote selected' : 'Vote (Preview)'}
                   </Button>
                 </div>
               </div>

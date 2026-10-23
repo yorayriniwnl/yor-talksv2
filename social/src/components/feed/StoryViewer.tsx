@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
+import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { useAppStore, type Story } from '@/lib/store';
 import { api, type BackendStoryAnalytics, type BackendStoryViewer } from '@/lib/api-client';
-import { AudioLines, X, Send, Heart, Smile, Zap, Sparkles, HelpCircle, BarChart2, Search, Clock, Pause, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AudioLines, X, Send, Heart, Zap, BarChart2, Search, Clock, Pause, Play, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { sounds } from '@/lib/sound';
@@ -15,6 +14,7 @@ import { toast } from 'sonner';
 import { storyTextStyleToCss } from '@/lib/story-text-style';
 import { storyBackgroundToCss } from '@/lib/story-background';
 import { useProtectedMediaSource } from '@/lib/protected-media';
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 
 interface StoryViewerProps {
   initialAuthorId: string;
@@ -26,9 +26,7 @@ interface StoryViewerProps {
 const STORY_DURATION = 5000;
 const FAST_REACTIONS = ['🔥', '❤️', '🚀', '💎', '😂', '🙏'];
 
-export default function StoryViewer({ initialAuthorId, groupedStories, authors, onClose }: StoryViewerProps) {
-  const reduceMotion = useAppReducedMotion();
-  const restoreFocusRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+export default function StoryViewer({ initialAuthorId, groupedStories, authors: initialAuthors, onClose }: StoryViewerProps) {
   const users = useAppStore((s) => s.users);
   const currentUser = useAppStore((s) => s.currentUser);
   const viewStory = useAppStore((s) => s.viewStory);
@@ -36,12 +34,29 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const voteStoryPoll = useAppStore((s) => s.voteStoryPoll);
   const sendDirectMessage = useAppStore((s) => s.sendDirectMessage);
 
+  // Viewing changes unseen ordering in the tray. Preserve the opened sequence.
+  const [authors] = useState(() => [...initialAuthors]);
   const [authorIndex, setAuthorIndex] = useState(authors.indexOf(initialAuthorId) >= 0 ? authors.indexOf(initialAuthorId) : 0);
   const [storyIndex, setStoryIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [isPointerHeld, setIsPointerHeld] = useState(false);
-  const [isReplyFocused, setIsReplyFocused] = useState(false);
+  const [isHolding, setIsHolding] = useState(false);
+  const [focusPaused, setFocusPaused] = useState(false);
+  const [pageHidden, setPageHidden] = useState(document.hidden);
+  const [loadedStoryId, setLoadedStoryId] = useState('');
+  const [failedStoryId, setFailedStoryId] = useState('');
+  const [mediaRetry, setMediaRetry] = useState(0);
+  const reduceMotion = useAppReducedMotion();
+  const opener = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const replyPending = useRef(false);
+  const reactionPending = useRef(false);
+  const votePending = useRef(false);
+  const viewedIds = useRef(new Set<string>());
+  const sessionOwner = useRef(currentUser?.id);
+  const mediaRef = useRef<HTMLMediaElement | null>(null);
+  const [isReacting, setIsReacting] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
   const [reactionText, setReactionText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
   
@@ -53,6 +68,9 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState('');
+  const [insightsRetry, setInsightsRetry] = useState(0);
+  const insightsGeneration = useRef(0);
+  const viewerPagePending = useRef(false);
   const [analytics, setAnalytics] = useState<BackendStoryAnalytics | null>(null);
   const [viewers, setViewers] = useState<BackendStoryViewer[]>([]);
   const [viewerQuery, setViewerQuery] = useState('');
@@ -64,31 +82,71 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   const currentAuthorId = authors[authorIndex];
   const currentStories = groupedStories[currentAuthorId] || [];
   const currentStory = currentStories[storyIndex];
-  const currentStoryMedia = useProtectedMediaSource(currentStory?.mediaUrl);
+  const insightsKey = useRef('');
+  insightsKey.current = `${currentStory?.id}:${viewerQuery}:${insightsOpen}:${currentUser?.id}`;
+  const activeStoryId = useRef(currentStory?.id);
+  activeStoryId.current = currentStory?.id;
+  const isCurrentSession = () => useAppStore.getState().currentUser?.id === sessionOwner.current;
+  const mediaFailed = useCallback(() => setFailedStoryId(currentStory?.id ?? ''), [currentStory?.id, mediaRetry]);
+  const currentStoryMedia = useProtectedMediaSource(currentStory?.mediaUrl, mediaFailed);
+  const autoPaused = isPaused || isHolding || focusPaused || pageHidden || tippingOpen || insightsOpen || Boolean(reactionText.trim())
+    || currentStory?.type === 'voice' || currentStory?.type === 'video'
+    || (currentStory?.type === 'image' && loadedStoryId !== currentStory.id) || failedStoryId === currentStory?.id;
+
+  const handleNext = useCallback(() => {
+    setProgress(0);
+    if (storyIndex < currentStories.length - 1) setStoryIndex((index) => index + 1);
+    else if (authorIndex < authors.length - 1) { setAuthorIndex((index) => index + 1); setStoryIndex(0); }
+    else onClose();
+  }, [storyIndex, currentStories.length, authorIndex, authors.length, onClose]);
+
+  const handlePrev = useCallback(() => {
+    setProgress(0);
+    if (storyIndex > 0) setStoryIndex((index) => index - 1);
+    else if (authorIndex > 0) {
+      setAuthorIndex(authorIndex - 1);
+      setStoryIndex(Math.max(0, (groupedStories[authors[authorIndex - 1]]?.length ?? 1) - 1));
+    }
+  }, [storyIndex, authorIndex, authors, groupedStories]);
+
+  useEffect(() => {
+    const onVisibility = () => setPageHidden(document.hidden);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   // Auto-advance logic
   useEffect(() => {
-    if (isPaused || isPointerHeld || isReplyFocused || tippingOpen || insightsOpen || !currentStory) return;
+    if (!currentStory || currentUser?.id !== sessionOwner.current) onClose();
+  }, [currentStory?.id, currentUser?.id, onClose]);
+
+  useEffect(() => {
+    if (pageHidden || tippingOpen || insightsOpen) mediaRef.current?.pause();
+  }, [pageHidden, tippingOpen, insightsOpen]);
+
+  useEffect(() => {
+    if (autoPaused || !currentStory) return;
 
     const interval = 50;
     const step = (interval / STORY_DURATION) * 100;
 
     const timer = setInterval(() => {
-      setProgress((p) => {
-        if (p + step >= 100) {
-          handleNext();
-          return 0;
-        }
-        return p + step;
-      });
+      setProgress((previous) => Math.min(100, previous + step));
     }, interval);
 
     return () => clearInterval(timer);
-  }, [authorIndex, storyIndex, isPaused, isPointerHeld, isReplyFocused, tippingOpen, insightsOpen, currentStory]);
+  }, [autoPaused, currentStory?.id]);
+
+  useEffect(() => { if (progress >= 100) handleNext(); }, [progress, handleNext]);
 
   useEffect(() => {
     setProgress(0);
-    setIsPaused(currentStory?.type === 'voice' || reduceMotion);
+    setIsHolding(false);
+    setReactionText('');
+    setLoadedStoryId('');
+    setFailedStoryId('');
+    // Reduced-motion users start each story paused so nothing advances on its own.
+    if (reduceMotion) setIsPaused(true);
   }, [currentStory?.id, currentStory?.type, reduceMotion]);
 
   useEffect(() => {
@@ -112,72 +170,57 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   }, [currentStory?.id]);
 
   useEffect(() => {
+    const generation = ++insightsGeneration.current;
+    viewerPagePending.current = false;
     if (!insightsOpen || currentAuthorId !== currentUser?.id || !currentStory) return;
     let active = true;
+    setInsightsLoading(true);
+    setInsightsError('');
+    setViewerCursor(null);
+    setHasMoreViewers(false);
+    setViewers([]);
+    setAnalytics(null);
     const timer = window.setTimeout(() => {
-      setInsightsLoading(true);
-      setInsightsError('');
-      setViewerCursor(null);
       void Promise.allSettled([
         api.getStoryAnalytics(currentStory.id),
         api.getStoryViewers(currentStory.id, viewerQuery),
       ]).then(([analyticsResult, viewersResult]) => {
-        if (!active) return;
+        if (!active || generation !== insightsGeneration.current || !isCurrentSession()) return;
         if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
         if (viewersResult.status === 'fulfilled') {
           setViewers(viewersResult.value.viewers);
           setViewerCursor(viewersResult.value.nextCursor);
           setHasMoreViewers(Boolean(viewersResult.value.nextCursor));
         }
-        if (analyticsResult.status === 'rejected' && viewersResult.status === 'rejected') {
-          setInsightsError('Story insights are not enabled for this account yet.');
+        if (analyticsResult.status === 'rejected' || viewersResult.status === 'rejected') {
+          setInsightsError(viewersResult.status === 'rejected' ? 'Viewers could not load. Try again.' : 'View totals could not load. Try again.');
         }
       }).finally(() => {
-        if (active) setInsightsLoading(false);
+        if (active && generation === insightsGeneration.current) setInsightsLoading(false);
       });
     }, 180);
     return () => {
       active = false;
+      insightsGeneration.current++;
       window.clearTimeout(timer);
     };
-  }, [currentAuthorId, currentStory?.id, currentUser?.id, insightsOpen, viewerQuery]);
+  }, [currentAuthorId, currentStory?.id, currentUser?.id, insightsOpen, viewerQuery, insightsRetry]);
 
   // Mark as viewed
   useEffect(() => {
-    if (currentStory && !currentStory.viewed && currentUser) {
+    if (currentStory && !currentStory.viewed && currentUser && !viewedIds.current.has(currentStory.id)) {
+      viewedIds.current.add(currentStory.id);
       viewStory(currentStory.id).catch(console.error);
     }
   }, [currentStory, currentUser, viewStory]);
-
-  const handleNext = () => {
-    setProgress(0);
-    if (storyIndex < currentStories.length - 1) {
-      setStoryIndex((i) => i + 1);
-    } else if (authorIndex < authors.length - 1) {
-      setAuthorIndex((i) => i + 1);
-      setStoryIndex(0);
-    } else {
-      onClose();
-    }
-  };
-
-  const handlePrev = () => {
-    setProgress(0);
-    if (storyIndex > 0) {
-      setStoryIndex((i) => i - 1);
-    } else if (authorIndex > 0) {
-      const prevAuthorId = authors[authorIndex - 1];
-      setAuthorIndex(authorIndex - 1);
-      setStoryIndex(groupedStories[prevAuthorId].length - 1);
-    }
-  };
 
   const handleTap = (e: React.MouseEvent) => {
     // Don't trigger if clicking controls or interactive elements
     if ((e.target as HTMLElement).closest('.story-controls')) return;
 
-    const x = e.clientX;
-    const width = window.innerWidth;
+    const bounds = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - bounds.left;
+    const width = bounds.width;
     if (x < width * 0.35) {
       handlePrev();
     } else {
@@ -185,8 +228,16 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
     }
   };
 
-  const handleQuickReaction = (emoji: string) => {
-    sounds.playPop();
+  const handleQuickReaction = async (emoji: string) => {
+    if (!currentStory || !currentUser || reactionPending.current || currentAuthorId === currentUser.id) return;
+    const storyId = currentStory.id;
+    reactionPending.current = true;
+    setIsReacting(true);
+    try {
+      await reactToStory(storyId, emoji);
+      if (!isCurrentSession() || activeStoryId.current !== storyId) return;
+      sounds.playPop();
+      if (reduceMotion) return;
     const id = `pt_${Date.now()}_${Math.random()}`;
     const x = 30 + Math.random() * 40;
     setFloatingParticles((prev) => [...prev, { id, emoji, x }]);
@@ -194,52 +245,70 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
       setFloatingParticles((prev) => prev.filter((p) => p.id !== id));
     }, 1800);
 
-    if (currentStory) {
-      reactToStory(currentStory.id, emoji).catch(console.error);
+    } catch {
+      if (isCurrentSession()) toast.error('Reaction not sent. Please try again.');
+    } finally {
+      reactionPending.current = false;
+      setIsReacting(false);
     }
   };
 
   const handleSuperHeart = async () => {
-    if (!currentStory || !superHeartEnabled || superHeartBusy || currentAuthorId === currentUser?.id) return;
+    if (!currentStory || !superHeartEnabled || reactionPending.current || currentAuthorId === currentUser?.id) return;
+    reactionPending.current = true;
+    setIsReacting(true);
     setSuperHeartBusy(true);
     try {
-      sounds.playChime();
       await reactToStory(currentStory.id, '💖', 'SUPER_HEART');
+      if (!isCurrentSession()) return;
+      sounds.playChime();
       toast.success('Super Heart sent ✨');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Super Heart could not be sent');
+      if (isCurrentSession()) toast.error(error instanceof Error ? error.message : 'Super Heart could not be sent');
     } finally {
       setSuperHeartBusy(false);
+      reactionPending.current = false;
+      setIsReacting(false);
     }
   };
 
   const loadMoreViewers = async () => {
-    if (!currentStory || !viewerCursor || insightsLoading) return;
+    if (!currentStory || !viewerCursor || insightsLoading || viewerPagePending.current) return;
+    viewerPagePending.current = true;
+    const generation = insightsGeneration.current;
+    const key = insightsKey.current;
+    const isCurrent = () => generation === insightsGeneration.current && key === insightsKey.current && isCurrentSession();
     setInsightsLoading(true);
+    setInsightsError('');
     try {
       const result = await api.getStoryViewers(currentStory.id, viewerQuery, viewerCursor);
-      setViewers((current) => [...current, ...result.viewers]);
+      if (!isCurrent()) return;
+      setViewers((current) => [...new Map([...current, ...result.viewers].map(viewer => [viewer.viewerId, viewer])).values()]);
       setViewerCursor(result.nextCursor);
       setHasMoreViewers(Boolean(result.nextCursor));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not load more viewers');
+      if (isCurrent()) setInsightsError(error instanceof Error ? error.message : 'Could not load more viewers');
     } finally {
-      setInsightsLoading(false);
+      if (isCurrent()) { viewerPagePending.current = false; setInsightsLoading(false); }
     }
   };
 
   const handleSendReaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reactionText.trim() || !currentStory || !currentUser || currentAuthorId === currentUser.id || isSendingReply) return;
+    if (!reactionText.trim() || !currentStory || !currentUser || currentAuthorId === currentUser.id || replyPending.current) return;
+    replyPending.current = true;
+    const storyId = currentStory.id;
     setIsSendingReply(true);
     try {
-      sounds.playChime();
       await sendDirectMessage(currentAuthorId, `[Story Reply] ${reactionText.trim()}`);
+      if (!isCurrentSession()) return;
+      sounds.playChime();
       toast.success('Reply sent to story author! 💬');
-      setReactionText('');
+      if (activeStoryId.current === storyId) setReactionText('');
     } catch {
-      toast.error('Reply not sent. Try again when you are ready.');
+      if (isCurrentSession()) toast.error('Reply not sent. Try again when you are ready.');
     } finally {
+      replyPending.current = false;
       setIsSendingReply(false);
     }
   };
@@ -253,29 +322,30 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
   return (
     <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Content
-          asChild
-          onCloseAutoFocus={(event) => { event.preventDefault(); restoreFocusRef.current?.focus(); }}
-          onKeyDown={(event) => {
-            if (tippingOpen || (event.target as HTMLElement).closest('input, textarea, select, audio, video, [role="slider"], [contenteditable="true"]')) return;
-            if (event.key === 'ArrowRight') { event.preventDefault(); handleNext(); }
-            if (event.key === 'ArrowLeft') { event.preventDefault(); handlePrev(); }
-          }}
-        >
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[70] bg-black/90" />
+      <DialogPrimitive.Content asChild onOpenAutoFocus={(event) => { event.preventDefault(); closeRef.current?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); opener.current?.focus(); }}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col sm:p-4 md:p-8 items-center justify-center font-sans"
+        className="fixed inset-0 z-[70] backdrop-blur-xl flex flex-col sm:p-4 md:p-8 items-center justify-center font-sans outline-none [&_button]:min-h-11 [&_button]:min-w-11 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-white"
+        onKeyDown={(event) => {
+          if (tippingOpen || insightsOpen || (event.target instanceof HTMLElement && event.target.closest('input,textarea,audio,video'))) return;
+          if (event.key === 'ArrowRight') { event.preventDefault(); handleNext(); }
+          if (event.key === 'ArrowLeft') { event.preventDefault(); handlePrev(); }
+          if (event.key === ' ' && event.target === event.currentTarget) { event.preventDefault(); setIsPaused((paused) => !paused); }
+        }}
       >
         <DialogPrimitive.Title className="sr-only">{displayName}'s story</DialogPrimitive.Title>
-        <DialogPrimitive.Description className="sr-only">Use the previous and next buttons or arrow keys to browse stories. Pause to read, and press Escape to close.</DialogPrimitive.Description>
+        <DialogPrimitive.Description className="sr-only">Use the previous and next buttons or arrow keys to browse. Pause to keep a story open. Escape closes the viewer.</DialogPrimitive.Description>
         <div 
-          className="relative w-full h-full max-h-[820px] sm:max-w-[420px] sm:rounded-3xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl border border-white/10"
-          onPointerDown={() => setIsPointerHeld(true)}
-          onPointerUp={() => setIsPointerHeld(false)}
-          onPointerCancel={() => setIsPointerHeld(false)}
-          onPointerLeave={() => setIsPointerHeld(false)}
+          className="relative w-full h-full sm:max-w-[420px] sm:h-[820px] sm:rounded-3xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl border border-white/10"
+          onPointerDown={() => setIsHolding(true)}
+          onPointerUp={() => setIsHolding(false)}
+          onPointerCancel={() => setIsHolding(false)}
+          onPointerLeave={() => setIsHolding(false)}
+          onFocusCapture={(event) => { if (event.target instanceof HTMLElement && event.target.closest('input,textarea')) setFocusPaused(true); }}
+          onBlurCapture={() => setFocusPaused(false)}
         >
           {/* Progress Bars */}
           <div className="absolute top-0 left-0 right-0 z-30 flex gap-1.5 p-3 pt-4">
@@ -303,15 +373,13 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                   <span className="font-bold text-sm leading-none">{displayName}</span>
                 </div>
                 <span className="text-[0.68rem] text-white/70 font-mono">
-                  {formatDistanceToNow(new Date(currentStory.createdAt))} ago
+                  {Number.isNaN(Date.parse(currentStory.createdAt)) ? 'Recently' : formatDistanceToNow(new Date(currentStory.createdAt), { addSuffix: true })}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2 story-controls">
-              <button type="button" onClick={() => setIsPaused((paused) => !paused)} aria-label={isPaused ? 'Resume story' : 'Pause story'} aria-pressed={isPaused} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-white">
-                {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-              </button>
+              {(currentStory.type === 'text' || currentStory.type === 'image') && <button type="button" aria-label={isPaused ? 'Resume story' : 'Pause story'} aria-pressed={isPaused} onClick={() => setIsPaused((paused) => !paused)} className="grid place-items-center rounded-full bg-black/40 text-white">{isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</button>}
               {currentAuthorId === currentUser?.id && (
                 <button
                   type="button"
@@ -337,7 +405,8 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
               <button 
                 type="button"
-                aria-label="Close story"
+                ref={closeRef}
+                aria-label="Close stories"
                 onClick={(e) => { e.stopPropagation(); onClose(); }} 
                 className="p-2 text-white/80 hover:text-white bg-black/40 rounded-full backdrop-blur-md transition-colors"
               >
@@ -361,8 +430,9 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 {!insightsLoading && viewers.length === 0 && !insightsError && <p className="p-4 text-xs text-white/60">No identified viewers match this search.</p>}
                 {viewers.map((viewer) => <div key={`${viewer.viewerId}-${viewer.viewedAt}`} className="flex items-center gap-3 border-b border-white/5 px-3 py-2.5 last:border-0"><Avatar className="h-8 w-8"><AvatarImage src={viewer.avatarUrl ?? undefined} /><AvatarFallback className="bg-white/10 text-xs">{(viewer.displayName || viewer.username || 'U').charAt(0).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{viewer.displayName || viewer.username}</p><p className="truncate text-[0.65rem] text-white/50">@{viewer.username}</p></div><span className="flex shrink-0 items-center gap-1 text-[0.62rem] text-white/50"><Clock className="h-3 w-3" /> {formatDistanceToNow(new Date(viewer.viewedAt), { addSuffix: true })}</span></div>)}
               </div>
-              {hasMoreViewers && <button type="button" onClick={() => void loadMoreViewers()} className="mt-3 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-bold text-white/80 hover:bg-white/10">Load more identified viewers</button>}
+              {hasMoreViewers && <button type="button" disabled={insightsLoading} onClick={() => void loadMoreViewers()} className="mt-3 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-bold text-white/80 hover:bg-white/10 disabled:opacity-50">{insightsLoading ? 'Loading viewers…' : 'Load more identified viewers'}</button>}
               {insightsError && <p role="status" className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-200">{insightsError}</p>}
+              {insightsError && <button type="button" disabled={insightsLoading} onClick={() => setInsightsRetry(value => value + 1)} className="mt-2 rounded-xl border border-white/30 px-4 py-2 text-sm text-white">Retry insights</button>}
             </div>
           )}
 
@@ -387,10 +457,18 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
             className="flex-1 relative cursor-pointer flex items-center justify-center select-none"
             onClick={handleTap}
           >
-            <button type="button" aria-label="Previous story" disabled={authorIndex === 0 && storyIndex === 0} onClick={(event) => { event.stopPropagation(); handlePrev(); }} className="story-controls absolute left-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white disabled:invisible"><ChevronLeft className="h-5 w-5" /></button>
-            <button type="button" aria-label="Next story" onClick={(event) => { event.stopPropagation(); handleNext(); }} className="story-controls absolute right-2 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white"><ChevronRight className="h-5 w-5" /></button>
-            {currentStory.type === 'image' || currentStory.type === 'video' ? (
-              <img src={currentStoryMedia} className="absolute inset-0 w-full h-full object-cover" alt={`Story photo shared by ${author?.displayName || author?.username || 'a member'}`} />
+            {currentStory.type !== 'text' && (failedStoryId === currentStory.id || !currentStory.mediaUrl) ? (
+              <div className="story-controls z-10 space-y-3 p-8 text-center text-white" onClick={(event) => event.stopPropagation()}>
+                <p role="status">This story could not be loaded.</p>
+                {currentStory.mediaUrl && <button type="button" className="rounded-full border border-white/30 px-5" onClick={() => { setFailedStoryId(''); setLoadedStoryId(''); setMediaRetry((retry) => retry + 1); }}>Retry story</button>}
+              </div>
+            ) : currentStory.type === 'image' ? (
+              <>
+                {loadedStoryId !== currentStory.id && <span role="status" className="text-white"><Loader2 className="mx-auto h-6 w-6 animate-spin" /><span className="sr-only">Loading story</span></span>}
+                <img key={`${currentStory.id}-${mediaRetry}`} src={currentStoryMedia} className="absolute inset-0 w-full h-full object-contain" alt={`${displayName}'s story`} onLoad={() => setLoadedStoryId(currentStory.id)} onError={mediaFailed} />
+              </>
+            ) : currentStory.type === 'video' ? (
+              <video key={`${currentStory.id}-${mediaRetry}`} ref={(element) => { mediaRef.current = element; }} controls playsInline preload="metadata" src={currentStoryMedia} className="story-controls absolute inset-0 h-full w-full object-contain" aria-label={`${displayName}'s video story`} onError={mediaFailed} onEnded={handleNext} onClick={(event) => event.stopPropagation()} />
             ) : null}
             
             {currentStory.type === 'text' && (
@@ -404,7 +482,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
               </div>
             )}
 
-            {currentStory.type === 'voice' && (
+            {currentStory.type === 'voice' && currentStory.mediaUrl && failedStoryId !== currentStory.id && (
               <div
                 className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-gradient-to-br from-slate-950 via-indigo-950 to-fuchsia-950 p-8 text-center"
                 onClick={(event) => event.stopPropagation()}
@@ -413,13 +491,14 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 <div className="w-full max-w-sm space-y-3">
                   <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/60">Voice Story</p>
                   <audio
-                    aria-label={`${displayName}'s voice story`}
+                    key={`${currentStory.id}-${mediaRetry}`}
+                    ref={(element) => { mediaRef.current = element; }}
                     controls
                     autoFocus={false}
                     src={currentStoryMedia}
                     className="story-controls w-full"
-                    onPlay={() => setIsPaused(true)}
-                    onPause={() => setIsPaused(true)}
+                    aria-label={`${displayName}'s voice story`}
+                    onError={mediaFailed}
                     onEnded={handleNext}
                   />
                   {currentStory.textContent && <p className="text-lg font-semibold leading-snug text-white">{currentStory.textContent}</p>}
@@ -440,7 +519,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                       const hasVoted = Boolean(currentStory.poll!.votedOptionId);
                       const isVoted = currentStory.poll!.votedOptionId === option.id;
                       return (
-                        <button key={option.id} type="button" disabled={hasVoted} onClick={() => { sounds.playPop(); void voteStoryPoll(currentStory.id, option.id); }} className="relative w-full overflow-hidden p-2.5 rounded-2xl border border-primary/40 text-xs font-bold transition-all text-left flex items-center justify-between disabled:cursor-default">
+                        <button key={option.id} type="button" disabled={hasVoted || isVoting} onClick={async () => { if (votePending.current) return; votePending.current = true; setIsVoting(true); try { await voteStoryPoll(currentStory.id, option.id); } finally { votePending.current = false; setIsVoting(false); } }} className="relative w-full overflow-hidden p-2.5 rounded-2xl border border-primary/40 text-xs font-bold transition-all text-left flex items-center justify-between disabled:cursor-default">
                           {hasVoted && <motion.div initial={{ width: 0 }} animate={{ width: `${percentage}%` }} className={cn('absolute inset-y-0 left-0 z-0', isVoted ? 'bg-primary/30' : 'bg-accent/20')} />}
                           <span className="relative z-10 text-foreground">{option.text}</span>
                           {hasVoted && <span className="relative z-10 font-mono text-primary font-extrabold">{percentage}%</span>}
@@ -456,19 +535,27 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
 
           {/* Bottom Fast Reaction Bar & Reply Box */}
           <div className="relative z-30 p-4 pt-2 bg-gradient-to-t from-black/95 via-black/80 to-transparent story-controls space-y-2.5">
+            <div className="flex items-center justify-between gap-2 text-white">
+              <button type="button" aria-label="Previous story" disabled={authorIndex === 0 && storyIndex === 0} onClick={handlePrev} className="grid place-items-center rounded-full bg-white/10 disabled:opacity-30"><ChevronLeft className="h-5 w-5" /></button>
+              <span role="status" className="text-xs text-white/70">Story {storyIndex + 1} of {currentStories.length}</span>
+              <button type="button" aria-label="Next story" onClick={handleNext} className="grid place-items-center rounded-full bg-white/10"><ChevronRight className="h-5 w-5" /></button>
+            </div>
             {/* Quick 6-Emoji Fast Reactions */}
             <div className="flex items-center justify-between px-1">
               {FAST_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
-                  onClick={() => handleQuickReaction(emoji)}
+                  type="button"
+                  aria-label={`React with ${emoji}`}
+                  disabled={isReacting || currentAuthorId === currentUser?.id}
+                  onClick={() => void handleQuickReaction(emoji)}
                   className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-lg hover:scale-125 active:scale-95 transition-transform cursor-pointer"
                 >
                   {emoji}
                 </button>
               ))}
             </div>
-            {superHeartEnabled && currentAuthorId !== currentUser?.id && <button type="button" onClick={() => void handleSuperHeart()} disabled={superHeartBusy} className="flex w-full items-center justify-center gap-2 rounded-full border border-fuchsia-300/30 bg-fuchsia-400/15 py-2 text-xs font-bold text-fuchsia-100 transition-colors hover:bg-fuchsia-400/25 disabled:opacity-50"><Heart className="h-3.5 w-3.5 fill-current" /> {superHeartBusy ? 'Sending Super Heart…' : 'Send Super Heart'}</button>}
+            {superHeartEnabled && currentAuthorId !== currentUser?.id && <button type="button" onClick={() => void handleSuperHeart()} disabled={isReacting} className="flex w-full items-center justify-center gap-2 rounded-full border border-fuchsia-300/30 bg-fuchsia-400/15 py-2 text-xs font-bold text-fuchsia-100 transition-colors hover:bg-fuchsia-400/25 disabled:opacity-50"><Heart className="h-3.5 w-3.5 fill-current" /> {superHeartBusy ? 'Sending Super Heart…' : 'Send Super Heart'}</button>}
 
             {/* DM Reply Input */}
             <form onSubmit={handleSendReaction} className="flex items-center gap-2">
@@ -476,8 +563,6 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 aria-label={`Reply to ${displayName}'s story`}
                 value={reactionText}
                 onChange={(e) => setReactionText(e.target.value)}
-                onFocus={() => setIsReplyFocused(true)}
-                onBlur={() => setIsReplyFocused(false)}
                 placeholder={currentAuthorId === currentUser?.id ? 'Your own story' : `Reply to ${displayName}…`}
                 disabled={currentAuthorId === currentUser?.id || isSendingReply}
                 className="rounded-full bg-white/10 border-white/20 text-xs h-10 text-white placeholder:text-white/60 focus:border-primary/60"
@@ -486,7 +571,7 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
                 type="submit"
                 aria-label="Send story reply"
                 disabled={!reactionText.trim() || currentAuthorId === currentUser?.id || isSendingReply}
-                className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 shrink-0 glow-neon-primary cursor-pointer"
+                className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-40 shrink-0 glow-neon-primary cursor-pointer"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -510,8 +595,9 @@ export default function StoryViewer({ initialAuthorId, groupedStories, authors, 
           />
         )}
       </motion.div>
-        </DialogPrimitive.Content>
+      </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }
+
