@@ -10,6 +10,29 @@ const currentDir = import.meta.dirname || path.dirname(fileURLToPath(import.meta
 const envDir = path.resolve(currentDir, '..');
 type BuildEnvironment = Record<string, string | undefined>;
 
+const vendorChunks: Record<string, string[]> = {
+  'vendor-react': ['react', 'react-dom', 'scheduler'],
+  // Class-name helpers shared by nearly every component
+  'vendor-ui': ['clsx', 'tailwind-merge', 'class-variance-authority'],
+  // Animation framework
+  'vendor-motion': ['framer-motion', 'motion-dom', 'motion-utils'],
+  // Date utilities
+  'vendor-date': ['date-fns'],
+  // Heavy charting (dashboard only) and the packages only it uses
+  'vendor-charts': ['recharts', 'recharts-scale', 'react-smooth', 'victory-vendor', 'lodash', 'decimal.js-light', 'internmap'],
+  // Icon library
+  'vendor-icons': ['lucide-react'],
+  // State management
+  'vendor-state': ['zustand'],
+  // Socket transport is used by the shell; keep its payload separate.
+  'vendor-socket': ['socket.io-client', 'engine.io-client', 'engine.io-parser', 'socket.io-parser', '@socket.io/component-emitter'],
+  // Live calling is route-level and should not block first paint.
+  'vendor-livekit': ['livekit-client', '@livekit/protocol', '@livekit/mutex', 'sdp-transform', 'webrtc-adapter', 'sdp', '@bufbuild/protobuf'],
+};
+const vendorChunkByPackage = new Map(
+  Object.entries(vendorChunks).flatMap(([chunk, pkgs]) => pkgs.map((pkg) => [pkg, chunk] as const)),
+);
+
 function requireProductionBuild(): Plugin {
   return {
     name: 'require-production-build',
@@ -163,21 +186,16 @@ export default defineConfig(async ({ mode }) => {
       emptyOutDir: true,
       rollupOptions: {
         output: {
-          manualChunks: {
-            // Animation framework
-            'vendor-motion': ['framer-motion'],
-            // Date utilities
-            'vendor-date': ['date-fns'],
-            // Heavy charting (used by dashboard)
-            'vendor-charts': ['recharts'],
-            // Icon library
-            'vendor-icons': ['lucide-react'],
-            // State management + data
-            'vendor-state': ['zustand'],
-            // Socket transport is used by the shell; keep its payload separate.
-            'vendor-socket': ['socket.io-client'],
-            // Live calling is route-level and should not block first paint.
-            'vendor-livekit': ['livekit-client'],
+          // Assign chunks by exact package. The object form also pulls each
+          // listed package's dependencies into its chunk, which put React inside
+          // vendor-charts and made every first paint download Recharts. Shared
+          // helpers (clsx, react-is, tslib, ...) are left to Rollup.
+          manualChunks(id) {
+            const marker = id.lastIndexOf('/node_modules/');
+            if (marker === -1) return undefined;
+            const parts = id.slice(marker + '/node_modules/'.length).split('/');
+            const pkg = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0];
+            return vendorChunkByPackage.get(pkg);
           },
         },
       },
