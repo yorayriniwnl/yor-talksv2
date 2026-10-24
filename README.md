@@ -1,6 +1,14 @@
-# YOR // Talks
+<!-- YOR REDLINE / README COVER V1 -->
+<div align="center">
 
-![Yor Talks realtime communication system](assets/hero.svg)
+![yor-talksv2 | YOR REDLINE](docs/yor-redline-cover.svg)
+
+<sub><strong>YOR / PROJECT DOSSIER</strong> · <a href="https://github.com/yorayriniwnl">GitHub</a> · <a href="https://yorayriniwnl.in">Portfolio</a></sub>
+
+</div>
+<!-- END YOR REDLINE -->
+
+# YOR // Talks
 
 `DEMO` · `CODE-READY` · `DEPLOYMENT BLOCKED`
 
