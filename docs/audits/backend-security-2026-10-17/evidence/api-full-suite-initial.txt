@@ -1,0 +1,1528 @@
+✔ account cleanup erases scoped authentication state and remains safe to retry (27.8439ms)
+✔ a delayed cleanup preserves OTP state issued to a new account with the same address (3.1875ms)
+✔ legacy deletion jobs remain compatible without an email locator (1.3463ms)
+✔ cleanup rejects invalid locators and surfaces Redis outages for durable retry (0.659ms)
+✔ a post-header export source failure is logged without private error details and closes the download (55.2839ms)
+✔ a client disconnect closes its export generator without logging a source failure (9.5352ms)
+✔ the actual export route verifies current sessions and applies the per-account four-download limit (259.1971ms)
+✔ message archives omit shared legacy receipts while retaining the subjects own read records (208.5982ms)
+✔ every migrated user foreign key has an explicit export or privacy exclusion decision (5.7322ms)
+✔ native cursor types match the catalog and common subject pages can seek through ordered indexes (40.1975ms)
+✔ a database disconnect while the archive consumer is paused is handled and releases its connection (250.4527ms)
+✔ version 2 includes authored domains and canonical group messages without unrelated private data or grants (177.0279ms)
+✔ indexed legacy reaction and discussion scopes retain complete compound keyset pages (72.9573ms)
+✔ archives retain submitted external video links without exposing provider delivery URLs (50.1483ms)
+✔ keyset pages form one stable snapshot and generator cancellation releases the transaction (121.2065ms)
+✔ HTTP export streams the existing envelope and checks missing users before attachment headers (105.9137ms)
+✔ deleting payer first preserves the counterparty and immutable financial references (445.6256ms)
+✔ deleting creator first preserves the counterparty and immutable financial references (70.5065ms)
+✔ account deletion preserves group creator with two remaining members's shared group history (185.5385ms)
+✔ account deletion preserves legacy second participant with one remaining member's shared group history (42.199ms)
+✔ migrated legacy history references are nullable and use SET NULL (2.652ms)
+✔ nullable direct history retains the surviving author and scrubs the deleted participant snapshot (94.132ms)
+✖ account deletion erases embedded actors and discussions while preserving unrelated content and queue delivery (38.8397ms)
+✔ a queued JSON reaction cannot restore an actor after the deletion scrub commits (274.4339ms)
+✔ an injected database failure rolls back ledger anonymization and cleanup enqueue together (68.9687ms)
+✔ durable jobs deduplicate, recover abandoned leases, fence stale workers and expose exhausted retries (20.2635ms)
+[16:53:07.118] WARN (41808): BullMQ queue temporarily unavailable
+    redisVersion: "3.0.504"
+    reason: "version_unsupported"
+[16:53:07.118] WARN (41808): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "notification:deliver"
+[16:53:07.118] WARN (41808): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "notification:deliver"
+✔ both account export directions exclude entire deleted and expired text or attachment rows (643.4512ms)
+✔ account export excludes authentication secrets and deletion removes the account (151.101ms)
+✔ account deletion rolls back ledger anonymization when user deletion fails (474.1967ms)
+✔ account deletion erases verified waitlist addresses (49.668ms)
+✔ account deletion preserves unattributed waitlist addresses (28.0484ms)
+✔ unknown or revoked accounts cannot call AI providers through either API prefix (128.8185ms)
+✔ AI chat rechecks capability after context loading before contacting the provider (19.0386ms)
+✔ AI chat and moderation cannot deliver a result after provider-time revocation (42.4194ms)
+✔ AI search cannot return content if capability is revoked during result hydration (9.7249ms)
+✔ AI delivery fails closed on an authority outage and succeeds with current authority (20.6065ms)
+✔ OpenAI moderation rejects empty, partial, coerced, and out-of-range results (31.1778ms)
+✔ OpenAI moderation preserves clean results and cannot drop a flagged category (1.5857ms)
+✔ Gemini malformed moderation falls back and production fails closed if both providers fail (3.9904ms)
+✔ Gemini moderation and assistance calls send credentials only in the API key header (2.1652ms)
+[16:53:14.986] WARN (39168): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+[16:53:14.987] WARN (39168): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+[16:53:14.988] WARN (39168): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+[16:53:14.988] WARN (39168): Gemini moderation request failed; trying the configured gateway provider
+    err: {
+      "type": "Error"
+    }
+✔ default unavailable provider cannot create authority or reserve challenges (52.358ms)
+✔ strict challenge intake cannot accept verified flags, asserted bands or parent evidence (4.0872ms)
+✔ verified callback consumes once, stores private proof, and exposes only safe owner status (191.063ms)
+✔ wrong subject, issuer, audience, purpose, nonce, expiry or policy cannot consume a challenge (36.1703ms)
+✔ same-version policy changes and expired challenge invalidate in-flight results (57.3756ms)
+✔ issuer event uniqueness rolls back challenge consumption and proof writes (25.4213ms)
+✔ purpose-bound guardian journey verifies responsibility and withdraws atomically without parent disclosure (50.0527ms)
+✔ callback waiting on subject lock loses to guardian withdrawal; no stale grant is written (51.95ms)
+✔ bounded outstanding reservations across concurrent starts and safe provider timeouts (93.0229ms)
+✔ callback timeout is safe and a failed provider start revokes its reservation (45.7188ms)
+✔ revoked linked parent and policy replacement during proof writes cannot grant authority (32.6737ms)
+✔ private challenge policy binding cannot contain only half its required fields (4.1608ms)
+✔ expired proof during awaited database write rolls back its challenge and authority (173.2283ms)
+✔ fixture adapter injection is refused by production environment (0.5425ms)
+✔ SQL auto search enforces audience, account status, privacy, blocks and profile distribution (171.5886ms)
+✔ SQL fallback search enforces audience, account status, privacy, blocks and profile distribution (94.775ms)
+✔ warm search and trending caches cannot restore edited, restricted or deleted records (155.9262ms)
+✔ visibility uses two SQL queries for fifty candidates and preserves keyset pagination after filtering (29.9583ms)
+ℹ 50 candidates: 2 SQL queries, 2.1 ms
+✔ login reports database outages as service unavailable (3.1299ms)
+✔ login preserves invalid-credential responses for ordinary auth failures (0.2567ms)
+✔ auth controller returns success on register (139.9533ms)
+✔ restricted login response omits ordinary profile fields (1.1602ms)
+✔ auth controller returns a machine-readable two-factor challenge (0.3087ms)
+✔ auth controller includes the number-matching details (0.2182ms)
+✔ auth controller clears the refresh cookie even if server-side revocation fails (0.2803ms)
+[16:53:22.146] INFO (38996): Email dispatch simulated
+[16:53:22.147] INFO (38996): Email verification requested and email dispatched
+    userId: "ab71bddf-f6aa-4db9-a124-18610aeaf9b2"
+[16:53:23.740] INFO (34032): Email login code dispatched
+    userId: "a3bfdd21-acbb-47fe-9c25-fbd58150faaa"
+✔ concurrent valid email OTP submissions create at most one session (29.7927ms)
+✔ failed OTP attempts are atomically counted and the fifth locks the code (3.0766ms)
+✔ logout-all revokes an already issued email OTP (2.5624ms)
+[16:53:23.749] INFO (34032): Email login code dispatched
+    userId: "87f21248-b5c0-4f10-a27b-56aefbd9bbb4"
+[16:53:23.752] INFO (34032): Email login code dispatched
+    userId: "4fe14a31-abd3-4cb5-8105-f147a10dce2a"
+[16:53:23.754] INFO (34032): Email login code dispatched
+    userId: "de88bae7-d250-45a9-b981-ba5a4d80863c"
+✔ password reset revokes an already issued email OTP (72.8941ms)
+✔ OTP issuance and redemption fail closed when Redis is unavailable (1.1324ms)
+✔ Google sign-in uses provider subject or current mailbox authority: external_unlinked (4.8033ms)
+✔ Google sign-in uses provider subject or current mailbox authority: external_linked (0.65ms)
+✔ Google sign-in uses provider subject or current mailbox authority: gmail (0.3961ms)
+✔ Google sign-in uses provider subject or current mailbox authority: workspace (0.3462ms)
+✔ Google sign-in uses provider subject or current mailbox authority: wrong_workspace (0.4765ms)
+✔ Google sign-in uses provider subject or current mailbox authority: deleted (0.6211ms)
+✔ Google sign-in uses provider subject or current mailbox authority: link_conflict (0.9376ms)
+✔ Google binding waits for the account second factor and current identity: approved (3.9996ms)
+✔ Google binding waits for the account second factor and current identity: revoked (0.9644ms)
+✔ Google binding waits for the account second factor and current identity: email_changed (0.7989ms)
+✔ Google binding waits for the account second factor and current identity: wrong_totp (3.2809ms)
+✔ same-second rotation has unique jti and concurrent replay has exactly one winner (373.2219ms)
+✔ logout-all rejects old refresh and approved challenges even when Redis cleanup fails (316.1539ms)
+[16:53:27.690] WARN (18736): Revoked credentials await Redis expiry; database epoch prevents access
+    userId: "b26fe89b-38e0-4df6-87ec-0ebebdedafdb"
+[16:53:27.929] INFO (18736): Password reset requested and email dispatched
+    userId: "aa0ff787-23c3-43f8-b561-1ce50babb471"
+✔ password reset is single-use, transactionally revokes all sessions, and preserves the token after database rollback (488.2399ms)
+✔ expired reset credentials never change a password (69.1211ms)
+✔ HTTP rejects revoked epochs with a stale Redis key and reports dependency outages without expiring the cookie (193.6441ms)
+✔ call cleanup atomically releases both participants so they can place another call (4.5484ms)
+✔ logout is refresh-cookie based and protected by trusted-origin validation (0.8283ms)
+✔ logout expires the browser cookie before responding after successful revocation (47.9686ms)
+✔ logout expires the browser cookie before responding after failed revocation (9.7502ms)
+✔ logout expires the browser cookie before responding after a missing refresh cookie (6.7717ms)
+✔ public requestEmailOtp does not reveal existing accounts through per-account throttles (2.2526ms)
+✔ public resendVerificationEmailPublic does not reveal existing accounts through per-account throttles (0.3665ms)
+✔ public resetPassword does not reveal existing accounts through per-account throttles (0.339ms)
+[16:53:33.570] INFO (36516): Email dispatch simulated
+[16:53:33.570] INFO (36516): Email verification requested and email dispatched
+    userId: "87ee3c6e-de16-4233-91fe-60732fd85f5f"
+[16:53:33.639] WARN (36516): Security audit event
+    eventId: "65150805-9a84-475a-9b23-f04dcc1483f3"
+    type: "login_failure"
+    message: "Email not verified"
+✔ registration requires email verification before password login (349.0999ms)
+[16:53:33.854] INFO (36516): Email dispatch simulated
+[16:53:33.854] INFO (36516): Email verification requested and email dispatched
+    userId: "47af3c0b-8ec3-400e-b79b-6ae9c03e47fd"
+✔ two-factor authentication blocks password login until the authenticator code is valid (168.1196ms)
+[16:53:34.015] INFO (36516): Email verification requested and email dispatched
+    userId: "72447f9d-53bc-450e-a27d-119af7b092a3"
+[16:53:34.017] INFO (36516): Email login code dispatched
+    userId: "72447f9d-53bc-450e-a27d-119af7b092a3"
+[16:53:34.103] INFO (36516): Email verification requested and email dispatched
+    userId: "e3d3a541-9c3e-4794-af0c-1704b7ada734"
+[16:53:34.104] INFO (36516): Email login code dispatched
+    userId: "e3d3a541-9c3e-4794-af0c-1704b7ada734"
+✔ email OTP reservation and redemption are atomic with exact attempt accounting (224.4652ms)
+✔ email OTP cleanup cannot delete a replacement code (2.0975ms)
+[16:53:34.240] INFO (36516): Email verification requested and email dispatched
+    userId: "8ffced80-d098-4786-831c-1e97f18ca672"
+[16:53:34.242] INFO (36516): Email login code dispatched
+    userId: "8ffced80-d098-4786-831c-1e97f18ca672"
+[16:53:34.246] INFO (36516): Email login code dispatched
+    userId: "8ffced80-d098-4786-831c-1e97f18ca672"
+[16:53:34.249] INFO (36516): Password reset requested and email dispatched
+    userId: "8ffced80-d098-4786-831c-1e97f18ca672"
+✔ email OTPs issued before logout-all or password reset cannot create a session (154.3203ms)
+[16:53:34.403] INFO (36516): Email verification requested and email dispatched
+    userId: "3202e667-df98-4be5-b09a-74041e8b7438"
+[16:53:34.417] INFO (36516): Email login code dispatched
+    userId: "3202e667-df98-4be5-b09a-74041e8b7438"
+✔ email OTP remains single-use while a two-factor approval challenge is pending (148.8917ms)
+✔ session-establishing routes reject foreign form origins before issuing browser cookies (405.2332ms)
+✔ disabled payments reject creation, cached order reuse and verification before database access (2.1155ms)
+✔ disabled beta features stay closed through both HTTP API prefixes without contacting providers (414.1377ms)
+✔ broadcast reactions create a new emoji, preserve concurrent actors and toggle only the current actor (254.9011ms)
+▶ broadcast discovery, subscription, history and reactions enforce current owner visibility
+  ✔ owner block (16.6921ms)
+  ✔ viewer block (16.5873ms)
+  ✔ private owner (16.4138ms)
+  ✔ suspended owner (35.8497ms)
+✔ broadcast discovery, subscription, history and reactions enforce current owner visibility (134.8055ms)
+✔ broadcast message ratings are checked before changing reactions within an allowed channel (82.4961ms)
+✔ concurrent tip retries create one provider order and exactly one capture/refund effect (329.0875ms)
+✔ concurrent membership requests use one pending term and cancellation retains paid access (110.8527ms)
+✔ cancelling pending membership before capture never grants access or credits its creator (47.6475ms)
+✔ uncertain creation and capture before local binding recover without another provider POST (41.4087ms)
+✔ marketplace reservation races and late captures preserve the next buyer reservation (117.9803ms)
+✔ a marketplace settlement crash rolls back sale and ledger; retry safely finishes (51.5021ms)
+✔ provider amount, currency and receipt association cannot be swapped before settlement (27.4517ms)
+✔ failed attempts remain retryable and delayed failure events cannot replace a settled state (39.1275ms)
+✔ racing membership cancellation with capture produces one coherent paid-through or refund-required outcome (36.079ms)
+✔ refund identifiers use literal prefixes and cannot collide across provider payment ids (41.0256ms)
+✔ billing history authenticates, binds ownership, and denies cross-origin cancellation (110.1673ms)
+✔ community service creates communities with default roles (57.3133ms)
+✔ community membership is persisted and counted through the join table (98.293ms)
+▶ discussion likes preserve the same author and content visibility as the discussion list
+  ✔ author block (48.5607ms)
+  ✔ viewer block (16.3588ms)
+  ✔ private author (13.6183ms)
+  ✔ suspended author (16.7895ms)
+  ✔ content rating (17.9812ms)
+✔ discussion likes preserve the same author and content visibility as the discussion list (256.4376ms)
+✔ adult-initiated minor requests and follow-only contact are denied (190.6906ms)
+✔ teen contact becomes active only after both teenagers accept (45.417ms)
+✔ teen to adult contact requires current guardian approval and withdrawal revokes access (61.9597ms)
+✔ under-13 contact needs recipient acceptance and that child’s guardian approval (67.8686ms)
+✔ two under-13 users each require their own guardian approval (65.2284ms)
+✔ blocking revokes accepted contact permanently, including after unblock (48.8361ms)
+✔ an unapproved legacy conversation cannot expose history or accept a message (36.8346ms)
+✔ contact withdrawal while a message is staged prevents the database write (138.1608ms)
+✔ contact identifiers normalize consistently before matching (0.9023ms)
+✔ contact identifier digests are stable without exposing the raw value (0.4424ms)
+✔ contact shields hide matching accounts in both directions (119.6535ms)
+▶ video and comment likes append typed actors, preserve concurrent likes and toggle only the current actor
+  ✔ videos (16.6061ms)
+  ✔ video_comments (11.0645ms)
+  ✔ comments (16.9347ms)
+✔ video and comment likes append typed actors, preserve concurrent likes and toggle only the current actor (207.4619ms)
+✔ content ratings default to regular (0.8128ms)
+✔ viewer filters are cumulative by audience level (0.1321ms)
+✔ an author supplied child-safe rating needs approval for the exact current revision (0.4333ms)
+✔ current eligibility ceiling overrides a mature saved preference (1.821ms)
+✔ author visibility is enforced consistently for public and private content (0.9076ms)
+✔ author visibility denies content across a mutual block (0.2628ms)
+✔ age based privacy overrides stale public profile settings when filtering authored content (1.1218ms)
+✔ profile and highlight fallback responses do not expose database or provider error messages (2.13ms)
+✔ reviewed media policy failures retain their intended public status and code (0.8647ms)
+✔ creator analytics reads and profile-view writes stop when analytics authority is absent (1.8472ms)
+✔ diagnostics rejects anonymous production-boundary requests (42.9471ms)
+✔ vanish-mode messages receive a bounded expiry (3.6236ms)
+✖ expired and deleted messages are excluded at the conversation response boundary (0.5516ms)
+✔ message visibility uses a strict expiry boundary and denies invalid dates (0.764ms)
+✔ expired retained messages cannot leak through send retries, edits, reactions or pins (86.6712ms)
+✔ reading vanish-mode content returns a tombstone and hides it from history, inbox, export and preview (281.1155ms)
+✔ Story and Note discovery batch mixed audiences and retain ranking with constant query counts (519.6956ms)
+ℹ Former Story per-item policy (50 distinct authors): 245 queries / 141.4 ms
+ℹ Story list sample 1: 7 queries / 18.8 ms
+ℹ Story list sample 2: 7 queries / 10.6 ms
+ℹ Story list sample 3: 7 queries / 7.7 ms
+ℹ Note list (50 distinct authors): 3 queries / 6.2 ms
+✔ current teen ceiling filters story and note candidates before the SQL page limit (716.3031ms)
+✔ restricted newest candidates cannot starve an older eligible Story or Note (542.5383ms)
+✔ SQL Story candidates and final policy agree across current privacy, relationship, block and rating changes (143.2029ms)
+✔ both search implementations batch fifty distinct authors and filter before the candidate cap (404.301ms)
+ℹ Former per-item search visibility (50 authors): 100 queries / 29.7 ms
+ℹ auto full search sample 1: 10 queries / 14.0 ms
+ℹ auto full search sample 2: 10 queries / 28.2 ms
+ℹ auto full search sample 3: 10 queries / 10.1 ms
+ℹ fallback full search sample 1: 10 queries / 10.2 ms
+ℹ fallback full search sample 2: 10 queries / 9.5 ms
+ℹ fallback full search sample 3: 10 queries / 9.8 ms
+✔ the ten design acceptance requirements remain linked to executable authoritative suites (4.8376ms)
+✔ public grievance projection allows only the approved receipt fields (0.2633ms)
+✔ empty production policy and operator registries keep even a valid-looking proof inactive (12.9464ms)
+✔ synthetic authority is accepted only when an isolated test explicitly injects it (1.7613ms)
+✔ new test users stay unknown unless the test explicitly grants synthetic adult authority (69.5334ms)
+✔ every generated authenticated operation has a reviewed capability or exact authority (39.997ms)
+✔ every client socket event has an explicit current capability (0.1923ms)
+✔ route authority classifies capabilities and keeps safety and restricted routes separate (11.7093ms)
+✔ unmapped operations and missing capabilities fail closed (0.7008ms)
+✔ economy analytics is controlled by analytics capability independently of payments (0.5257ms)
+✔ a child-safe approval applies only to its exact content revision and hash (174.4085ms)
+✔ prescreen returns no enrollment when verification or an approved territory is unavailable (1.7658ms)
+✔ prescreen does not create an enrollment for an unreviewed territory even with a test provider (1.4683ms)
+✔ prescreen accepts only a coarse experience and territory declaration (0.2217ms)
+✔ registration rejects self-asserted age and proof fields (0.8476ms)
+✔ password registration stops before user lookup, persistence, or email when enrollment is not authorized (0.9945ms)
+﹣ under-13 enrollment gates profile creation, rechecks guardian withdrawal, and consumes one time under concurrency (0.0927ms) # SKIP
+﹣ adult enrollment completes after age assessment without demanding guardian authorization (0.1001ms) # SKIP
+✔ Google sign-in does not create an account when no authorized Yor account exists (0.9764ms)
+✔ unknown actors and adults with unreleased features stop purchase, seller, live and AI entry points before providers (19.9396ms)
+✔ a current withdrawal during awaited moderation prevents live stream persistence (5.6984ms)
+✔ minor settings and privacy writes clamp every optional collection and discovery preference (6.7555ms)
+✔ withdrawn or unknown eligibility cannot ingest analytics or dispatch push notifications (1.2533ms)
+✔ minors can read messages without storing a sender-visible read receipt (0.7116ms)
+✔ adult account remains blocked when the server release flag for payments is off (1.3469ms)
+✔ verified guardian authority activates only the child's allowed social ceiling, never gated features (12ms)
+✔ default provider has no callback mount and returns a safe unavailable response (147.3277ms)
+✔ owner challenge routes require authentication and reject forged approval properties (30.3124ms)
+✔ raw client JSON cannot verify; trusted opaque fixture callback applies once and status remains owner-bound (175.8821ms)
+✔ guardian endpoint starts verification, ignores client authority and supports owner withdrawal (93.9476ms)
+✔ malformed callback bytes cannot reach the general logger or response (26.9722ms)
+✔ a viewer-bound exact-resource grant cannot be copied to another account or anonymous delivery (224.6158ms)
+✔ a public reference to an asset cannot authorize its separate private reference (131.1176ms)
+✔ a cached grant is denied immediately after its exact entity reference is removed (78.5304ms)
+✔ a cached media read rechecks current eligibility instead of trusting cached bytes (103.2898ms)
+✔ revoked eligibility during a shared provider read returns no bytes to either caller (130.6874ms)
+✔ profile media rechecks minor privacy at issuance, cached delivery and renewed grants (146.3486ms)
+✔ unclassified profile media stays unavailable to child-safe and anonymous audiences (49.2816ms)
+✔ profile privacy changed during provider verification prevents delivery and new issuance (66.833ms)
+✔ stories media expires at issuance and cached delivery without waiting for cleanup (88.2687ms)
+✔ stories expiry during provider verification returns no bytes (61.3212ms)
+✔ user_notes media expires at issuance and cached delivery without waiting for cleanup (77.488ms)
+✔ user_notes expiry during provider verification returns no bytes (59.7701ms)
+✖ messages media expires at issuance and cached delivery without waiting for cleanup (560.2542ms)
+✔ messages expiry during provider verification returns no bytes (555.7617ms)
+✔ an expired story retained in a highlight keeps its currently authorized media (117.7022ms)
+✖ message attachment expiry uses the database UTC clock for near-future content (34.0554ms)
+✔ message expiry during awaited contact authorization prevents grant issuance (548.8816ms)
+✔ stories media expiry supports timestamp without time zone in non-UTC database sessions (142.0808ms)
+✔ user_notes media expiry supports timestamp without time zone in non-UTC database sessions (129.8182ms)
+✔ messages media expiry supports timestamp without time zone in non-UTC database sessions (99.6248ms)
+✔ stories media expiry supports timestamp with time zone in non-UTC database sessions (148.3586ms)
+✔ user_notes media expiry supports timestamp with time zone in non-UTC database sessions (153.905ms)
+✔ messages media expiry supports timestamp with time zone in non-UTC database sessions (94.6769ms)
+✔ verified bands receive their ceiling; child activation needs verified specific guardian authority (62.8474ms)
+✔ unknown, missing, expired, future, revoked or rejected proof cannot activate from old checkboxes (6.1736ms)
+✔ contradictory, duplicate, unrecognised, malformed or incomplete thresholds fail closed (3.6085ms)
+✔ a teen band cannot bypass a separate 16-plus prohibition, including with guardian approval (3.4127ms)
+✔ guardian requirements support purpose, notice, responsibility, age-17 thresholds and withdrawal (6.0697ms)
+✔ specific purposes can be granted separately and latest withdrawal beats an older permissive grant (2.5215ms)
+✔ latest guardian withdrawal cannot fall back to a retained older approval (0.7324ms)
+✔ all resolved operator and recipient policies apply; stale or conflicting territory evidence denies (5.7877ms)
+✔ current terms and account restrictions stay independent of verified age; transition requires new proof (2.9227ms)
+✔ adult preference and separate releases restrict access; optional analytics/profiling always stay off (2.1623ms)
+✔ an approved territory can impose a stricter content ceiling on verified adults (1.0677ms)
+✔ safe decisions expose no evidence/parent reference and registry withdrawal changes their revision (1.2473ms)
+✔ production registry is empty and cannot accept synthetic or wildcard approvals (1.8378ms)
+✔ service reloads current database and registry state rather than caching authority or accepting beta bypass (736.3571ms)
+✔ service preserves conflicting trusted territory evidence rather than overriding it (0.7571ms)
+✔ eligibility migration is additive and idempotent on fresh and populated baselines (1408.8404ms)
+✔ historical checkbox stays an attestation; private assessments never join profile or export fields (138.9848ms)
+✔ single-user and batched eligibility reads bind UUID arrays and return one decision per account (27.8771ms)
+✔ newer authority revision wins even when transaction timestamps sort before old proof (10.5528ms)
+✔ eligibility revisions increment atomically without losing bigint precision and roll back with facts (479.7999ms)
+✔ challenge consumption is subject/purpose/revision bound, single-use and event unique (61.8631ms)
+✔ pre-account enrollments remain opaque and private subject/timestamp constraints cannot be bypassed (72.4291ms)
+✔ eligibility storage prevents orphans and rejects malformed private authority (320.1753ms)
+✔ guardian permissions are purpose-specific, owner-bound and withdrawn with the revision (17.433ms)
+✔ current eligibility service observes real proof, newer guardian withdrawal and registry withdrawal (29.972ms)
+✔ development email fallback never writes credential-bearing payloads to stdout (1.4243ms)
+✔ simulated email logging excludes addresses, reusable address hashes and credentials (1.2083ms)
+✔ all implemented email categories send only reviewed transactional payloads through the provider mock (23.244ms)
+✔ provider rejection preserves status without exposing provider response bodies in errors or logs (1.4006ms)
+✔ production email fails closed without configured credentials (0.4565ms)
+[16:54:46.465] INFO (33516): Email dispatch simulated
+✔ production rejects a shared access and refresh signing secret without logging it (252.0748ms)
+✔ eligibility defaults stay unavailable and sensitive feature releases fail closed (986.3917ms)
+✔ public beta refuses to start until the exact legal and eligibility content is approved (182.8156ms)
+✔ invalid boolean environment values fail closed at API startup (180.8651ms)
+✔ production configuration rejects cleartext browser origins (186.8163ms)
+✔ production startup fails closed when required dependencies are unavailable (2971.1058ms)
+✔ event RSVP status is exclusive and can be cleared (142.157ms)
+✔ fetchWithTimeout aborts slow external requests instead of hanging the process (18.2905ms)
+✔ provider deadline includes stalled bodies and completed JSON remains readable (142.6489ms)
+✔ concurrent Google subjects cannot replace the winning account binding (146.6237ms)
+✔ a revoked account epoch cannot attach a pending Google identity (15.0007ms)
+✔ pending invitees see no group history and accepted membership is added only after consent (278.04ms)
+✔ a minor cannot add an adult until the guardian approves, and withdrawal revokes group access (151.491ms)
+✔ a revoked pair contact cannot be reintroduced through a pending group invitation (62.7564ms)
+✔ simultaneous accepts serialize and refresh the remaining invite before it can add another adult (243.8336ms)
+✔ legacy JSON group participants do not become accepted membership (35.58ms)
+✔ disabled live-room token access fails before reading stream data (1.5081ms)
+✔ structured production error logs exclude query values and provider credentials (293.8922ms)
+✔ error metadata accepts only reviewed types and codes, and bounds recursive causes (0.3073ms)
+✔ permanent media sweep recovers terminal states while finite dead jobs and live/backoff leases remain unchanged (382.2181ms)
+✔ production HTTP presign and multipart upload succeed through verified lifecycle; forged fields and cross-owner finalization fail (443.9511ms)
+✔ production HTTP moderation unavailable remains a conditional 503 and cannot create a publishable asset (20.6266ms)
+✔ delivery verifies approved bytes, rejects token tampering/cross-ID replay, and revokes cached content after deletion (37.4726ms)
+✔ replayed provider bytes after approval never reach the delivery response or video poster generator (16.7062ms)
+✔ business and community images publish only owned approved purpose-specific IDs (96.229ms)
+✔ fresh media migration preserves actual historical voice/image bodies once without approving them or later forged text (1235.3918ms)
+✔ metadata migration adds the known provider without inventing historical finalization or changing legacy URLs (762.7047ms)
+✔ v1 follow-up repairs only pre-deployment UTC message timestamps and remains idempotent in a non-UTC database session (420.5506ms)
+✔ reservations bind unique provider paths to owner and purpose, with no provider grant on the bounded transport (83.2883ms)
+✔ upload and finalize reject another account before making any provider calls (11.9714ms)
+✔ database constraints cannot mistake NULL verification/moderation metadata for approval (266.6883ms)
+✔ uploaded media has no delivery URL; finalize is idempotent after explicit verified approval (26.9443ms)
+✔ upload retries acknowledge committed identical owner bytes without another provider write and preserve them across moderation retries (30.8247ms)
+✔ finalize refuses provider replacement of the exact server-uploaded bytes or a dishonest provider digest (17.6059ms)
+✔ finalize binds bytes committed between its initial read and verification claim (11.6475ms)
+✔ concurrent finalizers invoke the verifier/moderator once and return no URL to the losing request (10.1144ms)
+✔ moderation timeout, provider error, malformed and uncertain decisions never approve and remain retryable (66.471ms)
+✔ missing provider object fails closed, while byte, size and immutable identity mismatches reject and schedule deletion (16.6036ms)
+✔ provider replay/tampering after moderation cannot commit approval (10.0954ms)
+✔ rejection is idempotent, cannot be published, and deletes only the server reservation namespace (123.9342ms)
+✔ expired reservations and provider cleanup failures are retried, including late signature replay tombstones (27.1705ms)
+✔ concurrent cleanup workers cannot claim the same provider deletion (20.0773ms)
+✔ cleanup renews a later batch row lease immediately before provider deletion (897.2226ms)
+✔ cleanup skips a later batch row whose deletion lease another worker acquired (27.3206ms)
+✔ cleanup does not count provider completion after losing its deletion token (26.7313ms)
+✔ cleanup skips more than one batch of older live assets before limiting expired and rejected candidates (400.9346ms)
+✔ an expired verification lease or explicit deletion revokes a late moderation approval (24.0532ms)
+✔ publication winning an asset lock prevents a waiting deletion from missing committed references (87.2935ms)
+✔ direct grants require authentic provider ceilings for every unsigned resource-type endpoint (4.4747ms)
+✔ unsigned, public, mutable and converting presets fail before signing (1.3856ms)
+✔ server upload verifies bytes and per-purpose limits before any provider write (0.8191ms)
+✔ completion fetches only original server-signed destination and verifies immutable bytes and version (21.723ms)
+✔ completion bounds actual streamed bytes independently of size headers (1.9434ms)
+✔ provider metadata cannot forge the public ID, resource type, delivery type, format, size or immutable version (1.4278ms)
+✔ only an initial reservation lookup 404 confirms that a direct upload may be retried (1.5607ms)
+✔ deletion uses immutable asset IDs and reconciles all authenticated replay namespaces (0.8526ms)
+✔ multimodal receipt approves only complete explicit clear decisions (2.1538ms)
+✔ malformed or uncertain Gemini safety metadata never approves an otherwise clear receipt (3.6324ms)
+✔ valid optional Gemini metadata and omitted safety ratings preserve explicit clear approval (1.0735ms)
+✔ Gemini moderation sends actual multimodal bytes, uses header credentials and never falls back (1.9865ms)
+✔ video moderation uses a fixed documented5FPS setting; audio and image payloads do not (1.4188ms)
+✔ provider and Gemini hung requests time out and leave media unapproved (55.0379ms)
+✔ decoder wall-clock timeout stays retryable while malformed and excessive output remain permanent (303.9562ms)
+✔ actual decoder handles allowed synthetic formats, rejects disguised tracks, corruption and animation (6920.7458ms)
+✔ all publication validators reject raw URL fields; HTTP/socket accept structured attachment-only messages (5.0447ms)
+✔ approved ownership, purpose, lifecycle status, and verified type are enforced before a content write (251.6719ms)
+✔ media reference and content writes roll back together when publication fails (40.2207ms)
+✔ post, image/audio comments, story, and video publications persist only approved markers and matching uses (235.8681ms)
+✔ every cover and marketplace/showcase publication registers its approved asset use (104.7524ms)
+✔ avatar replacement preserves legacy reads, keeps reused media, and releases only the replaced asset (22.6075ms)
+▶ approved avatars hydrate typed follow, call and story viewer response DTOs
+  ✔ follow response (17.8496ms)
+  ✔ follow request list (6.5625ms)
+  ✔ accepted follow request (12.5474ms)
+  ✔ call invitation (7.1091ms)
+  ✔ story viewer list (8.4456ms)
+✔ approved avatars hydrate typed follow, call and story viewer response DTOs (141.8967ms)
+✔ typed avatar DTOs cannot hydrate foreign or unreferenced assets or markers in arbitrary metadata (36.5729ms)
+✔ concurrent message retries attach exactly the winning image/audio asset; soft deletion and replay never restore references (48.6433ms)
+✔ external video mode rejects off-host, non-HTTPS, credentialed and disguised URLs and requires approved thumbnails (28.9847ms)
+✔ parallel avatar replacements serialize before locking old/new assets and keep the final reference consistent (47.5724ms)
+✔ account deletion wins against blocked media publication without leaving an orphan use (13.4747ms)
+✔ shared media survives deletion of one post and queues cleanup only after its final use (39.0519ms)
+✔ a last-reference deletion waiting for publication sees the newly committed reference (23.6229ms)
+✔ production media storage fails closed before publishing unmoderated media (2.0377ms)
+✔ verified image, audio and video retain provider identity and an immutable finalization timestamp (149.6961ms)
+✔ unavailable or contradictory media decisions cannot finalize; explicit approval can retry safely (25.5196ms)
+✔ moderation and verification rejection retain finalization evidence through duplicate requests (19.176ms)
+✔ missing Gemini or Cloudinary configuration fails before any provider request (1.1961ms)
+✔ a confirmed absent reservation stays retryable and cannot become finalized or publishable (18.2816ms)
+✔ message reads and previews compare UTC instants with timestamp in Europe/Berlin (284.6833ms)
+✔ archive expiry scopes preserve one snapshot with timestamp in Europe/Berlin (323.3477ms)
+✔ message reads and previews compare UTC instants with timestamp in America/New_York (181.5888ms)
+✔ archive expiry scopes preserve one snapshot with timestamp in America/New_York (306.4378ms)
+✔ message reads and previews compare UTC instants with timestamptz in Europe/Berlin (166.9623ms)
+✔ archive expiry scopes preserve one snapshot with timestamptz in Europe/Berlin (297.6131ms)
+✔ message reads and previews compare UTC instants with timestamptz in America/New_York (168.2819ms)
+✔ archive expiry scopes preserve one snapshot with timestamptz in America/New_York (309.1582ms)
+✔ message preview records a preview lifecycle without creating a read receipt (3.3371ms)
+✔ message preview is entitlement-gated before any preview event is recorded (0.5072ms)
+✔ message preview does not reopen a message that already has a recipient read receipt (0.1779ms)
+✔ message preview cannot be used on the sender's own message (0.1641ms)
+✔ message preview rejects an expired message (0.3492ms)
+✔ premium cannot reopen expired or deleted messages or preview as a non-member (0.505ms)
+✔ preview return boundary rejects a row that expired or was deleted during the write (0.302ms)
+✔ preview checks committed deletion after waiting for a real message lock (173.8788ms)
+✔ expiry during preview insertion denies content and rolls back the preview event (751.6872ms)
+✔ real previews remain unread and cannot bypass a committed recipient receipt (58.6806ms)
+✔ recipient reads serialize with previews using the same real message row lock (227.8039ms)
+✔ concurrent reactions preserve every participant and remain idempotent (137.9446ms)
+✔ messages support edit, delete, reaction, and pin workflows (114.0109ms)
+✖ concurrent reactions from different users are preserved and repeated reactions are idempotent (24.6479ms)
+✔ message content length is bounded before transport-specific persistence (6.1919ms)
+✔ blocks deny new and existing messages in both blocking directions (20.1444ms)
+✔ group read receipts survive reload and stay scoped to each recipient (174.4247ms)
+✔ sender history and inbox suppress retained direct receipts after reader withdrawal (99.4376ms)
+✔ group receipt aggregation includes only currently permitted adult readers (89.904ms)
+✔ concurrent first messages share one direct conversation in either direction (190.4563ms)
+✔ new messages move old conversations to the top of the inbox (26.269ms)
+✔ allowDmFromStrangers opt-outs cannot be bypassed by direct or group conversations (44.0531ms)
+✔ messageRequests opt-outs cannot be bypassed by direct or group conversations (33.0372ms)
+✖ deleting a group creator or member preserves shared group history and removes the departed account data (217.6404ms)
+✔ metrics scrape credentials require a high-entropy exact match (0.8942ms)
+✔ metrics scrape token files reject short credentials and read one-line secrets (9.0847ms)
+✔ metrics endpoint accepts only the dedicated scrape token or admin authentication (154.9274ms)
+✔ grievance tickets survive service recreation (53.1784ms)
+✔ note service trims content, applies a 24-hour expiry, and replaces the author status (2.1827ms)
+✔ note service only exposes notes allowed by audience and content visibility (1.802ms)
+✔ push delivery resolves canonical content after subscription lookup: deleted (3.863ms)
+✔ push delivery resolves canonical content after subscription lookup: edited (0.5728ms)
+✔ push delivery resolves canonical content after subscription lookup: recipient_changed (0.3632ms)
+✔ push delivery resolves canonical content after subscription lookup: already_delivered (0.3274ms)
+✔ push delivery resolves canonical content after subscription lookup: in_app (0.4856ms)
+✔ push delivery resolves canonical content after subscription lookup: database_unavailable (0.7953ms)
+✔ push delivery resolves canonical content after subscription lookup: unsafe_endpoint (0.3222ms)
+✔ push delivery rechecks recipient authority after canonical hydration: preference (0.5228ms)
+✔ push delivery rechecks recipient authority after canonical hydration: eligibility (0.2933ms)
+✔ push delivery rechecks recipient authority after canonical hydration: account_status (0.3532ms)
+✔ push delivery rechecks recipient authority after canonical hydration: authority_unavailable (0.2331ms)
+✔ legacy job payloads identify canonical rows and cannot override recipient or content (2.6016ms)
+✔ deleted, already delivered and malformed jobs never dispatch a stale payload (0.2811ms)
+✔ deletion while recipient lookup is pending suppresses delivery (0.1835ms)
+✔ content changes while recipient lookup is pending use the latest persisted content (0.2113ms)
+✔ failed delivery remains retryable and an unrelated subsequent notice still dispatches (1.381ms)
+✔ canonical row lookup failure is retried instead of treated as successful delivery (0.271ms)
+✖ notification workers report readiness through start, stop, and restart (22.7466ms)
+[16:55:44.998] WARN (43896): Notification worker temporarily unavailable
+    redisVersion: "3.0.504"
+    reason: "version_unsupported"
+✔ operational metrics use route templates instead of raw identifiers (81.1112ms)
+✔ operational metrics keep unknown paths in one bounded bucket (5.9818ms)
+✔ rollup status metrics stay alertable before the first successful scheduled run (2.7397ms)
+✔ lifecycle health exposes stale workers and overdue or dead cleanup jobs (15.1132ms)
+✔ shared Prometheus counters are visible across API instances with bounded labels (100.0669ms)
+✔ Redis metric failure preserves local counters and reports shared storage unavailable (4.5099ms)
+✔ pagination service slices items correctly (1.324ms)
+✔ tip: duplicate and out-of-order disputes freeze and restore only the original paid state (302.0805ms)
+✔ membership: duplicate and out-of-order disputes freeze and restore only the original paid state (135.7219ms)
+✔ marketplace: duplicate and out-of-order disputes freeze and restore only the original paid state (106.7999ms)
+✔ premium: duplicate and out-of-order disputes freeze and restore only the original paid state (88.5009ms)
+✔ partial chargeback plus refund never debits more than the original creator credit (73.3943ms)
+✔ lost dispute keeps access revoked and delayed won events cannot override current provider loss (45.0049ms)
+✔ multiple disputes share one bounded reserve and one resolution cannot clear another open case (71.8381ms)
+✔ winning an expired Premium dispute never renews the term (38.7235ms)
+✔ refund during a dispute wins over later resolution and paid-through cancellation survives a won dispute (77.3483ms)
+✔ creator deletion during dispute preserves financial identity without restoring deleted credit attribution (115.0864ms)
+✔ dispute transaction failure rolls back evidence, access and reserve, then read-only retry succeeds (63.3132ms)
+✔ scheduled provider scan queues missed disputes without changing money before reconciliation (77.5441ms)
+✔ ordinary users and moderators cannot inspect financial operations; administrator retries are audited (206.1041ms)
+✔ marketplace prices cannot exceed the integer minor-unit ledger ceiling (1.2822ms)
+✔ dispute adapter validates current provider amounts, currency and payment association fields (24.1139ms)
+✔ marketplace order creation checks the payment gate before touching the database (0.4732ms)
+✔ Razorpay order responses must match the requested amount and currency (0.934ms)
+✔ signed captured-payment webhooks dispatch to exactly the matching payment flow (1.1726ms)
+✔ processed refund webhooks validate amount and route using provider payment id (0.3835ms)
+✔ payment webhooks reject invalid raw-body signatures before dispatch (0.4897ms)
+✔ payment reconciliation survives provider retry and concurrent duplicate webhook delivery (143.574ms)
+✔ Razorpay webhook signatures require the configured secret (1.5441ms)
+✔ Razorpay payment signatures bind both order and payment identifiers (0.3715ms)
+✔ Razorpay order requests use the provider API with configured mock credentials (21.1646ms)
+✔ free accounts have no paid perks and one SQL query resolves the entire snapshot (61.3168ms)
+✔ concurrent checkout and repeated client keys create a single durable provider order (167.7653ms)
+✔ temporary overrides are independent of payment, expire, and cannot defeat operational availability (28.7331ms)
+✔ failed payment attempts are visible and a later successful attempt on the same order grants access (49.1624ms)
+✔ closed checkout settles through encrypted durable webhook acceptance exactly once (66.707ms)
+✔ uncertain provider creation recovers by durable receipt without repeating the POST (28.5819ms)
+✔ capture overtaking local provider binding recovers association from provider receipt and notes (26.2781ms)
+✔ amount, currency, receipt, order, signature and account tampering never grant access (17.5366ms)
+✔ cancellation preserves paid access, expiry removes perks, and late cancelled captures require refund review (40.9492ms)
+✔ out-of-order refunds and later capture replays never restore access or duplicate accounting (28.5774ms)
+✔ a settlement database failure rolls back money and access together, then replay succeeds (21.874ms)
+✔ free/expired saved typography continues to send ordinary messages without changing existing content (36.4006ms)
+✔ real authenticated HTTP state enforces ownership, rejects client entitlement fields and cross-origin mutations (137.4554ms)
+✔ the advanced catalog is closed and defaults can be overridden by explicit flags (0.9205ms)
+✔ an active override grants an available perk; expired overrides and availability flags never grant access alone (1.9187ms)
+✔ audience policy applies blocks before every inclusion rule (0.2109ms)
+✔ pinning is entitlement-gated before a profile mutation is attempted (1.6973ms)
+✔ reordering profile pins is entitlement-gated before persistence (0.3724ms)
+✔ profile-only posts are entitlement-gated before persistence (1.0876ms)
+✔ premium profile styles come from a curated safe catalog (1.7437ms)
+✔ per-item typography accepts only catalog identifiers (0.2666ms)
+✔ profile pin capacity stops at six without changing existing pin order (0.1434ms)
+✔ non-default profile selections resolve to the exact entitlements they need (0.1887ms)
+✔ premium profile updates are entitlement-gated while keeping bio text independent (0.8041ms)
+✔ story analytics count every idempotent event, unique viewers, and rewatches (13.4113ms)
+✔ story reaction counts keep Super Hearts distinct from normal and custom reactions (0.2082ms)
+✔ viewer exposure is selected from the viewer preference, not a client identity claim (0.152ms)
+✔ story duration is limited to the entitlement ceiling and ranking boost is capped (0.4704ms)
+✔ duplicate Super Hearts are idempotent while a changed reaction can notify again (0.149ms)
+✔ highlight management stays owner-scoped and preserves ordered story ids (0.9124ms)
+✔ concurrent block requests preserve every target without duplicates (228.6732ms)
+✔ concurrent unblock requests remove only their intended targets (95.897ms)
+✔ concurrent mute requests preserve every target without duplicates (23.9279ms)
+✔ concurrent unmute requests remove only their intended targets (18.7757ms)
+✔ analytics migration creates durable event, daily, and job-run tables (37.2965ms)
+✔ ingestion deduplicates delivery and rollups respect UTC day boundaries (25.7363ms)
+✖ concurrent repeated rollups are idempotent and source KPI queries execute (10.6382ms)
+✔ source KPIs calculate activation, cohort retention, engagement, and ledger reconciliation (152.1286ms)
+✖ failed rollup state is durable and a later retry succeeds (22.2491ms)
+✖ rollup quality mismatches persist an alertable failure and clean retry recovers (7.9687ms)
+✖ F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts (6.9136ms)
+✔ product analytics accepts only versioned allowlisted events and minimal properties (2.5817ms)
+✔ product analytics rejects unknown names, payload fields, and oversized batches (1.1373ms)
+✔ profiler events accept bounded metrics only (0.3222ms)
+✔ product analytics excludes stale and implausibly future event timestamps (0.2971ms)
+✔ analytics reporting endpoint rejects unauthenticated requests (40.8736ms)
+✔ marketplace saves are private, viewer-scoped, and toggleable (175.5267ms)
+✔ own profile restores canonical follow relationships without exposing them to other viewers (269.1608ms)
+✔ production profile discovery requires current authority and keeps minor profiles private by default (85.5834ms)
+✔ production follow requests do not create public follow edges to minors with legacy public settings (25.5874ms)
+✔ private follow requests remain pending at the HTTP boundary (13.5182ms)
+✔ general search applies current canonical profile discovery authority (230.5853ms)
+✔ known-ID profile comments and showcases enforce owner authority and current private access (82.5686ms)
+✔ profile discovery batches relationship and current eligibility reads for fifty candidates (139.9972ms)
+✔ push endpoints accept documented vendor destinations without permitting arbitrary outbound requests (1.3325ms)
+✔ authenticated push registration rejects internal endpoints before persistence and accepts supported browser subscriptions (187.9961ms)
+✔ notification queue entries contain only the persisted ID, including legacy caller payloads (2.4025ms)
+✔ queue payloads use bounded retention while notification retries retain stable ids (0.1572ms)
+✔ queue service handles job enqueue and dequeue (8.9178ms)
+✖ queue retention is bounded without pruning operator-review jobs (2.9489ms)
+✔ queue service does not retain jobs in memory while Redis is unavailable (4.0681ms)
+[16:56:37.142] WARN (40400): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[16:56:37.142] WARN (40400): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+[16:56:37.150] WARN (40400): BullMQ queue temporarily unavailable
+    reason: "unavailable"
+[16:56:37.150] WARN (40400): BullMQ queue unavailable; durable caller record will be retried when Redis recovers
+    type: "email"
+✔ feed traffic and approval polling cannot exhaust the sign-in allowance (1806.881ms)
+✔ an optional media probe that never settles cannot delay core readiness or launch duplicate probes (2.6835ms)
+✔ mandatory dependency failures still fail readiness while media is pending (0.4618ms)
+✔ public readiness failures omit internal dependency error messages (0.2479ms)
+✔ media diagnostics expire from completion and fail closed while refreshing (0.3131ms)
+✔ an optional probe exception is a conservative diagnostic and does not become an unhandled rejection (0.266ms)
+✔ socket budgets are atomic across connections and expire (1134.0012ms)
+✔ Redis compatibility accepts BullMQ-supported versions (0.782ms)
+✔ Redis compatibility rejects missing, malformed, and legacy versions (0.1323ms)
+✔ public grievance submission returns only the safe receipt fields (61.435ms)
+✔ public grievance tracking hides identity and officer notes while moderator access retains them (102.121ms)
+▶ report routes reject anonymous access and keep moderation queue role-restricted
+  ✖ public grievance intake and status responses expose only the allowlisted fields (9.1739ms)
+✖ report routes reject anonymous access and keep moderation queue role-restricted (54.7344ms)
+✔ final report decisions require a reason and keep an immutable staff audit trail (71.6386ms)
+✔ staff report pagination reaches older unresolved rows and all timestamp ties without duplicates (230.8238ms)
+✖ staff grievance pagination keeps old cases reachable with status-scoped cursors (83.9252ms)
+✔ only payment webhook paths retain exact signed bytes; account requests do not duplicate secrets (145.0958ms)
+✔ request parser rejects invalid bodies with safe client errors before handlers run (45.2111ms)
+✔ unexpected errors stay private in every environment and headers already sent delegate (5.3045ms)
+[16:56:51.187] ERROR (43228): Unhandled error
+    err: {
+      "type": "Error"
+    }
+✔ request logs omit credential paths and queries while retaining the endpoint (1.0304ms)
+✔ restricted route matrix is exact across both API mounts (3.2742ms)
+✔ current terms acknowledgement does not use the legacy age checkbox as proof (1.4283ms)
+✔ password login and refresh preserve identity sessions while eligibility is restricted (51.4794ms)
+✔ HTTP authentication grants only identity and rights routes to restricted accounts (216.1415ms)
+﹣ real database and Redis sessions recheck moderation, auth epoch and device revocation (0.2266ms) # SKIP
+✔ saved posts remain reachable beyond an empty bounded scan and timestamp ties without dropping visible rows (328.7103ms)
+✔ saved video pages are bounded, preserve all bookmarks and reject changed cursor ownership, collection or signature (90.2514ms)
+✔ saved collection query validation rejects invalid page sizes and malformed cursors (0.8022ms)
+✔ saved, listed and direct video reads and likes respect either party shielding a contact (130.2196ms)
+✔ search service returns matching users and posts (108.7348ms)
+✔ audit events track abuse heuristics via Redis (27.9691ms)
+[16:56:58.184] WARN (36148): Security audit event
+    eventId: "c1051c30-1ba3-43fb-8957-9e54ac3b72a8"
+    type: "spam"
+    message: "test action 0"
+[16:56:58.185] WARN (36148): Security audit event
+    eventId: "e4faeeac-a464-4b95-a9c5-e447e38cafd8"
+    type: "spam"
+    message: "test action 1"
+[16:56:58.185] WARN (36148): Security audit event
+    eventId: "0ec7759e-f6c0-4518-bdba-6d593ecebf56"
+    type: "spam"
+    message: "test action 2"
+[16:56:58.185] WARN (36148): Security audit event
+    eventId: "30673694-3067-4b78-b1b2-0de8be43cab8"
+    type: "spam"
+    message: "test action 3"
+[16:56:58.185] WARN (36148): Security audit event
+    eventId: "4c878ce0-11ce-42eb-b632-b7411319c31b"
+    type: "spam"
+    message: "test action 4"
+✔ synthetic seed requires explicit nonproduction mode, opt-in and exact database confirmation (1.3325ms)
+✔ seed denials never reproduce connection credentials (0.327ms)
+✔ every synthetic seed entry point guards before executing its script body (1.9868ms)
+✔ concurrent privacy patches cannot undo another privacy restriction (164.7927ms)
+✔ concurrent settings patches preserve independent preferences and existing metadata (77.8975ms)
+✔ partial privacy updates fill legacy defaults and keep explicit opt-outs (26.0317ms)
+✔ updating messaging privacy never opens a legacy private account (17.1246ms)
+✔ posts support likes, bookmarks, and trending ranking (232.6206ms)
+✔ socket schemas reject null, malformed IDs, mass assignment and oversized messages (1.8183ms)
+✔ socket handshake rejects stale consent and hostile browser origins (54.2737ms)
+✔ connected sockets recheck consent and revocation before an action (21.222ms)
+✔ socket rejects malformed events, rate limits messages, and catches join failures (12.0441ms)
+✔ new direct messages reach the recipient's connected devices on the first event (18.045ms)
+[16:57:04.687] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.689] WARN (34888): Could not validate socket session
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.689] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.690] WARN (34888): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.696] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.696] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.697] WARN (34888): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.706] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.706] WARN (34888): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.707] WARN (34888): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.708] WARN (34888): Socket event failed
+    event: "conversation:join"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.708] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.713] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.714] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.718] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.721] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.726] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.726] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.731] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.732] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.732] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.736] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.740] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.783] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ message delivery disconnects a recipient whose current messaging authority was revoked (101.3341ms)
+[16:57:04.828] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.838] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+✔ socket live and call gates stay disabled (23.8163ms)
+[16:57:04.852] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.856] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+✔ connected sockets reject a revoked database epoch even if Redis still has the session (12.6345ms)
+[16:57:04.857] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.863] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.863] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:04.864] WARN (34888): Socket event rejected
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.875] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.877] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.882] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ a false delivery admission suppresses an event without disconnecting an authorized recipient (58.0956ms)
+✔ recipient device revocation during an awaited delivery guard prevents the event (8.6548ms)
+[16:57:04.922] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.927] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.928] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.931] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.932] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.935] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+✔ recipient JWT expiry during an awaited payload prevents dispatch before the expiry timer runs (8.5896ms)
+✔ recipient JWT expiry during an awaited guard prevents dispatch before the expiry timer runs (8.7201ms)
+[16:57:04.936] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.940] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:57:04.000] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.944] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.945] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.949] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:57:04.000] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ recipient JWT expiry during final session authorization prevents dispatch (8.1677ms)
+[16:57:04.953] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.954] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.957] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[17:57:04.000] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.961] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.962] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.965] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.966] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ dispatcher rejects a recipient with missing token expiry before payload hydration (8.0998ms)
+✔ dispatcher rejects a recipient with null token expiry before payload hydration (7.5509ms)
+[16:57:04.969] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.970] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.973] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.973] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.977] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.981] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.982] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ dispatcher rejects a recipient with text token expiry before payload hydration (8.0351ms)
+✔ dispatcher rejects a recipient with NaN token expiry before payload hydration (7.4145ms)
+✔ dispatcher rejects a recipient with infinite token expiry before payload hydration (7.6038ms)
+[16:57:04.985] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.986] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.989] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.989] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.992] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:04.993] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:04.996] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:04.997] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ dispatcher rejects a recipient with fractional token expiry before payload hydration (7.783ms)
+[16:57:05.000] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+✔ dispatcher rejects a recipient with expired token expiry before payload hydration (8.2646ms)
+[16:57:05.001] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.004] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.005] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.008] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.008] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.012] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.013] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.017] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.017] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.020] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.022] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.024] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.049] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+✔ conversation join cannot disclose presence after contact is withdrawn during room hydration (51.2155ms)
+[16:57:05.063] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.063] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.068] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.068] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.068] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.072] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.073] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.075] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ conversation join skips removed or revoked room peers while current peers remain visible (127.511ms)
+[16:57:05.191] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.191] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.191] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.195] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.196] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.196] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.199] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.201] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ disabled read receipts produce no socket event, including retained timestamps (169.4594ms)
+[16:57:05.361] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.361] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.365] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.365] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.365] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.368] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+✔ HTTP read acknowledgements do not publish disabled receipts (106.3466ms)
+[16:57:05.468] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.471] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.472] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.475] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.476] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.479] WARN (34888): Socket event failed
+    event: "call:accept"
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.480] WARN (34888): Socket event failed
+    event: "call:answer"
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.482] WARN (34888): Socket event failed
+    event: "call:ice"
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+✔ RTC acceptance and signaling stop after contact withdrawal or a safety block (16.0859ms)
+[16:57:05.484] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.484] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.491] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.493] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ stream WebRTC signaling cannot deliver to a revoked target device (36.7089ms)
+[16:57:05.517] WARN (34888): Socket event failed
+    event: "webrtc:offer"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.518] WARN (34888): Socket event failed
+    event: "webrtc:answer"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.520] WARN (34888): Socket event failed
+    event: "webrtc:ice-candidate"
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.520] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.520] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+[16:57:05.524] WARN (34888): Redis connection warning
+    error: {
+      "type": "Error"
+    }
+[16:57:05.524] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000002"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.524] WARN (34888): Could not broadcast offline presence
+    userId: "10000000-0000-4000-8000-000000000001"
+    error: {
+      "type": "Error"
+    }
+[16:57:05.527] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.529] INFO (34888): socket connected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ contact withdrawal while an RTC acceptance is awaited prevents its delivery and releases the call (11.507ms)
+[16:57:05.531] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000001"
+[16:57:05.532] INFO (34888): socket disconnected
+    userId: "10000000-0000-4000-8000-000000000002"
+✔ story views and reactions are persisted but scoped to the viewer (212.9756ms)
+✔ story text styles normalize to safe curated defaults and controls (2.5843ms)
+✔ story text styles reject arbitrary CSS-like keys and out-of-range values (1.0809ms)
+✔ advanced story text styling is entitlement-gated and persisted after authorization (2.7632ms)
+✔ registration and reacceptance retain separate terms versions without granting eligibility or optional consent (197.7842ms)
+✔ terms history migration preserves surviving legacy evidence idempotently in either timestamp storage (30.0557ms)
+✔ concurrent password logins consume a valid authenticator code exactly once (55.8852ms)
+✔ authenticator replay is denied across password, Google, email OTP and disable flows (7.6435ms)
+✔ setup consumes its authenticator code and a fresh code is required for login (5.804ms)
+✔ invalid authenticator codes do not claim Redis and a replay-store outage fails closed (5.9437ms)
+✔ trusted origin middleware accepts configured and non-browser callers (0.8082ms)
+✔ trusted origin middleware rejects an unconfigured browser origin (0.276ms)
+✔ detects common media signatures instead of trusting extensions (1.0213ms)
+✔ allows ambiguous WebM and Ogg containers only within media families (0.2017ms)
+✔ public profiles allowlist identity fields and exclude consent, email and future secrets (1.4465ms)
+✔ restricted owner view contains only account, security and eligibility summaries (0.2947ms)
+✔ required notification worker is unhealthy until it is explicitly ready (0.9917ms)
+✔ required lifecycle worker reports healthy, missing, stale, and recovered heartbeat states (60.066ms)
+✔ lifecycle readiness detects every current stalled handler and recovers after a crashed heartbeat expires (47.555ms)
+✔ lifecycle readiness requires the cleanup handler and uses database time rather than host clock skew (4.7301ms)
+ℹ tests 572
+ℹ suites 0
+ℹ pass 554
+ℹ fail 15
+ℹ cancelled 0
+ℹ skipped 3
+ℹ todo 0
+ℹ duration_ms 257431.662
+
+✖ failing tests:
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\account-integrity.test.ts:16:952
+✖ account deletion erases embedded actors and discussions while preserving unrelated content and queue delivery (38.8397ms)
+  AssertionError [ERR_ASSERTION]: the isolated Redis queue must be available
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\account-integrity.test.ts:232:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\disappearing-message.test.ts:1:1878
+✖ expired and deleted messages are excluded at the conversation response boundary (0.5516ms)
+  TypeError: this.conversationRepository.findById is not a function
+      at MessageService.requireConversationContacts (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\message-service.ts:64:75)
+      at MessageService.listConversationPage (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\message-service.ts:359:22)
+      at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\disappearing-message.test.ts:65:20)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\eligibility-media.integration.test.ts:4:9161
+✖ messages media expires at issuance and cached delivery without waiting for cleanup (560.2542ms)
+  AssertionError [ERR_ASSERTION]: expiry enforcement cannot depend on asynchronous reference cleanup
+
+  0 !== 1
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\eligibility-media.integration.test.ts:270:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\eligibility-media.integration.test.ts:4:12033
+✖ message attachment expiry uses the database UTC clock for near-future content (34.0554ms)
+  Error [MediaLifecycleError]: Media is not available to this viewer
+      at denied (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\media-authorization-service.ts:45:22)
+      at MediaAuthorizationService.authorize (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\media-authorization-service.ts:86:36)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\eligibility-media.integration.test.ts:321:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    status: 404,
+    code: 'media_not_available'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\message-service.test.ts:1:2167
+✖ concurrent reactions from different users are preserved and repeated reactions are idempotent (24.6479ms)
+  Error: This contact is not authorized
+      at MessageService.invitationPolicy (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\message-service.ts:102:76)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async MessageService.createGroupChat (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\message-service.ts:122:43)
+      at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\message-service.test.ts:54:17)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\message-service.test.ts:2:3833
+✖ deleting a group creator or member preserves shared group history and removes the departed account data (217.6404ms)
+  Error: This contact is not authorized
+      at MessageService.invitationPolicy (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\message-service.ts:102:76)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async MessageService.createGroupChat (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\message-service.ts:122:43)
+      at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\message-service.test.ts:229:24)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\notification-worker-lifecycle.integration.test.ts:1:349
+✖ notification workers report readiness through start, stop, and restart (22.7466ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  false !== true
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\notification-worker-lifecycle.integration.test.ts:17:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:8:902
+✖ concurrent repeated rollups are idempotent and source KPI queries execute (10.6382ms)
+  Error: Failed query:
+          INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
+          SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
+          FROM product_analytics_events
+          WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz
+          GROUP BY event_name
+          UNION ALL
+          SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()
+          FROM (
+            SELECT DISTINCT actor_id
+            FROM product_analytics_events
+            WHERE actor_id IS NOT NULL
+              AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz
+          ) active
+
+  params: 2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z
+      at NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:73:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+      ... 4 lines matching cause stack trace ...
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    query: "\n        INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)\n        SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()\n        FROM product_analytics_events\n        WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz\n        GROUP BY event_name\n        UNION ALL\n        SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()\n        FROM (\n          SELECT DISTINCT actor_id\n          FROM product_analytics_events\n          WHERE actor_id IS NOT NULL\n            AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz\n        ) active\n      ",
+    params: [ '2026-10-16T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-17T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-17T00:00:00.000Z' ],
+    cause: error: duplicate key value violates unique constraint "product_analytics_daily_date_event_name_pk"
+        at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\pg@8.23.0\node_modules\pg\lib\client.js:694:17
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:149:14)
+        at async NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:71:12)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+        at async NodePgSession.transaction (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:259:19)
+        at async ProductAnalyticsService.rollupDay (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:94:5)
+        at async Promise.all (index 0)
+        at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:95:3)
+        at async Test.run (node:internal/test_runner/test:1389:7) {
+      length: 306,
+      severity: 'ERROR',
+      code: '23505',
+      detail: 'Key (date, event_name)=(2026-10-16 05:30:00, navigation) already exists.',
+      hint: undefined,
+      position: undefined,
+      internalPosition: undefined,
+      internalQuery: undefined,
+      where: undefined,
+      schema: 'public',
+      table: 'product_analytics_daily',
+      column: undefined,
+      dataType: undefined,
+      constraint: 'product_analytics_daily_date_event_name_pk',
+      file: 'nbtinsert.c',
+      line: '673',
+      routine: '_bt_check_unique'
+    }
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:17:1775
+✖ failed rollup state is durable and a later retry succeeds (22.2491ms)
+  Error: Failed query:
+          INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
+          SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
+          FROM product_analytics_events
+          WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz
+          GROUP BY event_name
+          UNION ALL
+          SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()
+          FROM (
+            SELECT DISTINCT actor_id
+            FROM product_analytics_events
+            WHERE actor_id IS NOT NULL
+              AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz
+          ) active
+
+  params: 2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z
+      at NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:73:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+      ... 4 lines matching cause stack trace ...
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    query: "\n        INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)\n        SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()\n        FROM product_analytics_events\n        WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz\n        GROUP BY event_name\n        UNION ALL\n        SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()\n        FROM (\n          SELECT DISTINCT actor_id\n          FROM product_analytics_events\n          WHERE actor_id IS NOT NULL\n            AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz\n        ) active\n      ",
+    params: [ '2026-10-16T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-17T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-17T00:00:00.000Z' ],
+    cause: error: duplicate key value violates unique constraint "product_analytics_daily_date_event_name_pk"
+        at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\pg@8.23.0\node_modules\pg\lib\client.js:694:17
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:149:14)
+        at async NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:71:12)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+        at async NodePgSession.transaction (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:259:19)
+        at async ProductAnalyticsService.rollupDay (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:94:5)
+        at async ProductAnalyticsService.runDailyRollup (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:127:7)
+        at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:243:3)
+        at async Test.run (node:internal/test_runner/test:1389:7) {
+      length: 306,
+      severity: 'ERROR',
+      code: '23505',
+      detail: 'Key (date, event_name)=(2026-10-16 05:30:00, navigation) already exists.',
+      hint: undefined,
+      position: undefined,
+      internalPosition: undefined,
+      internalQuery: undefined,
+      where: undefined,
+      schema: 'public',
+      table: 'product_analytics_daily',
+      column: undefined,
+      dataType: undefined,
+      constraint: 'product_analytics_daily_date_event_name_pk',
+      file: 'nbtinsert.c',
+      line: '673',
+      routine: '_bt_check_unique'
+    }
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:35:102
+✖ rollup quality mismatches persist an alertable failure and clean retry recovers (7.9687ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /AnalyticsRollupQualityError/. Input:
+
+  'Error: Failed query: \n' +
+    '        INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)\n' +
+    '        SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()\n' +
+    '        FROM product_analytics_events\n' +
+    '        WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz\n' +
+    '        GROUP BY event_name\n' +
+    '        UNION ALL\n' +
+    "        SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()\n" +
+    '        FROM (\n' +
+    '          SELECT DISTINCT actor_id\n' +
+    '          FROM product_analytics_events\n' +
+    '          WHERE actor_id IS NOT NULL\n' +
+    '            AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz\n' +
+    '        ) active\n' +
+    '      \n' +
+    'params: 2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z'
+
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:271:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Failed query:
+            INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
+            SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
+            FROM product_analytics_events
+            WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz
+            GROUP BY event_name
+            UNION ALL
+            SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()
+            FROM (
+              SELECT DISTINCT actor_id
+              FROM product_analytics_events
+              WHERE actor_id IS NOT NULL
+                AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz
+            ) active
+
+    params: 2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z
+        at NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:73:11)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+        ... 4 lines matching cause stack trace ...
+        at async strict.rejects (node:assert:769:25)
+        at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:271:3)
+        at async Test.run (node:internal/test_runner/test:1389:7) {
+      [cause]: error: duplicate key value violates unique constraint "product_analytics_daily_date_event_name_pk"
+          at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\pg@8.23.0\node_modules\pg\lib\client.js:694:17
+          at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:149:14)
+          at async NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:71:12)
+          at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+          at async NodePgSession.transaction (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:259:19)
+          at async ProductAnalyticsService.rollupDay (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:94:5)
+          at async ProductAnalyticsService.runDailyRollup (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:127:7)
+          at async waitForActual (node:assert:646:5)
+          at async strict.rejects (node:assert:769:25)
+    },
+    expected: /AnalyticsRollupQualityError/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:1:1053
+✖ F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts (6.9136ms)
+  Error: Failed query:
+          INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)
+          SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()
+          FROM product_analytics_events
+          WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz
+          GROUP BY event_name
+          UNION ALL
+          SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()
+          FROM (
+            SELECT DISTINCT actor_id
+            FROM product_analytics_events
+            WHERE actor_id IS NOT NULL
+              AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz
+          ) active
+
+  params: 2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-16T00:00:00.000Z,2026-10-17T00:00:00.000Z
+      at NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:73:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+      ... 4 lines matching cause stack trace ...
+      at async Test.runHook (node:internal/test_runner/test:1269:9)
+      at async after (node:internal/test_runner/test:1322:9)
+      at async Test.run (node:internal/test_runner/test:1408:7) {
+    query: "\n        INSERT INTO product_analytics_daily (date, event_name, event_count, unique_users, rolled_up_at)\n        SELECT $1::timestamptz, event_name, count(*)::integer, count(DISTINCT actor_id)::integer, NOW()\n        FROM product_analytics_events\n        WHERE occurred_at >= $2::timestamptz AND occurred_at < $3::timestamptz\n        GROUP BY event_name\n        UNION ALL\n        SELECT $4::timestamptz, 'active_users', count(*)::integer, count(*)::integer, NOW()\n        FROM (\n          SELECT DISTINCT actor_id\n          FROM product_analytics_events\n          WHERE actor_id IS NOT NULL\n            AND occurred_at >= $5::timestamptz AND occurred_at < $6::timestamptz\n        ) active\n      ",
+    params: [ '2026-10-16T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-17T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-16T00:00:00.000Z', '2026-10-17T00:00:00.000Z' ],
+    cause: error: duplicate key value violates unique constraint "product_analytics_daily_date_event_name_pk"
+        at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\pg@8.23.0\node_modules\pg\lib\client.js:694:17
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:149:14)
+        at async NodePgPreparedQuery.queryWithCache (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\pg-core\session.ts:71:12)
+        at async <anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:97:7)
+        at async NodePgSession.transaction (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\node_modules\.pnpm\drizzle-orm@0.45.2_@types+pg@8.20.3_pg@8.23.0\node_modules\src\node-postgres\session.ts:259:19)
+        at async ProductAnalyticsService.rollupDay (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\services\product-analytics-service.ts:94:5)
+        at async TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\product-analytics.integration.test.ts:44:7)
+        at async TestHook.run (node:internal/test_runner/test:1389:7)
+        at async Test.runHook (node:internal/test_runner/test:1269:9) {
+      length: 308,
+      severity: 'ERROR',
+      code: '23505',
+      detail: 'Key (date, event_name)=(2026-10-16 05:30:00, active_users) already exists.',
+      hint: undefined,
+      position: undefined,
+      internalPosition: undefined,
+      internalQuery: undefined,
+      where: undefined,
+      schema: 'public',
+      table: 'product_analytics_daily',
+      column: undefined,
+      dataType: undefined,
+      constraint: 'product_analytics_daily_date_event_name_pk',
+      file: 'nbtinsert.c',
+      line: '673',
+      routine: '_bt_check_unique'
+    }
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\queue-service.test.ts:1:2365
+✖ queue retention is bounded without pruning operator-review jobs (2.9489ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    {
+      age: 604800,
+  +   count: 10000
+  -   count: 1000
+    }
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\queue-service.test.ts:69:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { age: 604800, count: 10000 },
+    expected: { age: 604800, count: 1000 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\report-authorization.integration.test.ts:1:4909
+✖ public grievance intake and status responses expose only the allowlisted fields (9.1739ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    [
+  -   'category',
+      'createdAt',
+  -   'slaDeadline',
+      'status',
+      'ticketId'
+    ]
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\report-authorization.integration.test.ts:119:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'createdAt', 'status', 'ticketId' ],
+    expected: [ 'category', 'createdAt', 'slaDeadline', 'status', 'ticketId' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\report-authorization.integration.test.ts:5:910
+✖ staff grievance pagination keeps old cases reachable with status-scoped cursors (83.9252ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+    assert.ok(seen.length <= ids.length)
+
+      at TestContext.<anonymous> (F:\CHATPGPT\Projects\yor-talks-backend-audit-20261017\api-server\src\__tests__\report-authorization.integration.test.ts:265:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

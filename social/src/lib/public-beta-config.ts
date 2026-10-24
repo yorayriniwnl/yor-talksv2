@@ -14,8 +14,8 @@ function readNumber(value: unknown, fallback: number): number {
 export const publicBetaConfig = {
   publicBeta: readBoolean(import.meta.env.VITE_PUBLIC_BETA),
   termsVersion: import.meta.env.VITE_TERMS_VERSION?.trim() || "development",
-  legalContentReviewed: readBoolean(import.meta.env.VITE_LEGAL_CONTENT_REVIEWED),
   minimumAge: readNumber(import.meta.env.VITE_MINIMUM_AGE, 18),
+  legalContentReviewed: readBoolean(import.meta.env.VITE_LEGAL_CONTENT_REVIEWED),
   operatorName: import.meta.env.VITE_LEGAL_OPERATOR_NAME?.trim() || "",
   operatorAddress: import.meta.env.VITE_LEGAL_OPERATOR_ADDRESS?.trim() || "",
   effectiveDate: import.meta.env.VITE_LEGAL_EFFECTIVE_DATE?.trim() || "",
@@ -31,13 +31,11 @@ export const publicBetaConfig = {
 } as const;
 
 const placeholderPattern = /change_me|change-me|replace-with|your-domain\.example|^development$/i;
-const isNonPlaceholder = (value: string) => Boolean(value) && !placeholderPattern.test(value);
-const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-const isRealDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
-  && !Number.isNaN(Date.parse(value))
-  && new Date(value).toISOString().slice(0, 10) === value;
 
-// Operator review is a separate approval gate from presence of build-time values.
+function isNonPlaceholder(val: string | undefined): boolean {
+  return typeof val === 'string' && val.trim().length > 0 && !placeholderPattern.test(val.trim());
+}
+
 export const legalConfigReady = Boolean(
   publicBetaConfig.legalContentReviewed &&
   isNonPlaceholder(publicBetaConfig.termsVersion) &&
@@ -48,9 +46,9 @@ export const legalConfigReady = Boolean(
   isNonPlaceholder(publicBetaConfig.privacyContactEmail) &&
   isNonPlaceholder(publicBetaConfig.supportEmail) &&
   isNonPlaceholder(publicBetaConfig.grievanceOfficerName) &&
-  isNonPlaceholder(publicBetaConfig.grievanceContactEmail) &&
-  isValidEmail(publicBetaConfig.privacyContactEmail) &&
-  isValidEmail(publicBetaConfig.supportEmail) &&
-  isValidEmail(publicBetaConfig.grievanceContactEmail) &&
-  isRealDate(publicBetaConfig.effectiveDate),
-);
+  isNonPlaceholder(publicBetaConfig.grievanceContactEmail),
+) && [publicBetaConfig.privacyContactEmail, publicBetaConfig.supportEmail, publicBetaConfig.grievanceContactEmail]
+  .every(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  && /^\d{4}-\d{2}-\d{2}$/.test(publicBetaConfig.effectiveDate)
+  && !Number.isNaN(Date.parse(publicBetaConfig.effectiveDate))
+  && new Date(publicBetaConfig.effectiveDate).toISOString().slice(0, 10) === publicBetaConfig.effectiveDate;

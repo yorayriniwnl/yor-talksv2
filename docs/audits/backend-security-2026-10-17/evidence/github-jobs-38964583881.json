@@ -1,0 +1,281 @@
+{
+    "total_count":  1,
+    "jobs":  [
+                 {
+                     "id":  117187763006,
+                     "run_id":  38964583881,
+                     "workflow_name":  "CI",
+                     "head_branch":  "codex/compliance-audit-20261017",
+                     "run_url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/actions/runs/38964583881",
+                     "run_attempt":  1,
+                     "node_id":  "CR_kwDOTQJbrs8AAAAbSO9bPg",
+                     "head_sha":  "2e80acbb3a74478935bd9641b16f709f06b67bb6",
+                     "url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/actions/jobs/117187763006",
+                     "html_url":  "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/38964583881/job/117187763006",
+                     "status":  "completed",
+                     "conclusion":  "failure",
+                     "created_at":  "2026-10-16T20:45:53Z",
+                     "started_at":  "2026-10-16T20:45:55Z",
+                     "completed_at":  "2026-10-16T20:46:42Z",
+                     "name":  "verify",
+                     "steps":  [
+                                   {
+                                       "name":  "Set up job",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  1,
+                                       "started_at":  "2026-10-16T20:45:56Z",
+                                       "completed_at":  "2026-10-16T20:45:57Z"
+                                   },
+                                   {
+                                       "name":  "Initialize containers",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  2,
+                                       "started_at":  "2026-10-16T20:45:57Z",
+                                       "completed_at":  "2026-10-16T20:46:12Z"
+                                   },
+                                   {
+                                       "name":  "Check out repository",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  3,
+                                       "started_at":  "2026-10-16T20:46:12Z",
+                                       "completed_at":  "2026-10-16T20:46:13Z"
+                                   },
+                                   {
+                                       "name":  "Set up pnpm",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  4,
+                                       "started_at":  "2026-10-16T20:46:13Z",
+                                       "completed_at":  "2026-10-16T20:46:14Z"
+                                   },
+                                   {
+                                       "name":  "Set up Node.js",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  5,
+                                       "started_at":  "2026-10-16T20:46:14Z",
+                                       "completed_at":  "2026-10-16T20:46:16Z"
+                                   },
+                                   {
+                                       "name":  "Install dependencies",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  6,
+                                       "started_at":  "2026-10-16T20:46:16Z",
+                                       "completed_at":  "2026-10-16T20:46:25Z"
+                                   },
+                                   {
+                                       "name":  "Audit runtime and build dependencies",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  7,
+                                       "started_at":  "2026-10-16T20:46:25Z",
+                                       "completed_at":  "2026-10-16T20:46:25Z"
+                                   },
+                                   {
+                                       "name":  "Verify API contract is synchronized",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  8,
+                                       "started_at":  "2026-10-16T20:46:25Z",
+                                       "completed_at":  "2026-10-16T20:46:35Z"
+                                   },
+                                   {
+                                       "name":  "Verify YOR visual framework tokens",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  9,
+                                       "started_at":  "2026-10-16T20:46:35Z",
+                                       "completed_at":  "2026-10-16T20:46:36Z"
+                                   },
+                                   {
+                                       "name":  "Run browser-state and session-boundary unit tests",
+                                       "status":  "completed",
+                                       "conclusion":  "failure",
+                                       "number":  10,
+                                       "started_at":  "2026-10-16T20:46:36Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Build database package",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  11,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Apply schema migration",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  12,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Typecheck API and web",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  13,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Install media verification runtime",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  14,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Run API tests serially",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  15,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Install browser test runtime",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  16,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Run browser smoke tests",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  17,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Retain browser failure evidence",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  18,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Build API and web",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  19,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Verify production configuration wiring",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  20,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Verify backup and restore failure cleanup",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  21,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Verify restricted database runtime role",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  22,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Validate production Compose file",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  23,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Verify Linux production secret permissions",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  24,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Build production container images",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  25,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Smoke test production container stack",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  26,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Post Set up Node.js",
+                                       "status":  "completed",
+                                       "conclusion":  "skipped",
+                                       "number":  49,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Post Set up pnpm",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  50,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Post Check out repository",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  51,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:39Z"
+                                   },
+                                   {
+                                       "name":  "Stop containers",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  52,
+                                       "started_at":  "2026-10-16T20:46:39Z",
+                                       "completed_at":  "2026-10-16T20:46:41Z"
+                                   },
+                                   {
+                                       "name":  "Complete job",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "number":  53,
+                                       "started_at":  "2026-10-16T20:46:41Z",
+                                       "completed_at":  "2026-10-16T20:46:41Z"
+                                   }
+                               ],
+                     "check_run_url":  "https://api.github.com/repos/[REDACTED legacy test credential]/yor-talksv2/check-runs/117187763006",
+                     "labels":  [
+                                    "ubuntu-latest"
+                                ],
+                     "runner_id":  1000002880,
+                     "runner_name":  "GitHub Actions 1000002880",
+                     "runner_group_id":  0,
+                     "runner_group_name":  "GitHub Actions"
+                 }
+             ]
+}

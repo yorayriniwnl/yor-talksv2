@@ -1,17 +1,21 @@
 import { useEffect } from 'react';
-import { Bell, MessageCircle, Plus, Search } from 'lucide-react';
+import { Bell, Menu, MessageCircle, Plus, Search } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { WorldSelector } from '@/components/worlds/WorldSelector';
 import { hasUnreadConversation } from '@/lib/message-state';
+import { isNavigationActive, navigationGroups, openCommandPalette } from './navigation';
 
 interface AppTopbarProps {
   onCompose: () => void;
+  onOpenNavigation: () => void;
 }
 
 const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
+  { match: '/preregister', title: 'Founder Terminal', kicker: 'Global Launch 01 Dec 2026' },
+  { match: '/launch', title: 'Founder Terminal', kicker: 'Global Launch 01 Dec 2026' },
   { match: '/pulse', title: 'Pulse', kicker: 'What is moving right now' },
   { match: '/worlds', title: 'Worlds', kicker: 'Places with shared gravity' },
   { match: '/dream', title: 'Dream Engine', kicker: 'Turn intent into motion' },
@@ -64,19 +68,14 @@ const PAGE_LABELS: Array<{ match: string; title: string; kicker: string }> = [
 
 function getPageLabel(location: string) {
   if (location === '/') return { title: 'Home', kicker: 'Signal feed // live' };
-  return PAGE_LABELS.find((item) => location.startsWith(item.match)) ?? { title: 'Yor', kicker: 'The living internet' };
+  if (location.startsWith('/@')) return { title: 'Profile', kicker: 'Get to know your people' };
+  if (location.startsWith('/post/')) return { title: 'Post', kicker: 'Keep the conversation going' };
+  const page = PAGE_LABELS.find((item) => isNavigationActive(location, item.match));
+  const destination = navigationGroups.flatMap(group => group.items).find(item => isNavigationActive(location, item.path));
+  return page ?? { title: destination?.label ?? 'Yor', kicker: 'A place for your people' };
 }
 
-function openCommandPalette() {
-  window.dispatchEvent(new KeyboardEvent('keydown', {
-    key: 'k',
-    code: 'KeyK',
-    ctrlKey: true,
-    bubbles: true,
-  }));
-}
-
-export function AppTopbar({ onCompose }: AppTopbarProps) {
+export function AppTopbar({ onCompose, onOpenNavigation }: AppTopbarProps) {
   const [location] = useLocation();
   const currentUser = useAppStore((state) => state.currentUser);
   const unreadNotifications = useAppStore((state) => state.notifications.filter((notification) => !notification.read).length);
@@ -92,9 +91,9 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
     <header className="premium-topbar sticky top-0 z-30" data-home={location === '/' ? 'true' : undefined} data-route={page.title.toLowerCase().replaceAll(' ', '-')}>
       <div className="premium-topbar__inner">
         <div className="premium-topbar__title">
-          <Link href="/" className="premium-topbar__mobile-mark" aria-label="Go to home">
-            <span>Y</span>
-          </Link>
+          <button type="button" className="premium-topbar__mobile-mark" aria-label="Open navigation menu" aria-haspopup="dialog" onClick={onOpenNavigation}>
+            <Menu size={20} aria-hidden="true" />
+          </button>
           <div className="min-w-0">
             <p className="premium-topbar__kicker">{page.kicker}</p>
             <h1 className="premium-topbar__heading">{page.title}</h1>
@@ -103,11 +102,19 @@ export function AppTopbar({ onCompose }: AppTopbarProps) {
 
         <button type="button" className="premium-search" onClick={openCommandPalette} aria-label="Search Yor">
           <Search className="h-4 w-4 shrink-0" />
-          <span>Search people, posts, worlds</span>
+          <span>Search people, posts, and features</span>
           <kbd className="premium-search__shortcut">Ctrl K</kbd>
         </button>
 
         <div className="premium-topbar__actions">
+          <Link
+            href="/preregister"
+            className="yor-launch-link hidden xl:inline-flex"
+            title="VIP Founder Pre-Registration for 01 Dec 2026 Global Launch"
+          >
+            <span>Founder launch</span>
+          </Link>
+
           <WorldSelector compact />
 
           <Link href="/messages" className="premium-icon-button" aria-label={unreadMessages ? `${unreadMessages} unread conversations` : 'Messages'}>

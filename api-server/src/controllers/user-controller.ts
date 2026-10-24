@@ -9,6 +9,10 @@ import { ContactShieldService, type ContactShieldInput } from "../services/conta
 import { AccountService, InvalidAccountPasswordError } from "../services/account-service.js";
 import { env } from "../config/env.js";
 import { assertValidUploadedFile } from "../middlewares/upload.js";
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { AccountExportNotFoundError } from '../services/account-export.js';
+import { logger } from '../lib/logger.js';
 
 export class UserController {
   private readonly mediaService = new MediaService();
@@ -76,7 +80,7 @@ export class UserController {
       if (error instanceof PremiumProfileFeatureUnavailableError) {
         return res.status(403).json(createResponse(error.message, null, {}, ["premium_feature_unavailable"]));
       }
-      return res.status(400).json(createResponse("Invalid premium profile option", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Invalid premium profile option", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -161,7 +165,7 @@ export class UserController {
       return res.status(200).json(createResponse("Close Friend added", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not add Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not add Close Friend", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -173,7 +177,7 @@ export class UserController {
       return res.status(200).json(createResponse("Close Friend removed", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not remove Close Friend", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not remove Close Friend", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -185,7 +189,7 @@ export class UserController {
       return res.status(200).json(createResponse("Creator added to Favorites", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not add creator to Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not add creator to Favorites", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -197,7 +201,7 @@ export class UserController {
       return res.status(200).json(createResponse("Creator removed from Favorites", result));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Could not remove creator from Favorites", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Could not remove creator from Favorites", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -265,7 +269,7 @@ export class UserController {
       return res.status(200).json(createResponse("User blocked", { blockedUsers: user.blockedUsers }));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Cannot block user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Cannot block user", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -288,7 +292,7 @@ export class UserController {
       return res.status(200).json(createResponse("User muted", { mutedUsers: user.mutedUsers }));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Cannot mute user", null, {}, [error instanceof Error ? error.message : "Bad request"]));
+      return res.status(400).json(createResponse("Cannot mute user", null, {}, ["Check your request and try again"]));
     }
   };
 
@@ -302,12 +306,52 @@ export class UserController {
   };
 
   exportAccount = async (req: Request, res: Response) => {
-    const data = await this.accountService.exportAccount(req.user?.id ?? "");
-    if (!data) {
-      return res.status(404).json(createResponse("User not found", null, {}, ["User not found"]));
+    const abort = new AbortController();
+    const onAborted = () => abort.abort();
+    const onClosed = () => { if (!res.writableFinished) abort.abort(); };
+    req.once('aborted', onAborted);
+    res.once('close', onClosed);
+    const chunks = this.accountService.streamAccountExport(req.user?.id ?? '', { signal: abort.signal });
+    let sourceFailure: unknown;
+    try {
+      // Resolve the account and begin the snapshot before committing attachment headers.
+      const first = await chunks.next();
+      abort.signal.throwIfAborted();
+      res.status(200);
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="yor-talks-account-export.json"');
+      res.setHeader('Cache-Control', 'private, no-store');
+      await pipeline(Readable.from((async function* () {
+        try {
+          yield '{"success":true,"message":"Account export ready","data":';
+          if (!first.done) yield first.value;
+          yield* chunks;
+          yield ',"errors":[],"meta":{}}';
+        } catch (error) {
+          // pipeline destroys the response after a source failure, which also
+          // fires close/abort. Preserve the cause before those cleanup signals.
+          if (!abort.signal.aborted) sourceFailure = error;
+          throw error;
+        }
+      })()), res);
+    } catch (error) {
+      const failure = sourceFailure ?? error;
+      const peerClosed = sourceFailure === undefined && (res.destroyed || abort.signal.aborted);
+      const expectedAbort = abort.signal.aborted && failure instanceof Error && failure.name === 'AbortError';
+      if (!peerClosed && !expectedAbort && !(failure instanceof AccountExportNotFoundError)) {
+        logger.warn({ errorName: failure instanceof Error ? failure.name : 'Error' }, 'Account export stream failed');
+      }
+      if (res.destroyed || abort.signal.aborted) return;
+      if (!res.headersSent) {
+        if (error instanceof AccountExportNotFoundError) return res.status(404).json(createResponse('User not found', null, {}, ['User not found']));
+        return res.status(503).json(createResponse('Account export is temporarily unavailable', null));
+      }
+      res.destroy(error instanceof Error ? error : undefined);
+    } finally {
+      await chunks.return(undefined).catch(() => undefined);
+      req.off('aborted', onAborted);
+      res.off('close', onClosed);
     }
-    res.setHeader("Content-Disposition", 'attachment; filename="yor-talks-account-export.json"');
-    return res.status(200).json(createResponse("Account export ready", data));
   };
 
   deleteAccount = async (req: Request, res: Response) => {
@@ -339,7 +383,7 @@ export class UserController {
       return res.status(201).json(createResponse("Contact shields updated", shields));
     } catch (error) {
       if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-      return res.status(400).json(createResponse("Contact shields could not be updated", null, {}, [error instanceof Error ? error.message : "Invalid contact list"]));
+      return res.status(400).json(createResponse("Contact shields could not be updated", null, {}, ["Check your contact list and try again"]));
     }
   };
 

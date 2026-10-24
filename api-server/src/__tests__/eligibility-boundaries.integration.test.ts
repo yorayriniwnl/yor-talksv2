@@ -29,8 +29,16 @@ test("route authority classifies capabilities and keeps safety and restricted ro
   assert.deepEqual(classifyApiRoute("POST", "/api/posts"), { kind: "capability", capability: "publish" });
   assert.deepEqual(classifyApiRoute("POST", `/api/v1/posts/${UUID}/like`), { kind: "capability", capability: "social" });
   assert.deepEqual(classifyApiRoute("POST", "/api/messages"), { kind: "capability", capability: "messaging" });
+  assert.deepEqual(classifyApiRoute("GET", "/api/economy/analytics"), { kind: "capability", capability: "analytics" });
   assert.deepEqual(classifyApiRoute("POST", "/api/billing/checkouts/3d6f2f91-32bb-45bc-bf1f-7f0e40a3b8a0/cancel"),
     { kind: "capability", capability: "payments" });
+  assert.deepEqual(classifyApiRoute("POST", `/api/products/${UUID}/order`), { kind: "capability", capability: "payments" });
+  assert.deepEqual(classifyApiRoute("GET", "/api/products/orders"), { kind: "capability", capability: "payments" });
+  assert.deepEqual(classifyApiRoute("POST", `/api/products/orders/${UUID}/cancel`), { kind: "capability", capability: "payments" });
+  assert.deepEqual(classifyApiRoute("POST", `/api/products/orders/${UUID}/verify`), { kind: "capability", capability: "payments" });
+  assert.deepEqual(classifyApiRoute("POST", `/api/products/orders/${UUID}/fulfill`), { kind: "capability", capability: "seller" });
+  assert.deepEqual(classifyApiRoute("POST", "/api/products"), { kind: "capability", capability: "seller" });
+  assert.deepEqual(classifyApiRoute("POST", `/api/products/${UUID}/save`), { kind: "capability", capability: "social" });
   assert.deepEqual(classifyApiRoute("POST", "/api/v1/streams"), { kind: "capability", capability: "live" });
   assert.deepEqual(classifyApiRoute("POST", "/api/v1/users/me/eligibility/challenges"), { kind: "restricted" });
   assert.deepEqual(classifyApiRoute("GET", "/api/users/me"), { kind: "restricted" });
@@ -59,4 +67,19 @@ test("unmapped operations and missing capabilities fail closed", () => {
   const capabilityResponse = { status(code: number) { capabilityStatus = code; return this; }, json() { return this; } } as unknown as Response;
   requireCapability("publish")(restricted, capabilityResponse, (() => { calledNext = true; }) as never);
   assert.equal(capabilityStatus, 403);
+});
+
+test("economy analytics is controlled by analytics capability independently of payments", () => {
+  const req = { method: "GET", originalUrl: "/api/economy/analytics", user: { id: UUID, role: "user", permissions: [] },
+    eligibility: { activated: true, capabilities: { analytics: false, payments: true }, reason: null } } as unknown as Request;
+  let statusCode = 200;
+  let calledNext = false;
+  const res = { status(code: number) { statusCode = code; return this; }, json() { return this; } } as unknown as Response;
+  enforceRouteAuthority(req, res, (() => { calledNext = true; }) as never);
+  assert.equal(statusCode, 403, "payment permission cannot grant creator analytics");
+  assert.equal(calledNext, false);
+
+  req.eligibility = { activated: true, capabilities: { analytics: true, payments: false }, reason: null } as never;
+  enforceRouteAuthority(req, res, (() => { calledNext = true; }) as never);
+  assert.equal(calledNext, true, "creator analytics does not require payments permission");
 });

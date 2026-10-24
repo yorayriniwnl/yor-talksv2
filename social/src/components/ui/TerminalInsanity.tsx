@@ -55,11 +55,6 @@ export function TerminalInsanity() {
 
     window.addEventListener('mousemove', handleMouseMove);
 
-    // --- FEATURE 3: HARLEM SHAKE ---
-    const audio = new Audio('https://s3.amazonaws.com/moovweb-marketing/playground/harlem-shake.mp3');
-    audio.volume = 1.0;
-    audio.play().catch(() => console.log('Audio autoplay prevented'));
-
     // --- EXISTING DOM CHAOS ---
     const interval = setInterval(() => {
       const elements = document.querySelectorAll('div, p, span, h1, h2, h3, img, button');
@@ -79,12 +74,11 @@ export function TerminalInsanity() {
 
     document.body.style.animation = 'barrelRoll 3s infinite linear';
 
-    // Trigger BSOD after 15 seconds (when the bass drops)
+    // End this dormant visual effect after 15 seconds
     const bsodTimer = setTimeout(() => {
       setShowBSOD(true);
       document.body.style.animation = '';
       if (audioCtxRef.current) audioCtxRef.current.close();
-      audio.pause();
     }, 15000);
 
     return () => {
@@ -92,7 +86,6 @@ export function TerminalInsanity() {
       clearTimeout(bsodTimer);
       document.body.style.animation = '';
       window.removeEventListener('mousemove', handleMouseMove);
-      audio.pause();
       if (audioCtxRef.current) {
          audioCtxRef.current.close();
          audioCtxRef.current = null;

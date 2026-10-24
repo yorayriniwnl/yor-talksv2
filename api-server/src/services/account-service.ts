@@ -1,40 +1,20 @@
 import bcrypt from "bcryptjs";
-import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { randomUUID } from 'node:crypto';
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import {
-  commentsTable,
-  communityMembersTable,
-  contactShieldsTable,
-  eventRsvpsTable,
-  broadcastChannelMembersTable,
-  invitesTable,
-  ledgerTransactionsTable,
-  marketplaceOrdersTable,
-  messagesTable,
-  paymentOrdersTable,
-  postsTable,
-  postBookmarksTable,
-  postLikesTable,
-  postPollVotesTable,
-  postRepostsTable,
-  productSavesTable,
-  reportsTable,
-  storiesTable,
-  storyPollVotesTable,
-  storyReactionsTable,
-  storyViewsTable,
-  subscriptionsTable,
-  userCloseFriendsTable,
-  userFavoriteCreatorsTable,
-  userFollowsTable,
-  videoBookmarksTable,
-  usersTable,
+  ledgerTransactionsTable, messagesTable, usersTable,
+  postsTable, commentsTable, storiesTable, storyViewsTable, storyReactionsTable,
+  postLikesTable, postBookmarksTable, postRepostsTable, postPollVotesTable,
+  storyPollVotesTable, videoBookmarksTable, productSavesTable, eventRsvpsTable,
+  communityMembersTable, broadcastChannelMembersTable, userFollowsTable,
+  userFavoriteCreatorsTable, userCloseFriendsTable, subscriptionsTable,
+  reportsTable, contactShieldsTable, paymentOrdersTable, marketplaceOrdersTable,
 } from "@workspace/db/schema";
 import { db } from "@workspace/db";
+import { eraseAccountData } from "@workspace/db/account-erasure";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { toOwnUser } from "../utils/user-view.js";
-import { visibleMessagePredicate } from "../utils/message-visibility.js";
+import { streamAccountExport } from "./account-export.js";
 
 export class InvalidAccountPasswordError extends Error {}
 
@@ -45,6 +25,11 @@ export class AccountService {
     private readonly redisRepository: RedisRepository,
   ) {}
 
+  streamAccountExport(userId: string, options?: { pageSize?: number; signal?: AbortSignal }): AsyncGenerator<string> {
+    return streamAccountExport(userId, options);
+  }
+
+  /** Compatibility helper for internal callers. HTTP downloads consume the generator directly. */
   async exportAccount(userId: string): Promise<Record<string, unknown> | undefined> {
     const user = await this.userRepository.findById(userId);
     if (!user) return undefined;
@@ -148,47 +133,7 @@ export class AccountService {
         throw new InvalidAccountPasswordError('Credentials changed; confirm the current password');
       }
 
-      await tx.update(ledgerTransactionsTable).set({
-        creditAccountId: sql`CASE WHEN ${ledgerTransactionsTable.creditAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.creditAccountId} END`,
-        debitAccountId: sql`CASE WHEN ${ledgerTransactionsTable.debitAccountId}=${userId} THEN NULL ELSE ${ledgerTransactionsTable.debitAccountId} END`,
-      }).where(or(eq(ledgerTransactionsTable.creditAccountId, userId), eq(ledgerTransactionsTable.debitAccountId, userId)));
-      await tx.update(invitesTable).set({ inviteeId: null }).where(eq(invitesTable.inviteeId, userId));
-
-      await tx.execute(sql`UPDATE marketplace_orders SET shipping_name='Deleted account',shipping_address='',shipping_phone=NULL WHERE buyer_id=${userId}`);
-      await tx.execute(sql`UPDATE payment_orders SET message='' WHERE payer_id=${userId}`);
-      await tx.execute(sql`UPDATE marketplace_orders o SET product_snapshot=jsonb_build_object('id',p.id,'title',p.title)
-        FROM products p WHERE p.id=o.product_id AND p.seller_id=${userId}`);
-      await tx.execute(sql`UPDATE entitlements SET status='revoked' WHERE entity_type='subscription'
-        AND entity_id IN (SELECT id::text FROM subscriptions WHERE creator_id=${userId} OR subscriber_id=${userId})`);
-      await tx.execute(sql`UPDATE subscriptions SET status='cancelled' WHERE creator_id=${userId} OR subscriber_id=${userId}`);
-
-      await tx.execute(sql`INSERT INTO media_cleanup_holds(deletion_id,source_type,source_id,references_json)
-        SELECT ${userId}::uuid,'post',id,images FROM posts WHERE author_id=${userId} AND images<>'[]'::jsonb
-        UNION ALL SELECT ${userId}::uuid,'avatar',id,to_jsonb(avatar_url) FROM users WHERE id=${userId} AND avatar_url IS NOT NULL
-        UNION ALL SELECT ${userId}::uuid,'story',id,to_jsonb(media_url) FROM stories WHERE author_id=${userId} AND media_url IS NOT NULL
-        UNION ALL SELECT ${userId}::uuid,'video',id,jsonb_build_array(video_url,thumbnail_url) FROM videos WHERE author_id=${userId}`);
-      await tx.execute(sql`UPDATE users SET follower_count=greatest(0,coalesce(follower_count,0)-1)
-        WHERE id IN (SELECT following_id FROM user_follows WHERE follower_id=${userId})`);
-      await tx.execute(sql`UPDATE users SET following_count=greatest(0,coalesce(following_count,0)-1)
-        WHERE id IN (SELECT follower_id FROM user_follows WHERE following_id=${userId})`);
-      await tx.execute(sql`INSERT INTO background_jobs(id,kind,dedup_key,payload)
-        VALUES(${randomUUID()},'account_cleanup',${`account:${userId}`},${JSON.stringify({ userId })}::jsonb)
-        ON CONFLICT(dedup_key) DO NOTHING`);
-
-      // The normalized membership FK cascades on account deletion, but the
-      // legacy JSON participant index has no FK. Keep it free of deleted IDs
-      // in the same transaction so stale identities cannot leak on reads.
-      await tx.execute(sql`
-        UPDATE conversations
-        SET participant_ids = (
-          SELECT COALESCE(jsonb_agg(member.value), '[]'::jsonb)
-          FROM jsonb_array_elements_text(COALESCE(participant_ids, '[]'::jsonb)) AS member(value)
-          WHERE member.value <> ${userId}
-        )
-        WHERE COALESCE(participant_ids, '[]'::jsonb) ? ${userId}
-      `);
-
-      await tx.delete(usersTable).where(eq(usersTable.id, userId));
+      await eraseAccountData(statement => tx.execute(statement), locked);
       return true;
     });
     if (!deleted) return false;

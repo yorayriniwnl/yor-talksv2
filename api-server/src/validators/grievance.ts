@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { staffQueuePageFields } from '../utils/staff-queue-page.js';
+
+export const grievanceQueueQuerySchema = z.object({
+  status: z.enum(['received', 'under_review', 'resolved', 'dismissed']).optional(),
+  ...staffQueuePageFields,
+});
 
 export const grievanceSchema = z.object({
   category: z.enum(["copyright", "hate_speech", "harassment", "impersonation", "privacy_violation", "other"]),

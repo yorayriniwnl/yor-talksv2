@@ -1,0 +1,52 @@
+{
+  "scope": "Unauthenticated read-only public GET requests; no credentials, response bodies, hosting configuration or production state retained or modified.",
+  "observedDateAsiaCalcutta": "2026-10-19",
+  "findings": ["INFRA-001", "INFRA-002", "INFRA-003"],
+  "probes": [
+    {
+      "url": "https://yor-talks.vercel.app/",
+      "observedAt": "2026-10-18T19:50:25.175Z",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "responseBytes": 2467,
+      "contentSecurityPolicy": null,
+      "strictTransportSecurity": "max-age=31536000; includeSubDomains",
+      "xFrameOptions": "SAMEORIGIN",
+      "engineIoOpenPacket": false
+    },
+    {
+      "url": "https://yor-talks.vercel.app/api/healthz",
+      "observedAt": "2026-10-18T19:50:26.706Z",
+      "status": 500,
+      "contentType": "text/plain; charset=utf-8",
+      "responseBytes": 96,
+      "contentSecurityPolicy": null,
+      "strictTransportSecurity": "max-age=31536000; includeSubDomains",
+      "xFrameOptions": "SAMEORIGIN",
+      "engineIoOpenPacket": false
+    },
+    {
+      "url": "https://yor-talks.vercel.app/api/readyz",
+      "observedAt": "2026-10-18T19:50:26.706Z",
+      "status": 500,
+      "contentType": "text/plain; charset=utf-8",
+      "responseBytes": 96,
+      "contentSecurityPolicy": null,
+      "strictTransportSecurity": "max-age=31536000; includeSubDomains",
+      "xFrameOptions": "SAMEORIGIN",
+      "engineIoOpenPacket": false
+    },
+    {
+      "url": "https://yor-talks.vercel.app/socket.io/?EIO=4&transport=polling",
+      "observedAt": "2026-10-18T19:50:25.176Z",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "responseBytes": 2467,
+      "contentSecurityPolicy": null,
+      "strictTransportSecurity": "max-age=31536000; includeSubDomains",
+      "xFrameOptions": "SAMEORIGIN",
+      "engineIoOpenPacket": false
+    }
+  ],
+  "conclusion": "Public API liveness/readiness still fail, Socket.IO polling returns HTML rather than an Engine.IO open packet, and the web shell lacks an observed CSP header. Deployment provenance and private hosting configuration remain unavailable."
+}

@@ -1,3 +1,4 @@
+import { pool } from "@workspace/db";
 import { z } from "zod";
 import type { Server } from "socket.io";
 import type { Capability } from "../eligibility/types.js";
@@ -96,6 +97,13 @@ export async function authorizeSocketAction(userId: string, event: string, depen
   const eligibility = dependencies.eligibilityService ?? defaultEligibilityService;
   const user = await repository.findById(userId);
   if (!user || (user.accountStatus ?? "active") !== "active") throw new SocketActionDeniedError(capability);
+  const enforcement = await pool.query<{ state: string }>(
+    `SELECT state FROM moderation_enforcements WHERE target_type = 'user' AND target_id = $1 AND (expires_at IS NULL OR expires_at > clock_timestamp())`,
+    [userId]
+  );
+  if (enforcement.rowCount && (enforcement.rows[0]?.state === 'removed' || enforcement.rows[0]?.state === 'restricted')) {
+    throw new SocketActionDeniedError(capability);
+  }
   if (requester && (requester.userId !== userId || requester.authVersion !== (user.authVersion ?? 0)
     || !await (dependencies.redisRepository ?? defaultRedisRepository).getStrict(`session:${userId}:${requester.deviceId}`))) {
     throw new SocketActionDeniedError(capability);
@@ -112,7 +120,7 @@ export async function dispatchSocketToUsers(
   payload: unknown | ((requester: SocketRequester) => unknown | Promise<unknown>),
   authorityEvent: string,
   excludeSocketId?: string,
-  deliveryGuard?: (requester: SocketRequester) => void | Promise<void>,
+  deliveryGuard?: (requester: SocketRequester) => boolean | void | Promise<boolean | void>,
 ): Promise<number> {
   const recipients = [...new Set(userIds)];
   let delivered = 0;
@@ -122,11 +130,29 @@ export async function dispatchSocketToUsers(
       if (socket.id === excludeSocketId || socket.data.userId !== userId) continue;
       try {
         const requester={userId,deviceId:String(socket.data.deviceId??''),authVersion:Number(socket.data.authVersion??-1)};
+        const requireCurrentToken = () => {
+          const expiresAt = socket.data.expiresAt;
+          if (typeof expiresAt !== 'number' || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now()) {
+            throw new SocketActionDeniedError(SOCKET_EVENT_CAPABILITIES[authorityEvent]);
+          }
+        };
+        requireCurrentToken();
         await authorizeSocketAction(userId, authorityEvent, {}, requester);
         const recipientPayload=typeof payload==='function'?await payload(requester):payload;
         // Authority may change while an asynchronous payload is hydrated.
+        requireCurrentToken();
         await authorizeSocketAction(userId, authorityEvent, {}, requester);
-        await deliveryGuard?.(requester);
+        // A current privacy preference can suppress an optional event without
+        // revoking the recipient's otherwise valid session.
+        const admitted = await deliveryGuard?.(requester);
+        requireCurrentToken();
+        if (admitted === false) continue;
+        // Guards can await contact, audience or preference lookups. The device
+        // session must still be valid after those final asynchronous checks.
+        await authorizeSocketAction(userId, authorityEvent, {}, requester);
+        // Expiry timers may run late; the signed token's deadline is authority
+        // even when a payload, guard or session lookup crossed that deadline.
+        requireCurrentToken();
         io.to(socket.id).emit(event, recipientPayload);
         delivered++;
       } catch {

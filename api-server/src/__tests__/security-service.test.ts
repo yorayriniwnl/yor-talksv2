@@ -3,13 +3,15 @@ import crypto from "node:crypto";
 import { after, test } from "node:test";
 import { SecurityService } from "../services/security-service.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
+import { Redis } from 'ioredis';
+import { env } from '../config/env.js';
 
 const redisRepository = new RedisRepository();
 after(async () => {
   await redisRepository.disconnect();
 });
 
-test("audit events track abuse heuristics via Redis", async () => {
+test("audit events track abuse heuristics via Redis", async t => {
   const securityService = new SecurityService(redisRepository);
   const subject = `user-${crypto.randomUUID()}`;
   const eventIds: string[] = [];
@@ -25,4 +27,9 @@ test("audit events track abuse heuristics via Redis", async () => {
   const matchingEvents = log.filter((event) => eventIds.includes(event.id));
   assert.equal(matchingEvents.length, 5);
   assert.ok(matchingEvents.every((event) => event.subject !== subject));
+  const redis = new Redis(env.REDIS_URL);
+  t.after(async () => { await redis.quit(); });
+  const index = `security:audit:spam:${crypto.createHash('sha256').update(subject).digest('hex')}`;
+  const expiry = await redis.ttl(index);
+  assert.ok(expiry > 0 && expiry <= 15 * 60, 'inactive hashed-subject indexes expire with the abuse window');
 });

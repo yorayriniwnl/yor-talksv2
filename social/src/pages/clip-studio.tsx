@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Film, Scissors, Play, Pause, Download, Share2,
-  Sparkles, Sliders, Flame, Type, Music
-} from 'lucide-react';
+import { Scissors, Download, Share2, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppStore } from '@/lib/store';
 import { uploadApprovedMedia } from '@/lib/media-upload';
-import { cn } from '@/lib/utils';
 import { sounds } from '@/lib/sound';
 import { toast } from 'sonner';
 import { ContentCategorySelect } from '@/components/content/ContentCategorySelect';
@@ -19,10 +14,7 @@ import { type ContentCategory } from '@/lib/content-category';
 
 export default function ClipStudio() {
   const createVideo = useAppStore((s) => s.createVideo);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [captionText, setCaptionText] = useState('WHAT A CLUTCH 1v4 ACE BY GODLIKE! 🔥');
-  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
-  const [selectedSFX, setSelectedSFX] = useState<string | null>(null);
+  const [captionText, setCaptionText] = useState('Untitled highlight');
   const [contentCategory, setContentCategory] = useState<ContentCategory | ''>('');
   const [contentRating, setContentRating] = useState<ContentRating>(DEFAULT_CONTENT_RATING);
   const [publishing, setPublishing] = useState(false);
@@ -39,17 +31,18 @@ export default function ClipStudio() {
     return () => URL.revokeObjectURL(objectUrl);
   }, [selectedFile]);
 
-  const handleExportReel = () => {
+  const handleDownloadSource = () => {
     if (!selectedFile || !previewUrl) {
-      toast.info('Choose a source video first. Export is unavailable without creator media.');
+      toast.info('Choose a source video before downloading it.');
       return;
     }
     const link = document.createElement('a');
     link.href = previewUrl;
-    link.download = `yor-clip-source-${Date.now()}${selectedFile.name.slice(selectedFile.name.lastIndexOf('.')) || '.webm'}`;
+    const extension = selectedFile.name.match(/\.[a-zA-Z0-9]{1,10}$/)?.[0] ?? '';
+    link.download = `yor-clip-original-${Date.now()}${extension}`;
     link.click();
     sounds.playChime();
-    toast.info('Source clip downloaded. Timeline rendering, SFX mixing, and 9:16 transcoding remain preview-only.');
+    toast.info('Original source downloaded. The 9:16 framing and title overlay are preview-only.');
   };
 
   const handlePostToReels = async () => {
@@ -62,7 +55,6 @@ export default function ClipStudio() {
       return;
     }
     setPublishing(true);
-    sounds.playChime();
     try {
       const uploaded = await uploadApprovedMedia(selectedFile, 'video');
       await createVideo({
@@ -72,6 +64,7 @@ export default function ClipStudio() {
         contentCategory,
         contentRating,
       });
+      sounds.playChime();
       toast.success('Highlight uploaded and published to Reels.');
       setSelectedFile(null);
     } catch (error) {
@@ -90,8 +83,8 @@ export default function ClipStudio() {
             <Scissors className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display text-foreground">Creator Clip & Highlight Cutter</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Convert Stream VODs into Viral 9:16 Reels & Shorts</p>
+            <h1 className="text-xl font-bold font-display text-foreground">Clip Studio</h1>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Preview and publish your original clip to Reels</p>
           </div>
         </div>
 
@@ -102,14 +95,14 @@ export default function ClipStudio() {
             disabled={publishing}
             className="rounded-2xl font-bold text-xs bg-primary text-primary-foreground glow-neon-primary"
           >
-            <Share2 className="w-3.5 h-3.5 mr-1" /> Post to Reels
+            <Share2 className="w-3.5 h-3.5 mr-1" /> Publish source to Reels
           </Button>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Video Preview Canvas Column */}
+          {/* Source preview column */}
           <div className="lg:col-span-6 flex justify-center">
             <div className="surface-1 rounded-3xl p-4 border border-border/40 shadow-2xl overflow-hidden w-full max-w-[320px] relative">
               <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-black relative flex flex-col justify-between p-4">
@@ -121,24 +114,21 @@ export default function ClipStudio() {
                   </div>
                 )}
 
-                {/* Top Badge */}
+                {/* Preview labels describe the source and its display-only crop. */}
                 <div className="relative z-10 flex justify-between items-center">
-                  <span className="px-3 py-1 rounded-full bg-red-600/90 text-white text-[0.65rem] font-mono font-bold flex items-center gap-1.5 shadow">
-                    <span className="w-2 h-2 rounded-full bg-white animate-ping" /> BGMI CLUTCH
+                  <span className="px-3 py-1 rounded-full bg-black/70 text-white text-[0.65rem] font-mono font-bold shadow">
+                    SOURCE PREVIEW
                   </span>
                   <span className="text-[0.65rem] font-mono text-white/80 bg-black/60 px-2.5 py-0.5 rounded-full">
-                    60 FPS
+                    9:16 DISPLAY
                   </span>
                 </div>
 
-                {/* Animated Subtitle Caption Overlay */}
+                {/* Display-only title overlay */}
                 <div className="relative z-10 text-center space-y-1 mb-6">
-                  <h4 className="font-display font-black text-xl text-yellow-300 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] uppercase tracking-wider animate-pulse">
+                  <h4 className="font-display font-black text-xl text-yellow-300 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] uppercase tracking-wider">
                     {captionText}
                   </h4>
-                  <span className="text-[0.65rem] font-mono font-bold text-white bg-black/70 px-3 py-0.5 rounded-full">
-                    YOR CLIPS · CLUTCH GOD #01
-                  </span>
                 </div>
               </div>
             </div>
@@ -146,17 +136,19 @@ export default function ClipStudio() {
 
           {/* Editor Controls Column */}
           <div className="lg:col-span-6 space-y-6">
-            {/* Caption Input */}
+            {/* Reel title input */}
             <div className="surface-1 p-6 rounded-3xl border border-border/40 space-y-4 shadow-sm">
               <div className="showcase-section-title">
                 <Type className="w-4 h-4 text-primary" />
-                <h3>Animated Caption Text</h3>
+                <h3>Reel title</h3>
               </div>
 
               <Input
                 value={captionText}
                 onChange={(e) => setCaptionText(e.target.value)}
-                placeholder="TYPE VIRAL STREAM HIGHLIGHT CAPTION..."
+                placeholder="Enter a title for your Reel"
+                maxLength={120}
+                aria-label="Reel title"
                 className="rounded-xl font-bold font-display text-sm uppercase h-11"
               />
             </div>
@@ -165,7 +157,7 @@ export default function ClipStudio() {
               <Label htmlFor="clip-source-video" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Source video</Label>
               <Input id="clip-source-video" type="file" accept="video/*" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} className="rounded-xl" />
               <p className="text-xs leading-relaxed text-muted-foreground">
-                {selectedFile ? `${selectedFile.name} · ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : 'Upload the clip you own. The file is sent to secure media storage when you publish.'}
+                {selectedFile ? `${selectedFile.name} · ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : 'Choose a clip you own. Publishing sends the original file through the configured media service.'}
               </p>
             </div>
 
@@ -174,43 +166,13 @@ export default function ClipStudio() {
               <ContentRatingSelect id="clip-content-rating" value={contentRating} onChange={setContentRating} />
               <p className="text-xs leading-relaxed text-muted-foreground">Choose how this highlight is classified before it becomes visible in the global feed.</p>
             </div>
-
-            {/* Audio SFX Insert */}
-            <div className="surface-1 p-6 rounded-3xl border border-border/40 space-y-4 shadow-sm">
-              <div className="showcase-section-title">
-                <Music className="w-4 h-4 text-amber-400" />
-                <h3>Clutch Sound FX Punch</h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { name: 'Airhorn Blast 📢', sound: 'pop' },
-                  { name: 'Sitar Cyber Drop 🪕', sound: 'chime' },
-                  { name: 'Stadium Crowd Roar 🏟️', sound: 'celebrate' },
-                  { name: 'Matrix Glitch ⚡', sound: 'glitch' },
-                ].map((sfx) => (
-                  <button
-                    key={sfx.name}
-                    onClick={() => {
-                      sounds.playPop();
-                      setSelectedSFX(sfx.name);
-                    }}
-                    className={cn(
-                      "p-3 rounded-2xl border text-xs font-bold transition-all text-left",
-                      selectedSFX === sfx.name ? "border-primary bg-primary/20 shadow" : "border-border/40 hover:bg-muted/40"
-                    )}
-                  >
-                    {sfx.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="rounded-2xl border border-border/40 bg-muted/20 p-4 text-xs leading-relaxed text-muted-foreground">This release publishes the original video with your title as its Reel title. The vertical crop and title overlay are previews and are not rendered into the video. Cropping, caption burn-in, and audio mixing are not available here.</p>
 
             <Button
-              onClick={handleExportReel}
+              onClick={handleDownloadSource}
               className="w-full rounded-2xl font-bold text-xs h-12 bg-primary text-primary-foreground glow-neon-primary shadow-lg"
             >
-              <Download className="w-4 h-4 mr-2" /> Export 9:16 Vertical Highlight Reel
+              <Download className="w-4 h-4 mr-2" /> Download original source
             </Button>
           </div>
         </div>

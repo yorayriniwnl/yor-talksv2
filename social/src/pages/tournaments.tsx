@@ -52,7 +52,7 @@ const TOURNAMENTS: Tournament[] = [
     id: 'tourney-1',
     title: 'BGMI India Invitational 2026 (Season 4)',
     game: 'BGMI (Battlegrounds Mobile India)',
-    coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
+    coverUrl: '/images/demo-preview-1.svg',
     prizePoolINR: 2500000,
     teamsCount: 16,
     startDate: 'Preview schedule — official feed unavailable',
@@ -65,7 +65,7 @@ const TOURNAMENTS: Tournament[] = [
     id: 'tourney-2',
     title: 'Valorant South Asia Masters (Challengers)',
     game: 'Valorant South Asia',
-    coverUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop',
+    coverUrl: '/images/demo-preview-2.svg',
     prizePoolINR: 1000000,
     teamsCount: 8,
     startDate: 'Starts Aug 22, 2026',
@@ -78,7 +78,7 @@ const TOURNAMENTS: Tournament[] = [
     id: 'tourney-3',
     title: 'CS2 India Premier League (Season 2)',
     game: 'Counter-Strike 2',
-    coverUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop',
+    coverUrl: '/images/demo-preview-3.svg',
     prizePoolINR: 750000,
     teamsCount: 8,
     startDate: 'Starts Aug 28, 2026',
@@ -91,7 +91,7 @@ const TOURNAMENTS: Tournament[] = [
     id: 'tourney-4',
     title: 'FGC Asian Showdown: SF6 & Tekken 8',
     game: 'Street Fighter 6 / Tekken 8',
-    coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop',
+    coverUrl: '/images/demo-preview-4.svg',
     prizePoolINR: 500000,
     teamsCount: 32,
     startDate: 'Starts Sep 5, 2026',
@@ -104,7 +104,7 @@ const TOURNAMENTS: Tournament[] = [
     id: 'tourney-5',
     title: 'Rocket League 3v3 Supersonic Championship',
     game: 'Rocket League',
-    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
+    coverUrl: '/images/demo-preview-5.svg',
     prizePoolINR: 350000,
     teamsCount: 16,
     startDate: 'Starts Sep 12, 2026',
@@ -117,7 +117,7 @@ const TOURNAMENTS: Tournament[] = [
     id: 'tourney-6',
     title: 'WebGPU Speed Shading & 64k Code Duel',
     game: 'Creative Code & WebGL',
-    coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
+    coverUrl: '/images/demo-preview-6.svg',
     prizePoolINR: 200000,
     teamsCount: 64,
     startDate: 'Starts Sep 20, 2026',
@@ -132,32 +132,32 @@ const BRACKET_MATCHES: BracketMatch[] = [
   {
     id: 'm1',
     round: 'Quarterfinals',
-    teamA: { id: 't1', name: 'GodLike Esports', tag: 'GODL', logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', score: 2, isWinner: true },
-    teamB: { id: 't2', name: 'Team SouL', tag: 'SOUL', logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', score: 1 },
+    teamA: { id: 't1', name: 'GodLike Esports', tag: 'GODL', logo: '', score: 2, isWinner: true },
+    teamB: { id: 't2', name: 'Team SouL', tag: 'SOUL', logo: '', score: 1 },
     time: 'Completed',
     status: 'completed'
   },
   {
     id: 'm2',
     round: 'Quarterfinals',
-    teamA: { id: 't3', name: 'Global Esports', tag: 'GE', logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', score: 2, isWinner: true },
-    teamB: { id: 't4', name: 'Entity Gaming', tag: 'ENT', logo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', score: 0 },
+    teamA: { id: 't3', name: 'Global Esports', tag: 'GE', logo: '', score: 2, isWinner: true },
+    teamB: { id: 't4', name: 'Entity Gaming', tag: 'ENT', logo: '', score: 0 },
     time: 'Completed',
     status: 'completed'
   },
   {
     id: 'm3',
     round: 'Semifinals',
-    teamA: { id: 't1', name: 'GodLike Esports', tag: 'GODL', logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', score: 1 },
-    teamB: { id: 't3', name: 'Global Esports', tag: 'GE', logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', score: 1 },
+    teamA: { id: 't1', name: 'GodLike Esports', tag: 'GODL', logo: '', score: 1 },
+    teamB: { id: 't3', name: 'Global Esports', tag: 'GE', logo: '', score: 1 },
     time: 'Preview match — official feed unavailable',
     status: 'upcoming'
   },
   {
     id: 'm4',
     round: 'Grand Finals',
-    teamA: { id: 't_pending1', name: 'Winner of SF1', tag: 'TBD', logo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop', score: 0 },
-    teamB: { id: 't_pending2', name: 'Team Velocity (SF2)', tag: 'VEL', logo: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=200&auto=format&fit=crop', score: 0 },
+    teamA: { id: 't_pending1', name: 'Winner of SF1', tag: 'TBD', logo: '', score: 0 },
+    teamB: { id: 't_pending2', name: 'Team Velocity (SF2)', tag: 'VEL', logo: '', score: 0 },
     time: 'Tomorrow, 7:00 PM IST',
     status: 'upcoming'
   }
@@ -190,7 +190,7 @@ export default function Tournaments() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Yor Esports Arena</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Tournament preview — registrations and rewards are not available yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative tournaments, teams and results. Registrations and rewards are unavailable.</p>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export default function Tournaments() {
                 <div className="flex items-center gap-4 text-xs font-mono text-zinc-300 mt-2">
                   <span className="text-amber-400 font-bold text-sm">Prize details unavailable</span>
                   <span>·</span>
-                  <span>{selectedTournament.teamsCount} Elite Squads</span>
+                  <span>{selectedTournament.teamsCount} sample squads</span>
                   <span>·</span>
                   <span>{selectedTournament.organizer}</span>
                 </div>
@@ -270,7 +270,7 @@ export default function Tournaments() {
             onClick={() => setActiveTab('bracket')}
             className={cn("rounded-xl font-bold text-xs px-5", activeTab === 'bracket' && "bg-primary text-primary-foreground shadow-md")}
           >
-            <Swords className="w-3.5 h-3.5 mr-1.5" /> Live Tournament Bracket
+            <Swords className="w-3.5 h-3.5 mr-1.5" /> Sample tournament bracket
           </Button>
           <Button
             size="sm"
@@ -278,12 +278,12 @@ export default function Tournaments() {
             onClick={() => setActiveTab('predictions')}
             className={cn("rounded-xl font-bold text-xs px-5", activeTab === 'predictions' && "bg-amber-600 text-white shadow-md")}
           >
-            <Target className="w-3.5 h-3.5 mr-1.5" /> Fan Pick'em Predictions (Win Karma)
+            <Target className="w-3.5 h-3.5 mr-1.5" /> Sample predictions (no rewards)
           </Button>
         </div>
 
         {activeTab === 'bracket' ? (
-          /* Live Tournament Bracket Visualization */
+          /* Sample tournament bracket Visualization */
           <div className="space-y-6">
             <div className="surface-1 p-6 rounded-3xl border border-border/40 shadow-sm">
               <div className="showcase-section-title mb-6">
@@ -350,7 +350,7 @@ export default function Tournaments() {
                 <Target className="w-4 h-4 text-amber-400" />
                 <h3>Match Predictions & Fan Pick'em Game</h3>
               </div>
-              <p className="text-xs text-muted-foreground font-mono mb-6">Pick the winner for upcoming matches. Correct predictions earn +100 Karma & YOR Points!</p>
+              <p className="text-xs text-muted-foreground font-mono mb-6">Illustrative match predictions only. Picks cannot be submitted and no Karma or points are awarded.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {BRACKET_MATCHES.filter(m => m.status !== 'completed').map((match) => {
@@ -360,7 +360,7 @@ export default function Tournaments() {
                     <div key={match.id} className="p-5 rounded-3xl bg-muted/20 border border-border/40 flex flex-col justify-between">
                       <div className="flex items-center justify-between mb-4 text-xs font-mono">
                         <span className="font-bold text-foreground">{match.round}</span>
-                        <span className="text-amber-400 font-bold">+100 Karma Reward</span>
+                        <span className="text-amber-400 font-bold">Rewards unavailable</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 mb-4">

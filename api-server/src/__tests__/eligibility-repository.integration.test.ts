@@ -89,6 +89,22 @@ test('historical checkbox stays an attestation; private assessments never join p
   assert.equal(await repo.readFacts(randomUUID()), undefined);
 });
 
+test('single-user and batched eligibility reads bind UUID arrays and return one decision per account', async () => {
+  const first = await newUser();
+  const second = await newUser();
+  const repo = await repository();
+  const one = await repo.readFactsMany([first.id]);
+  assert.deepEqual([...one.keys()], [first.id]);
+  assert.equal(one.get(first.id)?.account.id, first.id);
+  assert.equal((await repo.readFacts(first.id))?.account.id, first.id);
+
+  const many = await repo.readFactsMany([first.id, second.id]);
+  assert.deepEqual([...many.keys()].sort(), [first.id, second.id].sort());
+  const { EligibilityService } = await import('../services/eligibility-service.js');
+  const decisions = await new EligibilityService(repo).decisionForMany([first.id, second.id]);
+  assert.deepEqual([...decisions.keys()].sort(), [first.id, second.id].sort());
+});
+
 test('newer authority revision wins even when transaction timestamps sort before old proof', async () => {
   const user = await newUser();
   const repo = await repository();

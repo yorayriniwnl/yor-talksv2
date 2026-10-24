@@ -44,6 +44,12 @@ const resources: Partial<Record<MediaEntityType, { table: string; owner: string 
 };
 const denied = () => new MediaLifecycleError('Media is not available to this viewer', 404, 'media_not_available');
 const camel = (key: string) => key.replace(/_([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+// Fresh schemas store UTC wall times; additive legacy migrations also created
+// timestamptz columns. Compare actual instants without consulting session TZ.
+const unexpired = (column: 'expires_at' | 's.expires_at') => `(CASE
+  WHEN pg_typeof(${column})='timestamp without time zone'::regtype
+    THEN (${column}::timestamp AT TIME ZONE 'UTC')
+  ELSE ${column}::timestamptz END)>clock_timestamp()`;
 function recordFromRow(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [camel(key), item]));
@@ -110,10 +116,11 @@ export class MediaAuthorizationService {
       return this.profileVisible(context.entityId, viewerId);
     }
     if (context.entityType === 'messages') {
-      const result = await pool.query<{ conversation_id: string; deleted_at: string | null; expires_at: string | null }>(
-        `SELECT conversation_id,deleted_at,expires_at FROM messages WHERE id=$1`, [context.entityId]);
+      const result = await pool.query<{ conversation_id: string }>(
+        `SELECT conversation_id FROM messages WHERE id=$1 AND deleted_at IS NULL
+          AND (expires_at IS NULL OR ${unexpired('expires_at')})`, [context.entityId]);
       const message = result.rows[0];
-      if (!message || message.deleted_at || (message.expires_at && Date.parse(message.expires_at) <= Date.now())) return false;
+      if (!message) return false;
       if (!viewerId) return false;
       const members=await this.conversations.getMembers(message.conversation_id);
       if(!members.includes(viewerId))return false;
@@ -121,7 +128,7 @@ export class MediaAuthorizationService {
       try {
         if(conversation?.isGroup)await this.contactAuthorization.requirePairwiseGroupContacts(members,message.conversation_id,'read');
         else await this.contactAuthorization.requirePairwiseContacts(members,'read');
-        return true;
+        return this.ephemeralVisible(context.entityType, context.entityId);
       }
       catch(error) { if(error instanceof ContactAuthorizationDeniedError)return false; throw error; }
     }
@@ -161,17 +168,49 @@ export class MediaAuthorizationService {
     if (context.entityType === 'highlights' && entity.authorId === undefined) entity.authorId = ownerId;
     if (context.entityType === 'business_profiles' && entity.authorId === undefined) entity.authorId = ownerId;
     if (context.entityType === 'broadcast_channels' && entity.authorId === undefined) entity.authorId = ownerId;
-    return this.safety.isVisible(entity, viewerId, ownerId);
+    if (!await this.safety.isVisible(entity, viewerId, ownerId)) return false;
+    return this.ephemeralVisible(context.entityType, context.entityId);
+  }
+
+  /** Recheck after awaited policy/contact reads, independently of cleanup or grant lifetime. */
+  private async ephemeralVisible(entityType: MediaEntityType, entityId: string): Promise<boolean> {
+    if (entityType === 'messages') {
+      return Boolean((await pool.query(`SELECT 1 FROM messages WHERE id=$1 AND deleted_at IS NULL
+        AND (expires_at IS NULL OR ${unexpired('expires_at')})
+        AND NOT EXISTS (SELECT 1 FROM moderation_enforcements me
+          WHERE ((me.target_type='message' AND me.target_id=messages.id::text)
+            OR (me.target_type='user' AND me.target_id=messages.sender_id::text))
+          AND (me.expires_at IS NULL OR me.expires_at>clock_timestamp()))`, [entityId])).rowCount);
+    }
+    if (entityType === 'user_notes') {
+      return Boolean((await pool.query(`SELECT 1 FROM user_notes WHERE id=$1
+        AND ${unexpired('expires_at')}`, [entityId])).rowCount);
+    }
+    if (entityType === 'stories') {
+      return Boolean((await pool.query(`SELECT 1 FROM stories s WHERE s.id=$1 AND (
+        ${unexpired('s.expires_at')} OR s.is_highlight OR s.highlight_id IS NOT NULL
+        OR EXISTS(SELECT 1 FROM highlight_items h WHERE h.story_id=s.id))`, [entityId])).rowCount);
+    }
+    return true;
   }
 
   private async profileVisible(ownerId: string, viewerId?: string): Promise<boolean> {
     const owner = await this.users.findById(ownerId);
-    if (!owner || (owner.accountStatus ?? 'active') !== 'active' || !(await this.eligibility.decisionFor(ownerId)).activated) return false;
+    if (!owner || (owner.accountStatus ?? 'active') !== 'active') return false;
+    const ownerDecision = await this.eligibility.decisionFor(ownerId);
+    if (!ownerDecision.activated || !ownerDecision.capabilities.social) return false;
     const viewer = viewerId ? await this.users.findById(viewerId) : undefined;
     if (viewerId && (!viewer || (viewer.accountStatus ?? 'active') !== 'active' || owner.blockedUsers?.includes(viewerId)
       || viewer.blockedUsers?.includes(ownerId))) return false;
     if (viewerId === ownerId) return true;
-    const visibility = owner.privacy?.profileVisibility ?? (owner.settings?.privateAccount ? 'private' : 'public');
+    // Profile media has no age-appropriate classification workflow yet. Do
+    // not expose it to child-safe audiences (including anonymous visitors)
+    // based only on the asset's general-platform moderation approval.
+    if (await this.safety.getViewerFilter(viewerId) === 'child_safe') return false;
+    // The owner can be reclassified after this viewer's grant was issued. A
+    // stored public preference cannot override the current minor profile rule.
+    const visibility = ownerDecision.experience !== 'adult_18_plus' ? 'private'
+      : owner.privacy?.profileVisibility ?? (owner.settings?.privateAccount ? 'private' : 'public');
     if (visibility === 'public') return true;
     return Boolean(viewerId && await this.users.isFollowing(viewerId, ownerId));
   }

@@ -23,7 +23,7 @@ unchanged. Those probes are not release tests. No public/paid launch is approved
 
 ## Live state, freshly observed
 
-- Vercel project `yor-talks`, team `yorayriniwnl-1218s-projects`;
+- Vercel project `yor-talks`, team `[REDACTED legacy test credential]-1218s-projects`;
   production deployment `dpl_8uLzjCLpBsv4rSo64ojUKxbAv4VL`, source `f93a061`.
 - `https://yor-talks.vercel.app/`: 200; `/api/livez`, `/api/readyz`,
   `/api/healthz`: 500. Platform build status is Ready; API runtime is not healthy.
@@ -175,7 +175,7 @@ before restoring an older application image.
   rollback to a version that ignores auth_version requires draining/revoking all
   old Redis sessions/challenges first; retain the additive schema and reset ledger.
 
-- F01: preview `yor-talks-g3xwex9et-yorayriniwnl-1218s-projects.vercel.app`
+- F01: preview `yor-talks-g3xwex9et-[REDACTED legacy test credential]-1218s-projects.vercel.app`
   (source `ae51d4b`) reaches application configuration after the ESM repair.
   Authenticated platform probe still returns 500. Fresh runtime logs identify
   `[Config Error] Production requires unique JWT secrets of at least 32 characters:

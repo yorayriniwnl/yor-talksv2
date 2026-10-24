@@ -1,0 +1,41 @@
+import { test, expect } from '@playwright/test';
+
+test('password reset focuses invalid fields, retains failed values and prevents duplicate requests', async ({ page }) => {
+  let attempts = 0;
+  let release: () => void = () => {};
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/auth/refresh') return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Signed out' }) });
+    expect(path).toBe('/api/auth/reset-password/confirm');
+    expect(route.request().postDataJSON()).toEqual({ token: 'disposable-token', newPassword: 'Disposable123!' });
+    attempts++;
+    if (attempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Recovery temporarily unavailable' }) });
+    await new Promise<void>(resolve => { release = resolve; });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: null }) });
+  });
+  await page.goto('/reset-password?token=disposable-token');
+  const password = page.getByLabel('New password', { exact: true });
+  const confirmation = page.getByLabel('Confirm password', { exact: true });
+  const submit = page.getByRole('button', { name: 'Update password' });
+  await password.fill('Disposable123!');
+  await confirmation.fill('mismatch');
+  await submit.click();
+  await expect(confirmation).toBeFocused();
+  await expect(confirmation).toHaveAttribute('aria-invalid', 'true');
+  await expect(confirmation).toHaveAttribute('aria-describedby', 'reset-password-error');
+  expect(attempts).toBe(0);
+  await confirmation.fill('Disposable123!');
+  await submit.click();
+  await expect(page.getByRole('alert')).toContainText('Recovery temporarily unavailable');
+  await expect(page.getByRole('alert')).toBeFocused();
+  await expect(password).toHaveValue('Disposable123!');
+  await expect(confirmation).toHaveValue('Disposable123!');
+  await submit.click();
+  await expect.poll(() => attempts).toBe(2);
+  await expect(password).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Updating' })).toBeDisabled();
+  await page.keyboard.press('Enter');
+  expect(attempts).toBe(2);
+  release();
+  await expect(page.getByRole('heading', { name: 'Password updated.' })).toBeVisible();
+});

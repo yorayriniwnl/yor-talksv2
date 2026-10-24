@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db, pool, userFeatureOverridesTable } from "@workspace/db";
 import { PREMIUM_FEATURES, resolveFeatureFlags, type FeatureFlags, type PremiumFeature } from "../features/premium-features.js";
 
@@ -13,11 +13,20 @@ export interface FeatureOverrideRepository {
   snapshot?(userId: string): Promise<{ overrides: FeatureOverride[]; paidFeatures: string[] }>;
 }
 
+// Fresh schemas store a UTC wall time; additive legacy schemas use timestamptz.
+// Normalize both to an instant so a session timezone cannot expire a denial
+// early and expose the underlying paid grant.
+const overrideExpiryInstant = `(CASE
+  WHEN pg_typeof(expires_at)='timestamp without time zone'::regtype
+    THEN (expires_at::timestamp AT TIME ZONE 'UTC')
+  ELSE expires_at::timestamptz END)`;
+
 class DrizzleFeatureOverrideRepository implements FeatureOverrideRepository {
   async snapshot(userId: string): Promise<{ overrides: FeatureOverride[]; paidFeatures: string[] }> {
     const result = await pool.query(`SELECT
-      coalesce((SELECT jsonb_agg(jsonb_build_object('feature',feature_key,'enabled',enabled,'expiresAt',expires_at AT TIME ZONE 'UTC'))
-        FROM user_feature_overrides WHERE user_id=$1 AND status='active' AND (expires_at IS NULL OR expires_at>now())), '[]') AS overrides,
+      coalesce((SELECT jsonb_agg(jsonb_build_object('feature',feature_key,'enabled',enabled,'expiresAt',${overrideExpiryInstant}))
+        FROM user_feature_overrides WHERE user_id=$1 AND status='active'
+        AND (expires_at IS NULL OR ${overrideExpiryInstant}>clock_timestamp())), '[]') AS overrides,
       coalesce((SELECT jsonb_agg(DISTINCT f.feature) FROM premium_access a JOIN premium_orders o ON o.id=a.order_id
         CROSS JOIN LATERAL jsonb_array_elements_text(o.plan_snapshot->'features') f(feature)
         WHERE a.user_id=$1 AND a.status IN ('active','cancelled') AND o.status='paid' AND a.starts_at<=now() AND a.ends_at>now()), '[]') AS paid_features`, [userId]);
@@ -32,7 +41,7 @@ class DrizzleFeatureOverrideRepository implements FeatureOverrideRepository {
       eq(userFeatureOverridesTable.userId, userId),
       eq(userFeatureOverridesTable.featureKey, feature),
       eq(userFeatureOverridesTable.status, "active"),
-      or(isNull(userFeatureOverridesTable.expiresAt), gt(userFeatureOverridesTable.expiresAt, new Date().toISOString())),
+      or(isNull(userFeatureOverridesTable.expiresAt), sql`${sql.raw(overrideExpiryInstant)}>clock_timestamp()`),
     )).limit(1);
 
     return override ? {

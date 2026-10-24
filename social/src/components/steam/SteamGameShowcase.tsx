@@ -21,7 +21,7 @@ const ESPORTS_GAMES: GameItem[] = [
   {
     id: 'game-1',
     title: 'BGMI (Battlegrounds Mobile India)',
-    bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
+    bannerUrl: '/images/demo-preview-1.svg',
     hoursPlayed: 640,
     recentHours: 32.5,
     achievementsUnlocked: 48,
@@ -32,7 +32,7 @@ const ESPORTS_GAMES: GameItem[] = [
   {
     id: 'game-2',
     title: 'Valorant (South Asia Masters)',
-    bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop',
+    bannerUrl: '/images/demo-preview-2.svg',
     hoursPlayed: 820,
     recentHours: 24.0,
     achievementsUnlocked: 38,
@@ -43,7 +43,7 @@ const ESPORTS_GAMES: GameItem[] = [
   {
     id: 'game-3',
     title: 'Cyberpunk 2077: Phantom Liberty',
-    bannerUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop',
+    bannerUrl: '/images/demo-preview-3.svg',
     hoursPlayed: 342,
     recentHours: 14.5,
     achievementsUnlocked: 44,

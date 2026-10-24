@@ -157,7 +157,11 @@ body {
 .yor-companion {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
+  bottom: calc(1.5rem + var(--yor-ambient-player-height, 0px) + 0.75rem);
+  /* Reposition instantly when the audio player resizes. The global
+     reduced-motion rule otherwise turns every property into a transition,
+     leaving the companion briefly covering the player's controls. */
+  transition-property: none;
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -229,6 +233,9 @@ body {
 
 .yor-companion__panel {
   width: min(19rem, calc(100vw - 2rem));
+  max-height: var(--radix-popover-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
   border: 1px solid hsl(var(--border) / 0.82);
   border-radius: 1.35rem;
@@ -248,6 +255,8 @@ body {
 .companion-choice-card strong, .companion-choice-card small { display: block; }
 .companion-choice-card strong { font-size: 0.78rem; font-weight: 800; }
 .companion-choice-card small { margin-top: 0.16rem; color: hsl(var(--muted-foreground)); font-size: 0.64rem; line-height: 1.35; }
+/* The selected tint lowers muted text to 4.4:1; keep small descriptions above 4.5:1. */
+.companion-choice-card--selected small { color: hsl(var(--foreground) / 0.8); }
 
 .yor-companion-pet--sunrise { --companion-a: 40 96% 62%; --companion-b: 346 78% 58%; }
 .yor-companion-pet--ocean { --companion-a: 188 86% 54%; --companion-b: 220 78% 56%; }
@@ -258,12 +267,16 @@ body {
 @keyframes companion-panel-in { from { opacity: 0; transform: translateY(0.5rem) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 767px) {
-  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  .yor-companion { right: max(0.75rem, env(safe-area-inset-right)); }
   .yor-companion__wake { right: max(0.75rem, env(safe-area-inset-right)); bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .yor-companion__trigger { min-width: 3rem; width: 3rem; height: 3rem; justify-content: center; padding: 0.3rem; border-radius: 1rem; transform: none; }
   .yor-companion__trigger .yor-companion__label,
   .yor-companion__trigger .yor-companion__sparkle,
   .yor-companion__trigger > svg { display: none; }
+}
+
+@media (max-width: 1023px) {
+  .yor-companion { bottom: calc(5.25rem + env(safe-area-inset-bottom) + var(--yor-ambient-player-height, 0px) + 0.75rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2558,6 +2571,24 @@ a.yor-secondary-action:hover {
 html.yor-accessibility-large-text {
   font-size: 112.5%;
 }
+
+/* Accent choices use theme-specific foreground/background pairs. */
+:root[data-yor-accent]:not(.dark) {
+  --primary-foreground: 0 0% 100%;
+  --accent-foreground: 0 0% 100%;
+  --ring: var(--primary);
+}
+:root.dark[data-yor-accent] {
+  --primary-foreground: 0 0% 0%;
+  --accent-foreground: 0 0% 0%;
+  --ring: var(--primary);
+}
+:root[data-yor-accent='midnight']:not(.dark) { --primary: 0 66% 24%; --accent: 4 70% 36%; }
+:root.dark[data-yor-accent='midnight'] { --primary: 0 70% 70%; --accent: 4 100% 75%; }
+:root[data-yor-accent='lilac']:not(.dark) { --primary: 4 70% 36%; --accent: 0 66% 32%; }
+:root.dark[data-yor-accent='lilac'] { --primary: 4 100% 75%; --accent: 0 77% 66%; }
+:root[data-yor-accent='amber']:not(.dark) { --primary: 12 78% 34%; --accent: 0 66% 32%; }
+:root.dark[data-yor-accent='amber'] { --primary: 0 77% 64%; --accent: 4 100% 75%; }
 
 html.yor-accessibility-high-contrast {
   --muted-foreground: 240 6% 28%;

@@ -218,9 +218,171 @@ export interface PublicGrievanceReceipt {
   ticketId: string;
   status: PublicGrievanceReceiptStatus;
   createdAt: string;
-  /** Operational review target, not a universal statutory deadline. */
-  slaDeadline?: string;
 }
+
+export type ModerationDecisionRequestTargetType = typeof ModerationDecisionRequestTargetType[keyof typeof ModerationDecisionRequestTargetType];
+
+
+export const ModerationDecisionRequestTargetType = {
+  post: 'post',
+  user: 'user',
+  comment: 'comment',
+  message: 'message',
+  video: 'video',
+} as const;
+
+export type ModerationDecisionRequestAction = typeof ModerationDecisionRequestAction[keyof typeof ModerationDecisionRequestAction];
+
+
+export const ModerationDecisionRequestAction = {
+  no_action: 'no_action',
+  restrict: 'restrict',
+  remove: 'remove',
+  restore: 'restore',
+} as const;
+
+/**
+ * Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads.
+ */
+export type ModerationDecisionRequestScope = typeof ModerationDecisionRequestScope[keyof typeof ModerationDecisionRequestScope];
+
+
+export const ModerationDecisionRequestScope = {
+  public: 'public',
+  direct_only: 'direct_only',
+  global: 'global',
+} as const;
+
+export interface ModerationDecisionRequest {
+  targetType: ModerationDecisionRequestTargetType;
+  targetId: string;
+  action: ModerationDecisionRequestAction;
+  /** Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads. */
+  scope?: ModerationDecisionRequestScope;
+  /**
+     * Public explanation shown to the content author. Never include private evidence or reporter identity.
+     * @minLength 10
+     * @maxLength 5000
+     */
+  rationale: string;
+  /** @maxLength 5000 */
+  internalNotes?: string;
+  expiresAt?: string;
+  reportId?: string;
+  grievanceTicketId?: string;
+}
+
+/**
+ * If supplied, must match the private notice already issued to this account. It cannot establish authority.
+ */
+export type ModerationAppealRequestRelationship = typeof ModerationAppealRequestRelationship[keyof typeof ModerationAppealRequestRelationship];
+
+
+export const ModerationAppealRequestRelationship = {
+  author: 'author',
+  reporter: 'reporter',
+  affected_party: 'affected_party',
+} as const;
+
+export interface ModerationAppealRequest {
+  decisionId: string;
+  /**
+     * @minLength 10
+     * @maxLength 5000
+     */
+  statement: string;
+  /** If supplied, must match the private notice already issued to this account. It cannot establish authority. */
+  relationship?: ModerationAppealRequestRelationship;
+}
+
+export type ModerationReviewRequestOutcome = typeof ModerationReviewRequestOutcome[keyof typeof ModerationReviewRequestOutcome];
+
+
+export const ModerationReviewRequestOutcome = {
+  upheld: 'upheld',
+  reversed: 'reversed',
+  rejected: 'rejected',
+} as const;
+
+/**
+ * Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action.
+ */
+export type ModerationReviewRequestAction = typeof ModerationReviewRequestAction[keyof typeof ModerationReviewRequestAction];
+
+
+export const ModerationReviewRequestAction = {
+  restore: 'restore',
+  restrict: 'restrict',
+  remove: 'remove',
+} as const;
+
+export interface ModerationReviewRequest {
+  outcome: ModerationReviewRequestOutcome;
+  /** Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action. */
+  action?: ModerationReviewRequestAction;
+  /**
+     * Staff-only review evidence.
+     * @minLength 10
+     * @maxLength 5000
+     */
+  reviewerNotes: string;
+  /**
+     * Public review explanation visible only to the affected parties.
+     * @minLength 10
+     * @maxLength 5000
+     */
+  rationale: string;
+}
+
+export type PublicModerationAppealRelationship = typeof PublicModerationAppealRelationship[keyof typeof PublicModerationAppealRelationship];
+
+
+export const PublicModerationAppealRelationship = {
+  author: 'author',
+  reporter: 'reporter',
+  affected_party: 'affected_party',
+} as const;
+
+export type PublicModerationAppealStatus = typeof PublicModerationAppealStatus[keyof typeof PublicModerationAppealStatus];
+
+
+export const PublicModerationAppealStatus = {
+  pending: 'pending',
+  under_review: 'under_review',
+  upheld: 'upheld',
+  reversed: 'reversed',
+  rejected: 'rejected',
+} as const;
+
+export interface PublicModerationAppeal {
+  id: string;
+  decisionId: string;
+  relationship: PublicModerationAppealRelationship;
+  statement: string;
+  status: PublicModerationAppealStatus;
+  /** @nullable */
+  rationale: string | null;
+  /** @nullable */
+  outcomeDecisionId: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PublicModerationAppealList = PublicModerationAppeal[];
+
+export type ReportStatusUpdateRequest = {
+  status: 'pending' | 'reviewed';
+} | {
+  status: 'resolved' | 'dismissed';
+  /**
+     * Staff-only rationale required for a resolved or dismissed decision.
+     * @minLength 10
+     * @maxLength 2000
+     */
+  decisionReason: string;
+};
 
 export interface RegisterRequest {
   enrollmentId: string;
@@ -610,6 +772,194 @@ export type NullReceipt = null;
  */
 export type ContactWithdrawalReceipt = null;
 
+export type PrivacyChallengeRequestPurpose = typeof PrivacyChallengeRequestPurpose[keyof typeof PrivacyChallengeRequestPurpose];
+
+
+export const PrivacyChallengeRequestPurpose = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export interface PrivacyChallengeRequest {
+  /** @maxLength 255 */
+  email: string;
+  purpose?: PrivacyChallengeRequestPurpose;
+}
+
+export const PrivacyChallengeReceiptValue = {
+  initiated: true,
+} as const;
+export type PrivacyChallengeReceipt = typeof PrivacyChallengeReceiptValue;
+
+export interface PrivacyVerifyRequest {
+  /**
+     * Single-use email challenge, bound to its issued purpose and 15-minute database expiry.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  token: string;
+}
+
+export type PrivacyVerifyReceiptPurpose = typeof PrivacyVerifyReceiptPurpose[keyof typeof PrivacyVerifyReceiptPurpose];
+
+
+export const PrivacyVerifyReceiptPurpose = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export interface PrivacyVerifyReceipt {
+  valid: true;
+  purpose: PrivacyVerifyReceiptPurpose;
+}
+
+export type PrivacyRightsRequestRequestType = typeof PrivacyRightsRequestRequestType[keyof typeof PrivacyRightsRequestRequestType];
+
+
+export const PrivacyRightsRequestRequestType = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export type PrivacyRightsRequestDetails = {
+  /** @maxLength 500 */
+  reason?: string;
+  /** @pattern ^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$ */
+  preferredUsername?: string;
+};
+
+export interface PrivacyRightsRequest {
+  /**
+     * Single-use email challenge, bound to its issued purpose and 15-minute database expiry.
+     * @pattern ^[a-f0-9]{64}$
+     */
+  token: string;
+  requestType: PrivacyRightsRequestRequestType;
+  details?: PrivacyRightsRequestDetails;
+}
+
+export type PrivacyRightsResultRequestType = typeof PrivacyRightsResultRequestType[keyof typeof PrivacyRightsResultRequestType];
+
+
+export const PrivacyRightsResultRequestType = {
+  correction: 'correction',
+  restriction: 'restriction',
+  objection: 'objection',
+  erasure: 'erasure',
+  access: 'access',
+} as const;
+
+export type PrivacyRightsResultDetails = { [key: string]: unknown };
+
+export interface PrivacyRightsResult {
+  executed: boolean;
+  requestType: PrivacyRightsResultRequestType;
+  message: string;
+  recordStatus?: string;
+  erasedAt?: string;
+  details?: PrivacyRightsResultDetails;
+}
+
+export type PreregistrationRequestPerksItem = typeof PreregistrationRequestPerksItem[keyof typeof PreregistrationRequestPerksItem];
+
+
+export const PreregistrationRequestPerksItem = {
+  'founder-badge': 'founder-badge',
+  'priority-access': 'priority-access',
+  'community-input': 'community-input',
+  'username-preference': 'username-preference',
+} as const;
+
+export interface PreregistrationRequest {
+  /**
+     * Trimmed and lowercased before storage.
+     * @maxLength 255
+     */
+  email: string;
+  /**
+     * Preferred username, trimmed and lowercased. Availability is confirmed when an account is created.
+     * @minLength 3
+     * @maxLength 24
+     * @pattern ^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$
+     */
+  username: string;
+  /** Explicit agreement to receive launch and early member updates. */
+  launchUpdatesConsent: true;
+  /**
+     * @maxLength 28
+     * @pattern ^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$
+     */
+  referralCode?: string;
+  /** @maxItems 4 */
+  perks?: PreregistrationRequestPerksItem[];
+}
+
+export type PreregistrationPerkId = typeof PreregistrationPerkId[keyof typeof PreregistrationPerkId];
+
+
+export const PreregistrationPerkId = {
+  'founder-badge': 'founder-badge',
+  'priority-access': 'priority-access',
+  'community-input': 'community-input',
+  'username-preference': 'username-preference',
+} as const;
+
+export interface PreregistrationPerk {
+  id: PreregistrationPerkId;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export interface PreregistrationReceipt {
+  id: string;
+  username: string;
+  /** @nullable */
+  referralCode: string | null;
+  createdAt: string;
+  /**
+     * Unique registration reference; it is not a queue position or authentication credential.
+     * @pattern ^FOUNDER-[0-9A-F-]{36}$
+     */
+  passNumber: string;
+  /** Launch is 1 December 2026 at midnight in Asia/Kolkata. */
+  launchDate: string;
+  /** Planned early member benefits; no paid entitlement or handle reservation is granted. */
+  perks: PreregistrationPerk[];
+  isExisting: false;
+}
+
+/**
+ * Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned.
+ */
+export interface PreregistrationExistingReceipt {
+  /** Launch is 1 December 2026 at midnight in Asia/Kolkata. */
+  launchDate: string;
+  /** Planned early member benefits; no paid entitlement or handle reservation is granted. */
+  perks: PreregistrationPerk[];
+  isExisting: true;
+}
+
+export interface PreregistrationStats {
+  /**
+     * Actual stored registrations with no artificial offset.
+     * @minimum 0
+     */
+  totalRegistered: number;
+  /** Launch is 1 December 2026 at midnight in Asia/Kolkata. */
+  launchDate: string;
+  /** Planned early member benefits; no paid entitlement or handle reservation is granted. */
+  perks: PreregistrationPerk[];
+}
+
 export type PostAiChatBody = { [key: string]: unknown };
 
 export type PostAiModerateBody = { [key: string]: unknown };
@@ -798,6 +1148,8 @@ export type PostInvitesClaimBody = { [key: string]: unknown };
 
 export type PostInvitesGenerateBody = { [key: string]: unknown };
 
+export type PostLaunchUnsubscribeBody = { [key: string]: unknown };
+
 export type PostMediaByIdFinalize200 = ApiEnvelope & {
   data?: MediaResult;
 };
@@ -861,6 +1213,16 @@ export type PostMessagesByMessageIdReactionsBody = { [key: string]: unknown };
 
 export type PostMessagesByMessageIdSeenBody = { [key: string]: unknown };
 
+export type PostModerationAppeals201 = ApiEnvelope & {
+  data?: PublicModerationAppeal;
+};
+
+export type GetModerationAppealsMine200 = ApiEnvelope & {
+  data?: PublicModerationAppealList;
+};
+
+export type PostModerationNoticesByNoticeIdAcknowledgeBody = { [key: string]: unknown };
+
 export type PostNotesBody = { [key: string]: unknown };
 
 export type PostNotificationsByNotificationIdReadBody = { [key: string]: unknown };
@@ -907,6 +1269,20 @@ export type PostPostsByPostIdShareBody = { [key: string]: unknown };
 
 export type PostPostsByPostIdUnlikeBody = { [key: string]: unknown };
 
+export type GetPostsSavedParams = {
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
+
 export type PostPostsUploadImageBody = {
   image: Blob;
 };
@@ -918,6 +1294,36 @@ export type PostPremiumOrdersByOrderIdCancelBody = { [key: string]: unknown };
 export type PostPremiumOrdersByOrderIdRecoverBody = { [key: string]: unknown };
 
 export type PostPremiumOrdersByOrderIdVerifyBody = { [key: string]: unknown };
+
+export type PostPreregister200 = ApiEnvelope & {
+  data?: PreregistrationExistingReceipt;
+};
+
+export type PostPreregister201 = ApiEnvelope & {
+  data?: PreregistrationReceipt;
+};
+
+export type GetPreregisterStats200 = ApiEnvelope & {
+  data?: PreregistrationStats;
+};
+
+export type PostPrivacyChallenge200 = ApiEnvelope & {
+  data?: PrivacyChallengeReceipt;
+};
+
+export type PostPrivacyRequest200 = ApiEnvelope & {
+  data?: PrivacyRightsResult;
+};
+
+export type PostPrivacyVerify200 = ApiEnvelope & {
+  data?: PrivacyVerifyReceipt;
+};
+
+export type PutPrivateMessagesIdentityBody = { [key: string]: unknown };
+
+export type PostPrivateMessagesThreadsBody = { [key: string]: unknown };
+
+export type PostPrivateMessagesThreadsByThreadIdMessagesBody = { [key: string]: unknown };
 
 export type PostProductsBody = {
   /** @maxItems 10 */
@@ -943,8 +1349,6 @@ export type PostProjectsByProjectIdCollaboratorsRespondBody = { [key: string]: u
 
 export type PostReportsBody = { [key: string]: unknown };
 
-export type PatchReportsByReportIdStatusBody = { [key: string]: unknown };
-
 export type PostReportsGrievanceBody = { [key: string]: unknown };
 
 export type PostReportsGrievance201 = ApiEnvelope & {
@@ -956,6 +1360,62 @@ export type GetReportsGrievanceByTicketId200 = ApiEnvelope & {
 };
 
 export type PatchReportsGrievanceByTicketIdStatusBody = { [key: string]: unknown };
+
+export type GetReportsGrievancesParams = {
+/**
+ * Return only records currently in this status.
+ */
+status?: GetReportsGrievancesStatus;
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, status-scoped keyset cursor returned in meta.nextCursor.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
+
+export type GetReportsGrievancesStatus = typeof GetReportsGrievancesStatus[keyof typeof GetReportsGrievancesStatus];
+
+
+export const GetReportsGrievancesStatus = {
+  received: 'received',
+  under_review: 'under_review',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
+
+export type GetReportsQueueParams = {
+/**
+ * Return only records currently in this status.
+ */
+status?: GetReportsQueueStatus;
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, status-scoped keyset cursor returned in meta.nextCursor.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
+
+export type GetReportsQueueStatus = typeof GetReportsQueueStatus[keyof typeof GetReportsQueueStatus];
+
+
+export const GetReportsQueueStatus = {
+  pending: 'pending',
+  reviewed: 'reviewed',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
 
 export type PostStoriesBody = {
   /** An approved server-owned asset belonging to the authenticated owner and matching this consumer's purpose. */
@@ -1021,6 +1481,8 @@ export type PostUsersMeAvatarBody = {
 
 export type PostUsersMeConsentBody = { [key: string]: unknown };
 
+export type PostUsersMeConsentWithdrawalBody = { [key: string]: unknown };
+
 export type PostUsersMeContactShieldsBody = { [key: string]: unknown };
 
 export type GetUsersMeEligibility200 = ApiEnvelope & {
@@ -1057,6 +1519,8 @@ export type PutUsersMePremiumProfileBody = { [key: string]: unknown };
 
 export type PutUsersMePrivacyBody = { [key: string]: unknown };
 
+export type PostUsersMeRestrictionBody = { [key: string]: unknown };
+
 export type PutUsersMeSettingsBody = { [key: string]: unknown };
 
 export type PostVideosBody = {
@@ -1080,4 +1544,18 @@ export type PostVideosByIdCommentsBody = {
 export type PostVideosByIdCommentsByCommentIdLikeBody = { [key: string]: unknown };
 
 export type PostVideosByIdLikeBody = { [key: string]: unknown };
+
+export type GetVideosSavedParams = {
+/**
+ * Page size from 1 to 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+ * @pattern ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+ */
+cursor?: string;
+};
 

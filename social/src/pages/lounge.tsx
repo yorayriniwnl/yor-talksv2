@@ -23,16 +23,16 @@ interface SpatialAvatar {
 }
 
 const INITIAL_AVATARS: SpatialAvatar[] = [
-  { id: '1', name: 'Ayush Roy', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', x: 50, y: 35, role: 'host', isSpeaking: true },
-  { id: '2', name: 'Anya', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', x: 38, y: 45, role: 'speaker' },
-  { id: '3', name: 'Rohan Verma', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', x: 62, y: 45, role: 'speaker' },
-  { id: '4', name: 'Aditi Singh', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', x: 25, y: 70, role: 'listener' },
-  { id: '5', name: 'Marcus Vance', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop', x: 75, y: 70, role: 'listener' },
-  { id: '6', name: 'Aravind Rao', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop', x: 30, y: 55, role: 'speaker' },
-  { id: '7', name: 'Renata Silva', avatar: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop', x: 70, y: 55, role: 'speaker' },
-  { id: '8', name: 'Kenji Sato', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop', x: 15, y: 80, role: 'listener' },
-  { id: '9', name: 'Sakura Miyamoto', avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=200&auto=format&fit=crop', x: 85, y: 80, role: 'listener' },
-  { id: '10', name: 'Mateo Rossi', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop', x: 42, y: 75, role: 'listener' },
+  { id: '1', name: 'Ayush Roy', avatar: '', x: 50, y: 35, role: 'host', isSpeaking: true },
+  { id: '2', name: 'Anya', avatar: '', x: 38, y: 45, role: 'speaker' },
+  { id: '3', name: 'Rohan Verma', avatar: '', x: 62, y: 45, role: 'speaker' },
+  { id: '4', name: 'Aditi Singh', avatar: '', x: 25, y: 70, role: 'listener' },
+  { id: '5', name: 'Marcus Vance', avatar: '', x: 75, y: 70, role: 'listener' },
+  { id: '6', name: 'Aravind Rao', avatar: '', x: 30, y: 55, role: 'speaker' },
+  { id: '7', name: 'Renata Silva', avatar: '', x: 70, y: 55, role: 'speaker' },
+  { id: '8', name: 'Kenji Sato', avatar: '', x: 15, y: 80, role: 'listener' },
+  { id: '9', name: 'Sakura Miyamoto', avatar: '', x: 85, y: 80, role: 'listener' },
+  { id: '10', name: 'Mateo Rossi', avatar: '', x: 42, y: 75, role: 'listener' },
 ];
 
 export default function Lounge() {
@@ -96,7 +96,7 @@ export default function Lounge() {
   const handleRaiseHand = () => {
     sounds.playPop();
     setHandRaised(!handRaised);
-    toast.info(!handRaised ? '✋ Hand raised to speak on stage' : 'Lowered hand');
+    toast.info('Hand preview updated locally. No stage event was sent.');
   };
 
   return (
@@ -109,7 +109,7 @@ export default function Lounge() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">देसी Spatial Audio Lounge</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">2D Proximity Voice & Collaborative Soundboard</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative participants and local soundboard. Live voice and microphone capture are not connected.</p>
           </div>
         </div>
 
@@ -121,7 +121,7 @@ export default function Lounge() {
             className={cn("rounded-2xl font-bold text-xs", handRaised && "bg-amber-500 text-black border-amber-400")}
           >
             <Hand className="w-3.5 h-3.5 mr-1" />
-            {handRaised ? 'Hand Raised' : 'Raise Hand'}
+            {handRaised ? 'Hand marked (preview)' : 'Mark hand (preview)'}
           </Button>
 
           <Button
@@ -130,7 +130,7 @@ export default function Lounge() {
             className={cn("rounded-2xl font-bold text-xs", isMuted ? "bg-rose-600 text-white" : "bg-emerald-600 text-white")}
           >
             {isMuted ? <MicOff className="w-3.5 h-3.5 mr-1" /> : <Mic className="w-3.5 h-3.5 mr-1" />}
-            {isMuted ? 'Muted' : 'Mic Active'}
+            {isMuted ? 'Muted (preview)' : 'Unmuted (preview)'}
           </Button>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function Lounge() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <h3 className="font-display font-bold text-sm text-foreground">Spatial Audio Room: Tech & Chill</h3>
+              <h3 className="font-display font-bold text-sm text-foreground">Sample spatial room: Tech & Chill</h3>
             </div>
             <p className="text-xs font-mono text-muted-foreground hidden sm:block">Click anywhere on the floor plan to move your spatial avatar</p>
           </div>
@@ -210,7 +210,7 @@ export default function Lounge() {
             <Sparkles className="w-4 h-4 text-cyan-400" />
             <h3>Interactive Live Soundboard (देसी पैड्स)</h3>
           </div>
-          <p className="text-xs text-muted-foreground font-mono mb-6">Trigger real-time synthesized acoustic pads to hype the speaker and stage.</p>
+          <p className="text-xs text-muted-foreground font-mono mb-6">Play synthesized sounds on this device. Audio is not sent to other people or a live stage.</p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Button

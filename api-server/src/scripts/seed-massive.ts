@@ -1,3 +1,5 @@
+import { assertSyntheticSeedAllowed } from './seed-safety.js';
+assertSyntheticSeedAllowed();
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {

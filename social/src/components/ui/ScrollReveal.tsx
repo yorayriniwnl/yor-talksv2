@@ -1,5 +1,6 @@
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 import { useRef } from 'react';
-import { motion, useInView, useReducedMotion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
@@ -20,7 +21,7 @@ const directionMap = {
 export function ScrollReveal({ children, className, delay = 0, direction = 'up' }: ScrollRevealProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-60px' });
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useAppReducedMotion();
   const offset = directionMap[direction];
 
   return (

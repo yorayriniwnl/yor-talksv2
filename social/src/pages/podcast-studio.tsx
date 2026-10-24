@@ -34,9 +34,9 @@ const STAGES: PodcastStage[] = [
     genre: 'Esports & Gaming',
     listeners: 1420,
     speakers: [
-      { id: 's1', name: 'Aravind Rao', role: 'Host · Radiant Duelist', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
-      { id: 's2', name: 'Yuki Tanaka', role: 'Co-Host · FGC Champion', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false },
-      { id: 's3', name: 'Devansh D.', role: 'Guest · Analyst', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: true }
+      { id: 's1', name: 'Aravind Rao', role: 'Host · Radiant Duelist', avatar: '', isSpeaking: true, isMuted: false },
+      { id: 's2', name: 'Yuki Tanaka', role: 'Co-Host · FGC Champion', avatar: '', isSpeaking: false, isMuted: false },
+      { id: 's3', name: 'Devansh D.', role: 'Guest · Analyst', avatar: '', isSpeaking: false, isMuted: true }
     ]
   },
   {
@@ -45,9 +45,9 @@ const STAGES: PodcastStage[] = [
     genre: 'AI & Neural Tech',
     listeners: 2890,
     speakers: [
-      { id: 's4', name: 'Ayush Roy', role: 'Host · Yor Talks Architect', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
-      { id: 's5', name: 'Marcus Vance', role: 'Co-Host · Systems Researcher', avatar: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false },
-      { id: 's6', name: 'Aditi Singh', role: 'Guest · ML Engineer', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false }
+      { id: 's4', name: 'Ayush Roy', role: 'Host · Yor Talks Architect', avatar: '', isSpeaking: true, isMuted: false },
+      { id: 's5', name: 'Marcus Vance', role: 'Co-Host · Systems Researcher', avatar: '', isSpeaking: false, isMuted: false },
+      { id: 's6', name: 'Aditi Singh', role: 'Guest · ML Engineer', avatar: '', isSpeaking: false, isMuted: false }
     ]
   },
   {
@@ -56,8 +56,8 @@ const STAGES: PodcastStage[] = [
     genre: 'Music & Audio',
     listeners: 980,
     speakers: [
-      { id: 's7', name: 'Renata Silva', role: 'Host · Modular Artist', avatar: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
-      { id: 's8', name: 'Clara Vogel', role: 'Co-Host · Berlin Techno DJ', avatar: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false }
+      { id: 's7', name: 'Renata Silva', role: 'Host · Modular Artist', avatar: '', isSpeaking: true, isMuted: false },
+      { id: 's8', name: 'Clara Vogel', role: 'Co-Host · Berlin Techno DJ', avatar: '', isSpeaking: false, isMuted: false }
     ]
   },
   {
@@ -66,8 +66,8 @@ const STAGES: PodcastStage[] = [
     genre: 'Craftsmanship & Blades',
     listeners: 1650,
     speakers: [
-      { id: 's9', name: 'Thorin Lindqvist', role: 'Host · Master Bladesmith', avatar: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?q=80&w=200&auto=format&fit=crop', isSpeaking: true, isMuted: false },
-      { id: 's10', name: 'Hiroshi Tanaka', role: 'Co-Host · Kyoto Knife Master', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', isSpeaking: false, isMuted: false }
+      { id: 's9', name: 'Thorin Lindqvist', role: 'Host · Master Bladesmith', avatar: '', isSpeaking: true, isMuted: false },
+      { id: 's10', name: 'Hiroshi Tanaka', role: 'Co-Host · Kyoto Knife Master', avatar: '', isSpeaking: false, isMuted: false }
     ]
   }
 ];
@@ -104,7 +104,7 @@ export default function PodcastStudio() {
           </div>
           <div>
             <h1 className="text-xl font-bold font-display text-foreground">Live Audio Stage & Podcast</h1>
-            <p className="text-[0.68rem] text-muted-foreground font-mono">Audio stage preview · live panel transport is not connected yet</p>
+            <p className="text-[0.68rem] text-muted-foreground font-mono">Illustrative speakers and audience counts. Live audio is not connected.</p>
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export default function PodcastStudio() {
               )}
             >
               <span>{s.title}</span>
-              <span className="text-[0.65rem] opacity-75 font-mono">🎧 {s.listeners.toLocaleString()} listening · {s.genre}</span>
+              <span className="text-[0.65rem] opacity-75 font-mono">🎧 {s.listeners.toLocaleString()} sample listeners · {s.genre}</span>
             </button>
           ))}
         </div>
@@ -144,9 +144,9 @@ export default function PodcastStudio() {
         <div className="surface-1 rounded-3xl p-8 border border-border/40 space-y-6 shadow-2xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-bold text-primary flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" /> LIVE STAGE SPEAKERS ({speakers.length} / 6 SLOTS)
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> SAMPLE SPEAKERS ({speakers.length} / 6 SLOTS)
             </span>
-            <span className="text-xs font-mono text-muted-foreground">🎧 {activeStage.listeners.toLocaleString()} Active Listeners</span>
+            <span className="text-xs font-mono text-muted-foreground">🎧 {activeStage.listeners.toLocaleString()} sample listeners</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

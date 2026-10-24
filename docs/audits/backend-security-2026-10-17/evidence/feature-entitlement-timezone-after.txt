@@ -1,0 +1,17 @@
+✔ active feature denial overrides paid access with timestamp in UTC (71.1447ms)
+✔ active feature denial overrides paid access with timestamp in Asia/Calcutta (26.0877ms)
+✔ active feature denial overrides paid access with timestamp in America/New_York (27.5352ms)
+✔ active feature denial overrides paid access with timestamptz in UTC (27.8808ms)
+✔ active feature denial overrides paid access with timestamptz in Asia/Calcutta (28.5073ms)
+✔ active feature denial overrides paid access with timestamptz in America/New_York (33.9259ms)
+✔ the advanced catalog is closed and defaults can be overridden by explicit flags (0.9822ms)
+✔ an active override grants an available perk; expired overrides and availability flags never grant access alone (2.2648ms)
+✔ audience policy applies blocks before every inclusion rule (0.2212ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2185.593

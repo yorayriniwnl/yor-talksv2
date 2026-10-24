@@ -28,23 +28,41 @@ groups:
           summary: Yor Talks background jobs are failing
           description: A notification or feed worker failure was recorded during the last ten minutes.
 
-      - alert: YorLifecycleWorkerMissing
-        expr: yor_lifecycle_worker_healthy == 0
-        for: 2m
+      - alert: YorLifecycleWorkerUnavailable
+        expr: yor_lifecycle_metrics_up == 1 and yor_lifecycle_worker_up == 0
+        for: 1m
         labels:
           severity: critical
         annotations:
-          summary: Required lifecycle worker is missing or stale
-          description: The lifecycle worker has not generated a fresh heartbeat within the allowed grace window.
+          summary: Yor Talks lifecycle worker heartbeat is missing
+          description: Account and media cleanup jobs are not being serviced by a healthy lifecycle worker.
 
-      - alert: YorLifecycleWorkerStale
-        expr: yor_lifecycle_worker_heartbeat_timestamp_seconds == 0 or time() - yor_lifecycle_worker_heartbeat_timestamp_seconds > 180
+      - alert: YorLifecycleCleanupJobsOverdue
+        expr: yor_lifecycle_metrics_up == 1 and yor_lifecycle_cleanup_jobs_overdue > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Yor Talks cleanup jobs are overdue
+          description: One or more account or media cleanup jobs are over five minutes late or have an expired worker lease.
+
+      - alert: YorLifecycleCleanupJobsDead
+        expr: yor_lifecycle_metrics_up == 1 and yor_lifecycle_cleanup_jobs_dead > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Yor Talks cleanup jobs entered the dead-letter state
+          description: Review the cleanup job failure code, restore the handler or dependency, and use the approved recovery procedure.
+
+      - alert: YorLifecycleMetricsUnavailable
+        expr: yor_lifecycle_metrics_up == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: Required lifecycle worker heartbeat is overdue
-          description: Check the lifecycle worker process, queue lease health, and database heartbeat table.
+          summary: Yor Talks lifecycle health metrics are unavailable
+          description: The API metrics endpoint could not inspect lifecycle heartbeats and cleanup backlog in PostgreSQL.
 
       - alert: YorAnalyticsRollupFailed
         expr: yor_analytics_rollup_last_run_failed == 1

@@ -28,6 +28,9 @@ async function buildAll() {
     logLevel: "info",
     external: [
       "*.node",
+      // openpgp's ESM build calls createRequire(import.meta.url), which is empty in a
+      // CommonJS bundle; load its published CommonJS build at runtime instead.
+      "openpgp",
       "sharp",
       "better-sqlite3",
       "sqlite3",

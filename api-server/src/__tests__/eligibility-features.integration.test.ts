@@ -187,7 +187,7 @@ test("minors can read messages without storing a sender-visible read receipt", a
     content: "hello", createdAt: now.toISOString(), seenAt: null, deletedAt: null, expiresAt: null } as any;
   const service = new MessageService(
     { getMembers: async () => ["minor", "sender"], findById: async () => ({ isGroup: false }) } as any,
-    { findById: async () => message, recordVisibleRead: async () => { readWrites++; return message; } } as any,
+    { findVisibleById: async () => message, recordVisibleRead: async () => { readWrites++; return message; } } as any,
     { findById: async () => ({ id: "minor", settings: { readReceiptsEnabled: true } }) } as any,
     undefined, undefined, { requirePairwiseContacts: async () => {} } as any,
     { decisionFor: async () => minorDecision } as any,

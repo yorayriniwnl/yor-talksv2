@@ -4,6 +4,7 @@ import { BackgroundJobRepository, type BackgroundJob } from '../repositories/bac
 import { RedisRepository } from '../repositories/redis-repository.js';
 import { logger } from '../lib/logger.js';
 import { MediaService } from '../services/media-service.js';
+import { purgeHiddenMessageContent } from '../services/message-retention-service.js';
 
 export type LifecycleHandler = (job: BackgroundJob) => Promise<void | { retryAfterSeconds: number }>;
 
@@ -17,14 +18,48 @@ export async function ensureMediaCleanupLoop(): Promise<void> {
     WHERE background_jobs.kind='media_cleanup' AND background_jobs.status IN ('complete','dead')`, [randomUUID()]);
 }
 
+export async function ensurePrivacyCleanupLoop(): Promise<void> {
+  await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
+    VALUES($1,'privacy_cleanup','privacy:cleanup:loop','{}',now())
+    ON CONFLICT(dedup_key) DO UPDATE SET status='pending',attempts=0,
+      lease_token=NULL,lease_until=NULL,last_error=NULL,available_at=now(),updated_at=now()
+    WHERE background_jobs.kind='privacy_cleanup' AND background_jobs.status IN ('complete','dead')`,[randomUUID()]);
+}
+
+export async function ensureMessageCleanupLoop(): Promise<void> {
+  await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
+    VALUES($1,'message_cleanup','message:cleanup:loop','{}',now())
+    ON CONFLICT(dedup_key) DO UPDATE SET status='pending',attempts=0,
+      lease_token=NULL,lease_until=NULL,last_error=NULL,available_at=now(),updated_at=now()
+    WHERE background_jobs.kind='message_cleanup' AND background_jobs.status IN ('complete','dead')`,[randomUUID()]);
+}
+
+/** Remove expired verification authority in bounded, concurrent-safe batches.
+ * Completed rights evidence, consent history and erasure journals are retained. */
+export async function expirePrivacyChallenges(): Promise<number> {
+  const result = await pool.query(`WITH expired AS (
+    SELECT id FROM privacy_rights_requests WHERE status='pending_verification'
+      AND verification_expires_at<=clock_timestamp()
+    ORDER BY verification_expires_at,id FOR UPDATE SKIP LOCKED LIMIT 1000
+  ) UPDATE privacy_rights_requests p SET status='expired',verification_token_hash=NULL,verification_expires_at=NULL
+    FROM expired WHERE p.id=expired.id`);
+  return result.rowCount ?? 0;
+}
+
 export async function cleanAccountSessions(job: BackgroundJob, redis: RedisRepository): Promise<void> {
   const userId = job.payload.userId;
-  if (typeof userId !== 'string') throw new Error('invalid_job');
+  if (typeof userId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId)) throw new Error('invalid_job');
+  const emailHash = job.payload.emailHash;
+  if (emailHash !== undefined && (typeof emailHash !== 'string' || !/^[a-f0-9]{64}$/.test(emailHash))) throw new Error('invalid_job');
   const sessions = await redis.scanStrict(`session:${userId}:*`);
   for (const key of sessions) await redis.delStrict(key);
   const index = `login-approvals:user:${userId}`;
   for (const id of await redis.getSetStrict(index)) await redis.delStrict(`login-approval:${id}`);
   await redis.delStrict(index);
+  await redis.delStrict(`totp-setup:${userId}`);
+  // Older jobs lack this optional locator and rely on the OTP's five-minute
+  // TTL. Store only the locator hash, never the email or credential payload.
+  if (typeof emailHash === 'string') await redis.deleteEmailOtpForUserStrict(`email-login-otp:${emailHash}`, userId);
 }
 
 export async function startLifecycleWorker(additionalHandlers: Record<string, LifecycleHandler> = {}) {
@@ -33,10 +68,14 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
   const workerId = `lifecycle:${randomUUID()}`;
   const media = new MediaService();
   await ensureMediaCleanupLoop();
+  await ensurePrivacyCleanupLoop();
+  await ensureMessageCleanupLoop();
   let nextMediaSweepCheck = Date.now() + 60_000;
   const handlers: Record<string, LifecycleHandler> = {
     account_cleanup: job => cleanAccountSessions(job, redis),
     media_cleanup: async () => { await media.cleanup(); return { retryAfterSeconds: 60 }; },
+    privacy_cleanup: async () => ({ retryAfterSeconds: await expirePrivacyChallenges() === 1000 ? 5 : 60 }),
+    message_cleanup: async () => ({ retryAfterSeconds: await purgeHiddenMessageContent() === 500 ? 5 : 60 }),
     ...additionalHandlers,
   };
   await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });
@@ -49,6 +88,8 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
     try {
       if (Date.now() >= nextMediaSweepCheck) {
         await ensureMediaCleanupLoop();
+        await ensurePrivacyCleanupLoop();
+        await ensureMessageCleanupLoop();
         nextMediaSweepCheck = Date.now() + 60_000;
       }
       await jobs.heartbeat(workerId, { handlers: Object.keys(handlers) });

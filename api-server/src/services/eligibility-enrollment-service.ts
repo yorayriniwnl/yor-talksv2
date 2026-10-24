@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { db, type DbTransaction } from '@workspace/db';
 import { applicablePolicies, policyFingerprint } from '../eligibility/policy.js';
+import { requiredGuardianPurposes, thresholdValue } from '../eligibility/enrollment-policy.js';
 import type { ApprovedTerritoryPolicy, AuthorizationPurpose, EligibilityEnrollment, EnrollmentAuthorization, Experience, GuardianAuthorization, PolicyVersions } from '../eligibility/types.js';
 import { loadApprovedTerritoryPolicies, loadOperatorPolicyIds } from '../eligibility/territory-policy.js';
 import { EligibilityRepository } from '../repositories/eligibility-repository.js';
@@ -17,18 +18,6 @@ function sameMap(a: Record<string,string>, b: Record<string,string>): boolean {
 }
 function currentPolicies(enrollment: EligibilityEnrollment, policies: ApprovedTerritoryPolicy[], operatorPolicyIds: string[], now: Date) {
   return applicablePolicies({ declaredTerritory: enrollment.territory, operatorPolicyIds }, policies, now);
-}
-function thresholdValue(assertions: Array<{ age: number; atLeast: boolean }>, threshold: number): boolean | undefined {
-  const direct = assertions.find(item => item.age===threshold);
-  if (direct) return direct.atLeast;
-  if (assertions.some(item => item.atLeast && item.age>threshold)) return true;
-  if (assertions.some(item => !item.atLeast && item.age<threshold)) return false;
-  return undefined;
-}
-function requiredPurposes(enrollment: EligibilityEnrollment, policies: ApprovedTerritoryPolicy[]): Set<AuthorizationPurpose> {
-  const required = new Set(policies.flatMap(policy => policy.requiredGuardianPurposes));
-  if (enrollment.requestedExperience==='under_13') required.add('account_collection');
-  return required;
 }
 function validGuardianForPurpose(values: GuardianAuthorization[], purpose: AuthorizationPurpose, policies: ApprovedTerritoryPolicy[], now: Date): GuardianAuthorization | undefined {
   const candidates = values.filter(value => value.purposes.includes(purpose));
@@ -65,8 +54,8 @@ export class EligibilityEnrollmentService {
   private registry() { return (this.options.policies ?? loadApprovedTerritoryPolicies)(); }
   private operatorIds() { return this.options.operatorPolicyIds ?? loadOperatorPolicyIds(); }
   private now() { return (this.options.clock ?? (() => new Date()))(); }
-  private collectionFirst(enrollment: EligibilityEnrollment, policies: ApprovedTerritoryPolicy[]) {
-    return enrollment.requestedExperience==='under_13' || policies.some(policy => policy.requiredGuardianPurposes.includes('account_collection'));
+  private collectionFirst(enrollment: EligibilityEnrollment) {
+    return enrollment.requestedExperience==='under_13';
   }
   private hasUsableAssessment(enrollment: EligibilityEnrollment, assessment: EnrollmentAuthorization['assessment'] | undefined, policies: ApprovedTerritoryPolicy[], now: Date) {
     const verifiedExperience = assessment?.experience;
@@ -79,7 +68,7 @@ export class EligibilityEnrollmentService {
   private authorizationStatus(enrollment: EligibilityEnrollment, assessment: EnrollmentAuthorization['assessment'] | undefined,
     guardians: GuardianAuthorization[], policies: ApprovedTerritoryPolicy[], now: Date): 'authorized' | 'verification_required' {
     if (!this.hasUsableAssessment(enrollment,assessment,policies,now)) return 'verification_required';
-    for (const purpose of requiredPurposes(enrollment,policies)) {
+    for (const purpose of requiredGuardianPurposes(enrollment.requestedExperience,policies,assessment)) {
       if (!validGuardianForPurpose(guardians,purpose,policies,now)) return 'verification_required';
     }
     return 'authorized';
@@ -101,7 +90,7 @@ export class EligibilityEnrollmentService {
     } catch {
       throw new EnrollmentUnavailableError();
     }
-    const needsGuardian = policies.some(policy => policy.requiredGuardianPurposes.includes('account_collection')) || input.requestedExperience==='under_13';
+    const needsGuardian = input.requestedExperience==='under_13';
     return { status: 'verification_required', nextStep: needsGuardian ? 'guardian_authorization' : 'age_assessment',
       enrollment: { id: enrollmentId, registrationNonce, expiresAt } };
   }
@@ -123,7 +112,8 @@ export class EligibilityEnrollmentService {
     const policies = currentPolicies(enrollment,this.registry(),this.operatorIds(),now);
     if (!policies) return { status: 'unavailable', nextStep: null };
     const evidence = await db.transaction(tx => this.repository.readEnrollmentEvidence(enrollmentId,tx));
-    const needsGuardian = [...requiredPurposes(enrollment,policies)].some(purpose => !validGuardianForPurpose(evidence.guardianAuthorizations,purpose,policies,now));
+    const needsGuardian = [...requiredGuardianPurposes(enrollment.requestedExperience,policies,evidence.assessment)]
+      .some(purpose => !validGuardianForPurpose(evidence.guardianAuthorizations,purpose,policies,now));
     return { status: 'verification_required', nextStep: needsGuardian ? 'guardian_authorization' : 'age_assessment',
       enrollment: { id: enrollment.id, expiresAt: enrollment.expiresAt } };
   }
@@ -140,10 +130,10 @@ export class EligibilityEnrollmentService {
       const policies = currentPolicies(enrollment,registry,operatorIds,now);
       if (!policies || policies.some(policy => !policy.allowedExperiences.includes(enrollment.requestedExperience))) throw new EnrollmentUnavailableError();
       const evidence = await this.repository.readEnrollmentEvidence(enrollmentId,tx);
-      const purposes = requiredPurposes(enrollment,policies);
+    const purposes = requiredGuardianPurposes(enrollment.requestedExperience,policies,evidence.assessment);
       if (purpose==='guardian_authorization') {
         if (![...purposes].some(value => !validGuardianForPurpose(evidence.guardianAuthorizations,value,policies,now))) throw new EnrollmentUnavailableError();
-      } else if (this.collectionFirst(enrollment,policies)
+      } else if (this.collectionFirst(enrollment)
         && !validGuardianForPurpose(evidence.guardianAuthorizations,'account_collection',policies,now)) {
         throw new EnrollmentUnavailableError();
       }

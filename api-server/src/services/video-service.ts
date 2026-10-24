@@ -10,15 +10,15 @@ import { ContentSafetyService } from "./content-safety-service.js";
 import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { ContactShieldService } from "./contact-shield-service.js";
+import { visibleCollectionPage } from '../utils/saved-collection-page.js';
 import { withApprovedMedia, mediaBinding, attachmentFields, rejectRawMedia } from "./media-publication.js";
 import { MediaLifecycleError } from "./media-service.js";
+import { allowedExternalVideoUrl } from '../utils/external-video.js';
 
-const externalHosts = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "vimeo.com", "www.vimeo.com", "player.vimeo.com"]);
 export function normalizeExternalVideoUrl(value: string): string {
-  let url: URL;
-  try { url = new URL(value); } catch { throw new MediaLifecycleError("Invalid external video URL", 400, "invalid_external_video"); }
-  if (url.protocol !== "https:" || url.username || url.password || url.port || !externalHosts.has(url.hostname) || url.pathname === "/") throw new MediaLifecycleError("External video host is not allowed", 400, "invalid_external_video");
-  return url.href;
+  const url = allowedExternalVideoUrl(value);
+  if (!url) throw new MediaLifecycleError("External video URL is not allowed", 400, "invalid_external_video");
+  return url;
 }
 
 export class VideoService {
@@ -68,7 +68,7 @@ export class VideoService {
   }
 
   async listVideos(viewerId?: string): Promise<VideoRecord[]> {
-    const visible = await this.contentSafetyService.filterVisibleByAuthor(await this.videoRepository.list(), viewerId, (video) => video.authorId);
+    const visible = await this.filterVisibleVideos(await this.videoRepository.list(), viewerId);
     if (!viewerId) return visible;
     const savedIds = new Set(await this.videoBookmarkRepository.listForUser(viewerId));
     return visible.map((video) => ({ ...video, savedByMe: savedIds.has(video.id) }));
@@ -76,6 +76,7 @@ export class VideoService {
 
   async getVideo(id: string, viewerId?: string, countView = true): Promise<VideoRecord | undefined> {
     const existing = await this.videoRepository.findById(id);
+    if (!existing || (viewerId && !(await this.contactShieldService.canView(viewerId, existing.authorId)))) return undefined;
     if (!(await this.contentSafetyService.isVisible(existing, viewerId, existing?.authorId))) return undefined;
     if (countView) {
       const updated = await this.videoRepository.incrementViews(id);
@@ -85,8 +86,8 @@ export class VideoService {
   }
 
   async toggleLike(videoId: string, userId: string): Promise<VideoRecord | undefined> {
-    const video = await this.videoRepository.findById(videoId);
-    if (!video || !(await this.contentSafetyService.isVisible(video, userId, video.authorId))) return undefined;
+    const video = await this.getVideo(videoId, userId, false);
+    if (!video) return undefined;
     return this.videoRepository.toggleLike(videoId, userId);
   }
 
@@ -95,7 +96,9 @@ export class VideoService {
     if (!video) return [];
     const shielded = await this.contactShieldService.getShieldedUserIds(viewerId);
     const comments = await this.videoCommentRepository.list(videoId);
-    return Promise.all(comments.filter((comment) => !shielded.has(comment.authorId)).map(async (comment) => {
+    const candidates = comments.filter((comment) => !shielded.has(comment.authorId));
+    const visibleComments = await this.contentSafetyService.filterVisibleByAuthor(candidates,viewerId,comment => comment.authorId);
+    return Promise.all(visibleComments.map(async (comment) => {
       const likedBy = Array.isArray(comment.likedBy) ? comment.likedBy : [];
       const author = await this.getAuthor(comment.authorId);
       return {
@@ -152,8 +155,23 @@ export class VideoService {
 
   async listBookmarkedVideos(userId: string): Promise<VideoRecord[]> {
     const bookmarkIds = await this.videoBookmarkRepository.listForUser(userId);
-    const visible = await this.contentSafetyService.filterVisibleByAuthor(await this.videoRepository.listByIds(bookmarkIds), userId, (video) => video.authorId);
+    const visible = await this.filterVisibleVideos(await this.videoRepository.listByIds(bookmarkIds), userId);
     return visible.map((video) => ({ ...video, savedByMe: true }));
+  }
+
+  async listBookmarkedVideosPage(userId: string, limit = 50, cursor?: string) {
+    const shielded = await this.contactShieldService.getShieldedUserIds(userId);
+    const page = await visibleCollectionPage({
+      kind: 'saved_videos', ownerId: userId, limit, cursor,
+      fetch: (position, size) => this.videoBookmarkRepository.listPageForUser(userId, position, size),
+      filter: items => this.contentSafetyService.filterVisibleByAuthor(items.filter(video => !shielded.has(video.authorId)), userId, video => video.authorId),
+    });
+    return { ...page, data: page.data.map(video => ({ ...video, savedByMe: true })) };
+  }
+
+  private async filterVisibleVideos(videos: VideoRecord[], viewerId?: string): Promise<VideoRecord[]> {
+    const shielded = viewerId ? await this.contactShieldService.getShieldedUserIds(viewerId) : new Set<string>();
+    return this.contentSafetyService.filterVisibleByAuthor(videos.filter(video => !shielded.has(video.authorId)), viewerId, video => video.authorId);
   }
 
   private async presentComment(comment: VideoCommentRecord, viewerId: string): Promise<VideoCommentRecord> {

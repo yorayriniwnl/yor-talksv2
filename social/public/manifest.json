@@ -1,18 +1,18 @@
 {
   "name": "Yor Talks",
   "short_name": "Yor",
-  "description": "A living internet for turning ideas, people, and shared worlds into real momentum.",
+  "description": "Meet Yor Talks. A premium social space being built around your people, your choices, and an India-first approach to your data.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#e84b4b",
+  "background_color": "#f5f6f2",
+  "theme_color": "#f5f6f2",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "180x180",
-      "type": "image/svg+xml",
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

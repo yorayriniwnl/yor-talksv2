@@ -31,10 +31,10 @@ router.post("/auth/otp/verify", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/register", validateBody(registerSchema), authController.register);
-router.post("/auth/login", validateBody(loginSchema), authController.login);
-router.post("/auth/google", validateBody(googleLoginSchema), authController.googleLogin);
+router.post("/auth/login", requireTrustedOrigin, validateBody(loginSchema), authController.login);
+router.post("/auth/google", requireTrustedOrigin, validateBody(googleLoginSchema), authController.googleLogin);
 router.post("/auth/email-otp/send", validateBody(emailOtpRequestSchema), authController.requestEmailOtp);
-router.post("/auth/email-otp/verify", validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
+router.post("/auth/email-otp/verify", requireTrustedOrigin, validateBody(emailOtpVerifySchema), authController.verifyEmailOtp);
 router.post("/auth/refresh", requireTrustedOrigin, authController.refresh);
 // Logout uses the HttpOnly refresh cookie so an expired access token cannot
 // prevent the server from revoking the session and clearing that cookie.
@@ -52,6 +52,6 @@ router.get("/auth/2fa/challenges", authenticate, authController.listTwoFactorCha
 router.get("/auth/2fa/challenges/:challengeId", validateParams(challengeIdParamSchema), authController.getTwoFactorChallengeStatus);
 router.post("/auth/2fa/challenges/:challengeId/approve", authenticate, validateParams(challengeIdParamSchema), validateBody(twoFactorApprovalSchema), authController.approveTwoFactorChallenge);
 router.post("/auth/2fa/challenges/:challengeId/deny", authenticate, validateParams(challengeIdParamSchema), authController.denyTwoFactorChallenge);
-router.post("/auth/2fa/challenges/:challengeId/complete", validateParams(challengeIdParamSchema), authController.completeTwoFactorLogin);
+router.post("/auth/2fa/challenges/:challengeId/complete", requireTrustedOrigin, validateParams(challengeIdParamSchema), authController.completeTwoFactorLogin);
 
 export default router;

@@ -63,7 +63,7 @@ export class SecurityService {
     const score = Date.now();
     const write = (async () => {
       try {
-        await this.redisRepository.zadd(indexKey, score, event.id);
+        await this.redisRepository.zadd(indexKey, score, event.id, Math.ceil(SecurityService.ABUSE_WINDOW_MS / 1000));
         // Trim entries older than the abuse window to bound memory usage.
         await this.redisRepository.zremrangebyscore(
           indexKey,

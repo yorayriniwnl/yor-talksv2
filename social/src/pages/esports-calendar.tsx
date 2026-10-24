@@ -28,12 +28,12 @@ const UPCOMING_MATCHES: ScheduledMatch[] = [
     teamA: {
       name: 'Team GodLike',
       tag: 'GODL',
-      logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
+      logo: ''
     },
     teamB: {
       name: 'Team Soul',
       tag: 'SOUL',
-      logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop'
+      logo: ''
     },
     startsAt: getMatchStart(0, 18, 0),
     stage: 'Grand Final Match 6 (Erangel)',
@@ -46,12 +46,12 @@ const UPCOMING_MATCHES: ScheduledMatch[] = [
     teamA: {
       name: 'Global Esports',
       tag: 'GE',
-      logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop'
+      logo: ''
     },
     teamB: {
       name: 'Reckoning Esports',
       tag: 'RCK',
-      logo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop'
+      logo: ''
     },
     startsAt: getMatchStart(1, 19, 30),
     stage: 'Upper Bracket Semifinals (Bo3)',
@@ -116,11 +116,13 @@ export default function EsportsCalendar() {
     URL.revokeObjectURL(url);
 
     sounds.playChime();
-    setMatches(prev => {
-      const next = prev.map(m => m.id === id ? { ...m, reminderSet: true } : m);
+    const next = matches.map(m => m.id === id ? { ...m, reminderSet: true } : m);
+    setMatches(next);
+    try {
       localStorage.setItem('yor-esports-calendar-reminders', JSON.stringify(next.filter((m) => m.reminderSet).map((m) => m.id)));
-      return next;
-    });
+    } catch {
+      // The downloaded calendar file remains usable when local storage is unavailable.
+    }
     toast.success(`Calendar file downloaded for ${matchName}. Add it to your calendar to receive reminders.`);
   };
 

@@ -1,9 +1,9 @@
 import { apiRouteCatalog } from "../docs/routes.generated.js";
-import { getLifecycleWorkerStatus } from "../lib/worker-health.js";
 import { RedisRepository } from "../repositories/redis-repository.js";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { productAnalyticsJobsTable } from "@workspace/db/schema";
+import { inspectLifecycleHealth } from "../lib/lifecycle-health.js";
 
 type RequestMetric = {
   count: number;
@@ -198,15 +198,38 @@ export class OperationalMetricsService {
       );
     }
 
-    const lifecycleStatus = await getLifecycleWorkerStatus();
-    lines.push(
-      "# HELP yor_lifecycle_worker_healthy Whether the required lifecycle worker heartbeats within the allowed grace window.",
-      "# TYPE yor_lifecycle_worker_healthy gauge",
-      `yor_lifecycle_worker_healthy ${lifecycleStatus.healthy ? 1 : 0}`,
-      "# HELP yor_lifecycle_worker_heartbeat_timestamp_seconds Unix timestamp of the latest lifecycle worker heartbeat.",
-      "# TYPE yor_lifecycle_worker_heartbeat_timestamp_seconds gauge",
-      `yor_lifecycle_worker_heartbeat_timestamp_seconds ${lifecycleStatus.lastHeartbeat ? Math.floor(Date.parse(lifecycleStatus.lastHeartbeat) / 1000) : 0}`,
-    );
+    try {
+      const lifecycle = await inspectLifecycleHealth();
+      lines.push(
+        "# HELP yor_lifecycle_metrics_up Whether lifecycle worker and cleanup backlog status is queryable.",
+        "# TYPE yor_lifecycle_metrics_up gauge",
+        "yor_lifecycle_metrics_up 1",
+        "# HELP yor_lifecycle_worker_up Whether a current lifecycle worker heartbeat is present.",
+        "# TYPE yor_lifecycle_worker_up gauge",
+        `yor_lifecycle_worker_up ${lifecycle.workerUp ? 1 : 0}`,
+        "# HELP yor_lifecycle_cleanup_jobs_overdue Number of account or media cleanup jobs overdue by more than five minutes or with an expired lease.",
+        "# TYPE yor_lifecycle_cleanup_jobs_overdue gauge",
+        `yor_lifecycle_cleanup_jobs_overdue ${lifecycle.overdueCleanupJobs}`,
+        "# HELP yor_lifecycle_cleanup_jobs_dead Number of dead-lettered account or media cleanup jobs.",
+        "# TYPE yor_lifecycle_cleanup_jobs_dead gauge",
+        `yor_lifecycle_cleanup_jobs_dead ${lifecycle.deadCleanupJobs}`,
+      );
+    } catch {
+      lines.push(
+        "# HELP yor_lifecycle_metrics_up Whether lifecycle worker and cleanup backlog status is queryable.",
+        "# TYPE yor_lifecycle_metrics_up gauge",
+        "yor_lifecycle_metrics_up 0",
+        "# HELP yor_lifecycle_worker_up Whether a current lifecycle worker heartbeat is present.",
+        "# TYPE yor_lifecycle_worker_up gauge",
+        "yor_lifecycle_worker_up 0",
+        "# HELP yor_lifecycle_cleanup_jobs_overdue Number of account or media cleanup jobs overdue by more than five minutes or with an expired lease.",
+        "# TYPE yor_lifecycle_cleanup_jobs_overdue gauge",
+        "yor_lifecycle_cleanup_jobs_overdue 0",
+        "# HELP yor_lifecycle_cleanup_jobs_dead Number of dead-lettered account or media cleanup jobs.",
+        "# TYPE yor_lifecycle_cleanup_jobs_dead gauge",
+        "yor_lifecycle_cleanup_jobs_dead 0",
+      );
+    }
 
     const memory = process.memoryUsage();
     lines.push(

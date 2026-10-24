@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { AssuranceUnavailableError, UnavailableAssuranceAdapter, type AssuranceAdapter } from '../eligibility/assurance-adapter.js';
 import { applicablePolicies, consistentThresholdAssertions, policyFingerprint } from '../eligibility/policy.js';
+import { requiredGuardianPurposes, thresholdValue } from '../eligibility/enrollment-policy.js';
 import { loadApprovedTerritoryPolicies, loadOperatorPolicyIds } from '../eligibility/territory-policy.js';
 import type { ApprovedTerritoryPolicy, EligibilitySubject, PrivateAssuranceChallenge } from '../eligibility/types.js';
 import { EligibilityRepository, EligibilitySubjectUnavailableError } from '../repositories/eligibility-repository.js';
@@ -182,17 +183,9 @@ export class AssuranceService {
     if (!assessment || assessment.status!=='verified' || verifiedExperience==='unknown' || verifiedExperience!==enrollment.requestedExperience
       || assessment.territory!==enrollment.territory || !assessment.verifiedAt || Date.parse(assessment.verifiedAt)>now.getTime()
       || Date.parse(assessment.expiresAt)<=now.getTime() || !sameMap(assessment.policyVersions,Object.fromEntries(policies.map(policy => [policy.id,policy.version])))) return;
-    const thresholdValue = (age: number): boolean | undefined => {
-      const direct = assessment.thresholds.find(item => item.age===age);
-      if (direct) return direct.atLeast;
-      if (assessment.thresholds.some(item => item.atLeast && item.age>age)) return true;
-      if (assessment.thresholds.some(item => !item.atLeast && item.age<age)) return false;
-      return undefined;
-    };
     if (policies.some(policy => !policy.allowedExperiences.includes(verifiedExperience)
-      || policy.minimumAccessThreshold!==null && thresholdValue(policy.minimumAccessThreshold)!==true)) return;
-    const requiredPurposes = new Set(policies.flatMap(policy => policy.requiredGuardianPurposes));
-    if (enrollment.requestedExperience==='under_13') requiredPurposes.add('account_collection');
+      || policy.minimumAccessThreshold!==null && thresholdValue(assessment.thresholds,policy.minimumAccessThreshold)!==true)) return;
+    const requiredPurposes = requiredGuardianPurposes(enrollment.requestedExperience,policies,assessment);
     const noticeVersions: Record<string,string> = {};
     for (const purpose of requiredPurposes) {
       const expected = policies.map(policy => policy.guardianNoticeVersions[purpose]);

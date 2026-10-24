@@ -30,17 +30,25 @@ import type {
   EnrollmentPrescreenRequest,
   GetContactsRequests200,
   GetGroupInvitations200,
+  GetModerationAppealsMine200,
+  GetPostsSavedParams,
+  GetPreregisterStats200,
   GetReportsGrievanceByTicketId200,
+  GetReportsGrievancesParams,
+  GetReportsQueueParams,
   GetUsersMeEligibility200,
   GetUsersMeEligibilityChallengesByChallengeId200,
   GetUsersMeGuardianAuthorizations200,
+  GetVideosSavedParams,
   GroupInvitationDecisionRequest,
   GuardianJourneyRequest,
   InviteToGroupRequest,
   MediaFinalizeRequest,
   MediaPresignRequest,
+  ModerationAppealRequest,
+  ModerationDecisionRequest,
+  ModerationReviewRequest,
   PatchBroadcastChannelsByIdNotificationsBody,
-  PatchReportsByReportIdStatusBody,
   PatchReportsGrievanceByTicketIdStatusBody,
   PatchStoriesByIdPriorityBody,
   PostAiChatBody,
@@ -103,6 +111,7 @@ import type {
   PostHighlightsBody,
   PostInvitesClaimBody,
   PostInvitesGenerateBody,
+  PostLaunchUnsubscribeBody,
   PostMediaByIdFinalize200,
   PostMediaByIdUpload200,
   PostMediaByIdUploadBody,
@@ -114,6 +123,8 @@ import type {
   PostMessagesByMessageIdPreviewBody,
   PostMessagesByMessageIdReactionsBody,
   PostMessagesByMessageIdSeenBody,
+  PostModerationAppeals201,
+  PostModerationNoticesByNoticeIdAcknowledgeBody,
   PostNotesBody,
   PostNotificationsByNotificationIdReadBody,
   PostNotificationsPushSubscribeBody,
@@ -137,6 +148,13 @@ import type {
   PostPremiumOrdersByOrderIdCancelBody,
   PostPremiumOrdersByOrderIdRecoverBody,
   PostPremiumOrdersByOrderIdVerifyBody,
+  PostPreregister200,
+  PostPreregister201,
+  PostPrivacyChallenge200,
+  PostPrivacyRequest200,
+  PostPrivacyVerify200,
+  PostPrivateMessagesThreadsBody,
+  PostPrivateMessagesThreadsByThreadIdMessagesBody,
   PostProductsBody,
   PostProductsByIdOrderBody,
   PostProductsByIdSaveBody,
@@ -169,6 +187,7 @@ import type {
   PostUsersByUserIdUnmuteBody,
   PostUsersMeAvatarBody,
   PostUsersMeConsentBody,
+  PostUsersMeConsentWithdrawalBody,
   PostUsersMeContactShieldsBody,
   PostUsersMeEligibilityChallenges201,
   PostUsersMeFollowRequestsByRequestIdAcceptBody,
@@ -176,21 +195,28 @@ import type {
   PostUsersMeGuardianAuthorizations201,
   PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdraw200,
   PostUsersMeGuardianAuthorizationsByAuthorizationIdWithdrawBody,
+  PostUsersMeRestrictionBody,
   PostVideosBody,
   PostVideosByIdBookmarkBody,
   PostVideosByIdCommentsBody,
   PostVideosByIdCommentsByCommentIdLikeBody,
   PostVideosByIdLikeBody,
+  PreregistrationRequest,
+  PrivacyChallengeRequest,
+  PrivacyRightsRequest,
+  PrivacyVerifyRequest,
   PutConversationsByConversationIdVanishBody,
   PutCreatorWorkspaceBody,
   PutMessagesByMessageIdBody,
   PutPostsByPostIdBody,
+  PutPrivateMessagesIdentityBody,
   PutStreamsByIdStatusBody,
   PutUsersMeBody,
   PutUsersMePremiumProfileBody,
   PutUsersMePrivacyBody,
   PutUsersMeSettingsBody,
-  RegisterRequest
+  RegisterRequest,
+  ReportStatusUpdateRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -7246,6 +7272,154 @@ export const usePostInvitesGenerate = <TError = ErrorType<void>,
       return useMutation(getPostInvitesGenerateMutationOptions(options));
     }
 
+export const getGetLaunchUnsubscribeUrl = () => {
+
+
+
+
+  return `/api/launch/unsubscribe`
+}
+
+/**
+ * @summary Get /launch/unsubscribe
+ */
+export const getLaunchUnsubscribe = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetLaunchUnsubscribeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLaunchUnsubscribeQueryKey = () => {
+    return [
+    `/api/launch/unsubscribe`
+    ] as const;
+    }
+
+
+export const getGetLaunchUnsubscribeQueryOptions = <TData = Awaited<ReturnType<typeof getLaunchUnsubscribe>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLaunchUnsubscribe>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLaunchUnsubscribeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLaunchUnsubscribe>>> = ({ signal }) => getLaunchUnsubscribe({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLaunchUnsubscribe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLaunchUnsubscribeQueryResult = NonNullable<Awaited<ReturnType<typeof getLaunchUnsubscribe>>>
+export type GetLaunchUnsubscribeQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /launch/unsubscribe
+ */
+
+export function useGetLaunchUnsubscribe<TData = Awaited<ReturnType<typeof getLaunchUnsubscribe>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLaunchUnsubscribe>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLaunchUnsubscribeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostLaunchUnsubscribeUrl = () => {
+
+
+
+
+  return `/api/launch/unsubscribe`
+}
+
+/**
+ * @summary Post /launch/unsubscribe
+ */
+export const postLaunchUnsubscribe = async (postLaunchUnsubscribeBody?: PostLaunchUnsubscribeBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostLaunchUnsubscribeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postLaunchUnsubscribeBody)
+  }
+);}
+
+
+
+
+
+export const getPostLaunchUnsubscribeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postLaunchUnsubscribe>>, TError,{data?: BodyType<PostLaunchUnsubscribeBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postLaunchUnsubscribe>>, TError,{data?: BodyType<PostLaunchUnsubscribeBody>}, TContext> => {
+
+const mutationKey = ['postLaunchUnsubscribe'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postLaunchUnsubscribe>>, {data?: BodyType<PostLaunchUnsubscribeBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postLaunchUnsubscribe(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostLaunchUnsubscribeMutationResult = NonNullable<Awaited<ReturnType<typeof postLaunchUnsubscribe>>>
+    export type PostLaunchUnsubscribeMutationBody = BodyType<PostLaunchUnsubscribeBody> | undefined
+    export type PostLaunchUnsubscribeMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /launch/unsubscribe
+ */
+export const usePostLaunchUnsubscribe = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postLaunchUnsubscribe>>, TError,{data?: BodyType<PostLaunchUnsubscribeBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postLaunchUnsubscribe>>,
+        TError,
+        {data?: BodyType<PostLaunchUnsubscribeBody>},
+        TContext
+      > => {
+      return useMutation(getPostLaunchUnsubscribeMutationOptions(options));
+    }
+
 export const getGetLivezUrl = () => {
 
 
@@ -8417,6 +8591,682 @@ export function useGetMetrics<TData = Awaited<ReturnType<typeof getMetrics>>, TE
 
 
 
+
+export const getGetModerationAppealsUrl = () => {
+
+
+
+
+  return `/api/moderation/appeals`
+}
+
+/**
+ * @summary Get /moderation/appeals
+ */
+export const getModerationAppeals = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetModerationAppealsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModerationAppealsQueryKey = () => {
+    return [
+    `/api/moderation/appeals`
+    ] as const;
+    }
+
+
+export const getGetModerationAppealsQueryOptions = <TData = Awaited<ReturnType<typeof getModerationAppeals>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationAppeals>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModerationAppealsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModerationAppeals>>> = ({ signal }) => getModerationAppeals({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModerationAppeals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModerationAppealsQueryResult = NonNullable<Awaited<ReturnType<typeof getModerationAppeals>>>
+export type GetModerationAppealsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /moderation/appeals
+ */
+
+export function useGetModerationAppeals<TData = Awaited<ReturnType<typeof getModerationAppeals>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationAppeals>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModerationAppealsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostModerationAppealsUrl = () => {
+
+
+
+
+  return `/api/moderation/appeals`
+}
+
+/**
+ * @summary Post /moderation/appeals
+ */
+export const postModerationAppeals = async (moderationAppealRequest: ModerationAppealRequest, options?: RequestInit): Promise<PostModerationAppeals201> => {
+
+  return customFetch<PostModerationAppeals201>(getPostModerationAppealsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(moderationAppealRequest)
+  }
+);}
+
+
+
+
+
+export const getPostModerationAppealsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postModerationAppeals>>, TError,{data: BodyType<ModerationAppealRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postModerationAppeals>>, TError,{data: BodyType<ModerationAppealRequest>}, TContext> => {
+
+const mutationKey = ['postModerationAppeals'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postModerationAppeals>>, {data: BodyType<ModerationAppealRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postModerationAppeals(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostModerationAppealsMutationResult = NonNullable<Awaited<ReturnType<typeof postModerationAppeals>>>
+    export type PostModerationAppealsMutationBody = BodyType<ModerationAppealRequest>
+    export type PostModerationAppealsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /moderation/appeals
+ */
+export const usePostModerationAppeals = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postModerationAppeals>>, TError,{data: BodyType<ModerationAppealRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postModerationAppeals>>,
+        TError,
+        {data: BodyType<ModerationAppealRequest>},
+        TContext
+      > => {
+      return useMutation(getPostModerationAppealsMutationOptions(options));
+    }
+
+export const getPatchModerationAppealsByAppealIdReviewUrl = (appealId: string,) => {
+
+
+
+
+  return `/api/moderation/appeals/${appealId}/review`
+}
+
+/**
+ * @summary Patch /moderation/appeals/{appealId}/review
+ */
+export const patchModerationAppealsByAppealIdReview = async (appealId: string,
+    moderationReviewRequest: ModerationReviewRequest, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPatchModerationAppealsByAppealIdReviewUrl(appealId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(moderationReviewRequest)
+  }
+);}
+
+
+
+
+
+export const getPatchModerationAppealsByAppealIdReviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchModerationAppealsByAppealIdReview>>, TError,{appealId: string;data: BodyType<ModerationReviewRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof patchModerationAppealsByAppealIdReview>>, TError,{appealId: string;data: BodyType<ModerationReviewRequest>}, TContext> => {
+
+const mutationKey = ['patchModerationAppealsByAppealIdReview'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchModerationAppealsByAppealIdReview>>, {appealId: string;data: BodyType<ModerationReviewRequest>}> = (props) => {
+          const {appealId,data} = props ?? {};
+
+          return  patchModerationAppealsByAppealIdReview(appealId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchModerationAppealsByAppealIdReviewMutationResult = NonNullable<Awaited<ReturnType<typeof patchModerationAppealsByAppealIdReview>>>
+    export type PatchModerationAppealsByAppealIdReviewMutationBody = BodyType<ModerationReviewRequest>
+    export type PatchModerationAppealsByAppealIdReviewMutationError = ErrorType<void>
+
+    /**
+ * @summary Patch /moderation/appeals/{appealId}/review
+ */
+export const usePatchModerationAppealsByAppealIdReview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchModerationAppealsByAppealIdReview>>, TError,{appealId: string;data: BodyType<ModerationReviewRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchModerationAppealsByAppealIdReview>>,
+        TError,
+        {appealId: string;data: BodyType<ModerationReviewRequest>},
+        TContext
+      > => {
+      return useMutation(getPatchModerationAppealsByAppealIdReviewMutationOptions(options));
+    }
+
+export const getGetModerationAppealsMineUrl = () => {
+
+
+
+
+  return `/api/moderation/appeals/mine`
+}
+
+/**
+ * @summary Get /moderation/appeals/mine
+ */
+export const getModerationAppealsMine = async ( options?: RequestInit): Promise<GetModerationAppealsMine200> => {
+
+  return customFetch<GetModerationAppealsMine200>(getGetModerationAppealsMineUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModerationAppealsMineQueryKey = () => {
+    return [
+    `/api/moderation/appeals/mine`
+    ] as const;
+    }
+
+
+export const getGetModerationAppealsMineQueryOptions = <TData = Awaited<ReturnType<typeof getModerationAppealsMine>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationAppealsMine>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModerationAppealsMineQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModerationAppealsMine>>> = ({ signal }) => getModerationAppealsMine({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModerationAppealsMine>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModerationAppealsMineQueryResult = NonNullable<Awaited<ReturnType<typeof getModerationAppealsMine>>>
+export type GetModerationAppealsMineQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /moderation/appeals/mine
+ */
+
+export function useGetModerationAppealsMine<TData = Awaited<ReturnType<typeof getModerationAppealsMine>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationAppealsMine>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModerationAppealsMineQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetModerationDecisionsUrl = () => {
+
+
+
+
+  return `/api/moderation/decisions`
+}
+
+/**
+ * @summary Get /moderation/decisions
+ */
+export const getModerationDecisions = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetModerationDecisionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModerationDecisionsQueryKey = () => {
+    return [
+    `/api/moderation/decisions`
+    ] as const;
+    }
+
+
+export const getGetModerationDecisionsQueryOptions = <TData = Awaited<ReturnType<typeof getModerationDecisions>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationDecisions>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModerationDecisionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModerationDecisions>>> = ({ signal }) => getModerationDecisions({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModerationDecisions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModerationDecisionsQueryResult = NonNullable<Awaited<ReturnType<typeof getModerationDecisions>>>
+export type GetModerationDecisionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /moderation/decisions
+ */
+
+export function useGetModerationDecisions<TData = Awaited<ReturnType<typeof getModerationDecisions>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationDecisions>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModerationDecisionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostModerationDecisionsUrl = () => {
+
+
+
+
+  return `/api/moderation/decisions`
+}
+
+/**
+ * @summary Post /moderation/decisions
+ */
+export const postModerationDecisions = async (moderationDecisionRequest: ModerationDecisionRequest, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostModerationDecisionsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(moderationDecisionRequest)
+  }
+);}
+
+
+
+
+
+export const getPostModerationDecisionsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postModerationDecisions>>, TError,{data: BodyType<ModerationDecisionRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postModerationDecisions>>, TError,{data: BodyType<ModerationDecisionRequest>}, TContext> => {
+
+const mutationKey = ['postModerationDecisions'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postModerationDecisions>>, {data: BodyType<ModerationDecisionRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postModerationDecisions(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostModerationDecisionsMutationResult = NonNullable<Awaited<ReturnType<typeof postModerationDecisions>>>
+    export type PostModerationDecisionsMutationBody = BodyType<ModerationDecisionRequest>
+    export type PostModerationDecisionsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /moderation/decisions
+ */
+export const usePostModerationDecisions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postModerationDecisions>>, TError,{data: BodyType<ModerationDecisionRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postModerationDecisions>>,
+        TError,
+        {data: BodyType<ModerationDecisionRequest>},
+        TContext
+      > => {
+      return useMutation(getPostModerationDecisionsMutationOptions(options));
+    }
+
+export const getGetModerationEnforcementsByTargetTypeByTargetIdUrl = (targetType: string,
+    targetId: string,) => {
+
+
+
+
+  return `/api/moderation/enforcements/${targetType}/${targetId}`
+}
+
+/**
+ * @summary Get /moderation/enforcements/{targetType}/{targetId}
+ */
+export const getModerationEnforcementsByTargetTypeByTargetId = async (targetType: string,
+    targetId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetModerationEnforcementsByTargetTypeByTargetIdUrl(targetType,targetId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModerationEnforcementsByTargetTypeByTargetIdQueryKey = (targetType: string,
+    targetId: string,) => {
+    return [
+    `/api/moderation/enforcements/${targetType}/${targetId}`
+    ] as const;
+    }
+
+
+export const getGetModerationEnforcementsByTargetTypeByTargetIdQueryOptions = <TData = Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>, TError = ErrorType<void>>(targetType: string,
+    targetId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModerationEnforcementsByTargetTypeByTargetIdQueryKey(targetType,targetId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>> = ({ signal }) => getModerationEnforcementsByTargetTypeByTargetId(targetType,targetId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: targetType !== null && targetType !== undefined && targetId !== null && targetId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModerationEnforcementsByTargetTypeByTargetIdQueryResult = NonNullable<Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>>
+export type GetModerationEnforcementsByTargetTypeByTargetIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /moderation/enforcements/{targetType}/{targetId}
+ */
+
+export function useGetModerationEnforcementsByTargetTypeByTargetId<TData = Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>, TError = ErrorType<void>>(
+ targetType: string,
+    targetId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationEnforcementsByTargetTypeByTargetId>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModerationEnforcementsByTargetTypeByTargetIdQueryOptions(targetType,targetId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetModerationNoticesUrl = () => {
+
+
+
+
+  return `/api/moderation/notices`
+}
+
+/**
+ * @summary Get /moderation/notices
+ */
+export const getModerationNotices = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetModerationNoticesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModerationNoticesQueryKey = () => {
+    return [
+    `/api/moderation/notices`
+    ] as const;
+    }
+
+
+export const getGetModerationNoticesQueryOptions = <TData = Awaited<ReturnType<typeof getModerationNotices>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationNotices>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModerationNoticesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModerationNotices>>> = ({ signal }) => getModerationNotices({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModerationNotices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModerationNoticesQueryResult = NonNullable<Awaited<ReturnType<typeof getModerationNotices>>>
+export type GetModerationNoticesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /moderation/notices
+ */
+
+export function useGetModerationNotices<TData = Awaited<ReturnType<typeof getModerationNotices>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModerationNotices>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModerationNoticesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostModerationNoticesByNoticeIdAcknowledgeUrl = (noticeId: string,) => {
+
+
+
+
+  return `/api/moderation/notices/${noticeId}/acknowledge`
+}
+
+/**
+ * @summary Post /moderation/notices/{noticeId}/acknowledge
+ */
+export const postModerationNoticesByNoticeIdAcknowledge = async (noticeId: string,
+    postModerationNoticesByNoticeIdAcknowledgeBody?: PostModerationNoticesByNoticeIdAcknowledgeBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostModerationNoticesByNoticeIdAcknowledgeUrl(noticeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postModerationNoticesByNoticeIdAcknowledgeBody)
+  }
+);}
+
+
+
+
+
+export const getPostModerationNoticesByNoticeIdAcknowledgeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postModerationNoticesByNoticeIdAcknowledge>>, TError,{noticeId: string;data?: BodyType<PostModerationNoticesByNoticeIdAcknowledgeBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postModerationNoticesByNoticeIdAcknowledge>>, TError,{noticeId: string;data?: BodyType<PostModerationNoticesByNoticeIdAcknowledgeBody>}, TContext> => {
+
+const mutationKey = ['postModerationNoticesByNoticeIdAcknowledge'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postModerationNoticesByNoticeIdAcknowledge>>, {noticeId: string;data?: BodyType<PostModerationNoticesByNoticeIdAcknowledgeBody>}> = (props) => {
+          const {noticeId,data} = props ?? {};
+
+          return  postModerationNoticesByNoticeIdAcknowledge(noticeId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostModerationNoticesByNoticeIdAcknowledgeMutationResult = NonNullable<Awaited<ReturnType<typeof postModerationNoticesByNoticeIdAcknowledge>>>
+    export type PostModerationNoticesByNoticeIdAcknowledgeMutationBody = BodyType<PostModerationNoticesByNoticeIdAcknowledgeBody> | undefined
+    export type PostModerationNoticesByNoticeIdAcknowledgeMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /moderation/notices/{noticeId}/acknowledge
+ */
+export const usePostModerationNoticesByNoticeIdAcknowledge = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postModerationNoticesByNoticeIdAcknowledge>>, TError,{noticeId: string;data?: BodyType<PostModerationNoticesByNoticeIdAcknowledgeBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postModerationNoticesByNoticeIdAcknowledge>>,
+        TError,
+        {noticeId: string;data?: BodyType<PostModerationNoticesByNoticeIdAcknowledgeBody>},
+        TContext
+      > => {
+      return useMutation(getPostModerationNoticesByNoticeIdAcknowledgeMutationOptions(options));
+    }
 
 export const getGetNotesUrl = () => {
 
@@ -10679,20 +11529,27 @@ export function useGetPostsLiked<TData = Awaited<ReturnType<typeof getPostsLiked
 
 
 
-export const getGetPostsSavedUrl = () => {
+export const getGetPostsSavedUrl = (params?: GetPostsSavedParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/posts/saved`
+  return stringifiedParams.length > 0 ? `/api/posts/saved?${stringifiedParams}` : `/api/posts/saved`
 }
 
 /**
  * @summary Get /posts/saved
  */
-export const getPostsSaved = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getPostsSaved = async (params?: GetPostsSavedParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetPostsSavedUrl(),
+  return customFetch<ApiEnvelope>(getGetPostsSavedUrl(params),
   {
     ...options,
     method: 'GET'
@@ -10705,23 +11562,23 @@ export const getPostsSaved = async ( options?: RequestInit): Promise<ApiEnvelope
 
 
 
-export const getGetPostsSavedQueryKey = () => {
+export const getGetPostsSavedQueryKey = (params?: GetPostsSavedParams,) => {
     return [
-    `/api/posts/saved`
+    `/api/posts/saved`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetPostsSavedQueryOptions = <TData = Awaited<ReturnType<typeof getPostsSaved>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
+export const getGetPostsSavedQueryOptions = <TData = Awaited<ReturnType<typeof getPostsSaved>>, TError = ErrorType<void>>(params?: GetPostsSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPostsSavedQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetPostsSavedQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostsSaved>>> = ({ signal }) => getPostsSaved({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostsSaved>>> = ({ signal }) => getPostsSaved(params, { signal });
 
 
 
@@ -10739,11 +11596,11 @@ export type GetPostsSavedQueryError = ErrorType<void>
  */
 
 export function useGetPostsSaved<TData = Awaited<ReturnType<typeof getPostsSaved>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
+ params?: GetPostsSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPostsSaved>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetPostsSavedQueryOptions(options)
+  const queryOptions = getGetPostsSavedQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -11345,6 +12202,889 @@ export const usePostPremiumOrdersByOrderIdVerify = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getPostPremiumOrdersByOrderIdVerifyMutationOptions(options));
+    }
+
+export const getPostPreregisterUrl = () => {
+
+
+
+
+  return `/api/preregister`
+}
+
+/**
+ * @summary Post /preregister
+ */
+export const postPreregister = async (preregistrationRequest: PreregistrationRequest, options?: RequestInit): Promise<PostPreregister200 | PostPreregister201> => {
+
+  return customFetch<PostPreregister200 | PostPreregister201>(getPostPreregisterUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(preregistrationRequest)
+  }
+);}
+
+
+
+
+
+export const getPostPreregisterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPreregister>>, TError,{data: BodyType<PreregistrationRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPreregister>>, TError,{data: BodyType<PreregistrationRequest>}, TContext> => {
+
+const mutationKey = ['postPreregister'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPreregister>>, {data: BodyType<PreregistrationRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPreregister(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPreregisterMutationResult = NonNullable<Awaited<ReturnType<typeof postPreregister>>>
+    export type PostPreregisterMutationBody = BodyType<PreregistrationRequest>
+    export type PostPreregisterMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /preregister
+ */
+export const usePostPreregister = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPreregister>>, TError,{data: BodyType<PreregistrationRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPreregister>>,
+        TError,
+        {data: BodyType<PreregistrationRequest>},
+        TContext
+      > => {
+      return useMutation(getPostPreregisterMutationOptions(options));
+    }
+
+export const getGetPreregisterStatsUrl = () => {
+
+
+
+
+  return `/api/preregister/stats`
+}
+
+/**
+ * @summary Get /preregister/stats
+ */
+export const getPreregisterStats = async ( options?: RequestInit): Promise<GetPreregisterStats200> => {
+
+  return customFetch<GetPreregisterStats200>(getGetPreregisterStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPreregisterStatsQueryKey = () => {
+    return [
+    `/api/preregister/stats`
+    ] as const;
+    }
+
+
+export const getGetPreregisterStatsQueryOptions = <TData = Awaited<ReturnType<typeof getPreregisterStats>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreregisterStats>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPreregisterStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreregisterStats>>> = ({ signal }) => getPreregisterStats({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPreregisterStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPreregisterStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getPreregisterStats>>>
+export type GetPreregisterStatsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /preregister/stats
+ */
+
+export function useGetPreregisterStats<TData = Awaited<ReturnType<typeof getPreregisterStats>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreregisterStats>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPreregisterStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostPrivacyChallengeUrl = () => {
+
+
+
+
+  return `/api/privacy/challenge`
+}
+
+/**
+ * @summary Post /privacy/challenge
+ */
+export const postPrivacyChallenge = async (privacyChallengeRequest: PrivacyChallengeRequest, options?: RequestInit): Promise<PostPrivacyChallenge200> => {
+
+  return customFetch<PostPrivacyChallenge200>(getPostPrivacyChallengeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(privacyChallengeRequest)
+  }
+);}
+
+
+
+
+
+export const getPostPrivacyChallengeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivacyChallenge>>, TError,{data: BodyType<PrivacyChallengeRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPrivacyChallenge>>, TError,{data: BodyType<PrivacyChallengeRequest>}, TContext> => {
+
+const mutationKey = ['postPrivacyChallenge'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPrivacyChallenge>>, {data: BodyType<PrivacyChallengeRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPrivacyChallenge(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPrivacyChallengeMutationResult = NonNullable<Awaited<ReturnType<typeof postPrivacyChallenge>>>
+    export type PostPrivacyChallengeMutationBody = BodyType<PrivacyChallengeRequest>
+    export type PostPrivacyChallengeMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /privacy/challenge
+ */
+export const usePostPrivacyChallenge = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivacyChallenge>>, TError,{data: BodyType<PrivacyChallengeRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPrivacyChallenge>>,
+        TError,
+        {data: BodyType<PrivacyChallengeRequest>},
+        TContext
+      > => {
+      return useMutation(getPostPrivacyChallengeMutationOptions(options));
+    }
+
+export const getPostPrivacyRequestUrl = () => {
+
+
+
+
+  return `/api/privacy/request`
+}
+
+/**
+ * @summary Post /privacy/request
+ */
+export const postPrivacyRequest = async (privacyRightsRequest: PrivacyRightsRequest, options?: RequestInit): Promise<PostPrivacyRequest200> => {
+
+  return customFetch<PostPrivacyRequest200>(getPostPrivacyRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(privacyRightsRequest)
+  }
+);}
+
+
+
+
+
+export const getPostPrivacyRequestMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivacyRequest>>, TError,{data: BodyType<PrivacyRightsRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPrivacyRequest>>, TError,{data: BodyType<PrivacyRightsRequest>}, TContext> => {
+
+const mutationKey = ['postPrivacyRequest'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPrivacyRequest>>, {data: BodyType<PrivacyRightsRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPrivacyRequest(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPrivacyRequestMutationResult = NonNullable<Awaited<ReturnType<typeof postPrivacyRequest>>>
+    export type PostPrivacyRequestMutationBody = BodyType<PrivacyRightsRequest>
+    export type PostPrivacyRequestMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /privacy/request
+ */
+export const usePostPrivacyRequest = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivacyRequest>>, TError,{data: BodyType<PrivacyRightsRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPrivacyRequest>>,
+        TError,
+        {data: BodyType<PrivacyRightsRequest>},
+        TContext
+      > => {
+      return useMutation(getPostPrivacyRequestMutationOptions(options));
+    }
+
+export const getPostPrivacyVerifyUrl = () => {
+
+
+
+
+  return `/api/privacy/verify`
+}
+
+/**
+ * @summary Post /privacy/verify
+ */
+export const postPrivacyVerify = async (privacyVerifyRequest: PrivacyVerifyRequest, options?: RequestInit): Promise<PostPrivacyVerify200> => {
+
+  return customFetch<PostPrivacyVerify200>(getPostPrivacyVerifyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(privacyVerifyRequest)
+  }
+);}
+
+
+
+
+
+export const getPostPrivacyVerifyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivacyVerify>>, TError,{data: BodyType<PrivacyVerifyRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPrivacyVerify>>, TError,{data: BodyType<PrivacyVerifyRequest>}, TContext> => {
+
+const mutationKey = ['postPrivacyVerify'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPrivacyVerify>>, {data: BodyType<PrivacyVerifyRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPrivacyVerify(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPrivacyVerifyMutationResult = NonNullable<Awaited<ReturnType<typeof postPrivacyVerify>>>
+    export type PostPrivacyVerifyMutationBody = BodyType<PrivacyVerifyRequest>
+    export type PostPrivacyVerifyMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /privacy/verify
+ */
+export const usePostPrivacyVerify = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivacyVerify>>, TError,{data: BodyType<PrivacyVerifyRequest>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPrivacyVerify>>,
+        TError,
+        {data: BodyType<PrivacyVerifyRequest>},
+        TContext
+      > => {
+      return useMutation(getPostPrivacyVerifyMutationOptions(options));
+    }
+
+export const getGetPrivateMessagesIdentityUrl = () => {
+
+
+
+
+  return `/api/private-messages/identity`
+}
+
+/**
+ * @summary Get /private-messages/identity
+ */
+export const getPrivateMessagesIdentity = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPrivateMessagesIdentityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrivateMessagesIdentityQueryKey = () => {
+    return [
+    `/api/private-messages/identity`
+    ] as const;
+    }
+
+
+export const getGetPrivateMessagesIdentityQueryOptions = <TData = Awaited<ReturnType<typeof getPrivateMessagesIdentity>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesIdentity>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrivateMessagesIdentityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrivateMessagesIdentity>>> = ({ signal }) => getPrivateMessagesIdentity({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesIdentity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrivateMessagesIdentityQueryResult = NonNullable<Awaited<ReturnType<typeof getPrivateMessagesIdentity>>>
+export type GetPrivateMessagesIdentityQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /private-messages/identity
+ */
+
+export function useGetPrivateMessagesIdentity<TData = Awaited<ReturnType<typeof getPrivateMessagesIdentity>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesIdentity>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrivateMessagesIdentityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPutPrivateMessagesIdentityUrl = () => {
+
+
+
+
+  return `/api/private-messages/identity`
+}
+
+/**
+ * @summary Put /private-messages/identity
+ */
+export const putPrivateMessagesIdentity = async (putPrivateMessagesIdentityBody?: PutPrivateMessagesIdentityBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPutPrivateMessagesIdentityUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(putPrivateMessagesIdentityBody)
+  }
+);}
+
+
+
+
+
+export const getPutPrivateMessagesIdentityMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putPrivateMessagesIdentity>>, TError,{data?: BodyType<PutPrivateMessagesIdentityBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof putPrivateMessagesIdentity>>, TError,{data?: BodyType<PutPrivateMessagesIdentityBody>}, TContext> => {
+
+const mutationKey = ['putPrivateMessagesIdentity'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putPrivateMessagesIdentity>>, {data?: BodyType<PutPrivateMessagesIdentityBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  putPrivateMessagesIdentity(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutPrivateMessagesIdentityMutationResult = NonNullable<Awaited<ReturnType<typeof putPrivateMessagesIdentity>>>
+    export type PutPrivateMessagesIdentityMutationBody = BodyType<PutPrivateMessagesIdentityBody> | undefined
+    export type PutPrivateMessagesIdentityMutationError = ErrorType<void>
+
+    /**
+ * @summary Put /private-messages/identity
+ */
+export const usePutPrivateMessagesIdentity = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putPrivateMessagesIdentity>>, TError,{data?: BodyType<PutPrivateMessagesIdentityBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putPrivateMessagesIdentity>>,
+        TError,
+        {data?: BodyType<PutPrivateMessagesIdentityBody>},
+        TContext
+      > => {
+      return useMutation(getPutPrivateMessagesIdentityMutationOptions(options));
+    }
+
+export const getGetPrivateMessagesThreadsUrl = () => {
+
+
+
+
+  return `/api/private-messages/threads`
+}
+
+/**
+ * @summary Get /private-messages/threads
+ */
+export const getPrivateMessagesThreads = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPrivateMessagesThreadsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrivateMessagesThreadsQueryKey = () => {
+    return [
+    `/api/private-messages/threads`
+    ] as const;
+    }
+
+
+export const getGetPrivateMessagesThreadsQueryOptions = <TData = Awaited<ReturnType<typeof getPrivateMessagesThreads>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreads>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrivateMessagesThreadsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrivateMessagesThreads>>> = ({ signal }) => getPrivateMessagesThreads({ signal });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreads>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrivateMessagesThreadsQueryResult = NonNullable<Awaited<ReturnType<typeof getPrivateMessagesThreads>>>
+export type GetPrivateMessagesThreadsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /private-messages/threads
+ */
+
+export function useGetPrivateMessagesThreads<TData = Awaited<ReturnType<typeof getPrivateMessagesThreads>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreads>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrivateMessagesThreadsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostPrivateMessagesThreadsUrl = () => {
+
+
+
+
+  return `/api/private-messages/threads`
+}
+
+/**
+ * @summary Post /private-messages/threads
+ */
+export const postPrivateMessagesThreads = async (postPrivateMessagesThreadsBody?: PostPrivateMessagesThreadsBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostPrivateMessagesThreadsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postPrivateMessagesThreadsBody)
+  }
+);}
+
+
+
+
+
+export const getPostPrivateMessagesThreadsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivateMessagesThreads>>, TError,{data?: BodyType<PostPrivateMessagesThreadsBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPrivateMessagesThreads>>, TError,{data?: BodyType<PostPrivateMessagesThreadsBody>}, TContext> => {
+
+const mutationKey = ['postPrivateMessagesThreads'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPrivateMessagesThreads>>, {data?: BodyType<PostPrivateMessagesThreadsBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postPrivateMessagesThreads(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPrivateMessagesThreadsMutationResult = NonNullable<Awaited<ReturnType<typeof postPrivateMessagesThreads>>>
+    export type PostPrivateMessagesThreadsMutationBody = BodyType<PostPrivateMessagesThreadsBody> | undefined
+    export type PostPrivateMessagesThreadsMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /private-messages/threads
+ */
+export const usePostPrivateMessagesThreads = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivateMessagesThreads>>, TError,{data?: BodyType<PostPrivateMessagesThreadsBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPrivateMessagesThreads>>,
+        TError,
+        {data?: BodyType<PostPrivateMessagesThreadsBody>},
+        TContext
+      > => {
+      return useMutation(getPostPrivateMessagesThreadsMutationOptions(options));
+    }
+
+export const getGetPrivateMessagesThreadsByThreadIdUrl = (threadId: string,) => {
+
+
+
+
+  return `/api/private-messages/threads/${threadId}`
+}
+
+/**
+ * @summary Get /private-messages/threads/{threadId}
+ */
+export const getPrivateMessagesThreadsByThreadId = async (threadId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPrivateMessagesThreadsByThreadIdUrl(threadId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrivateMessagesThreadsByThreadIdQueryKey = (threadId: string,) => {
+    return [
+    `/api/private-messages/threads/${threadId}`
+    ] as const;
+    }
+
+
+export const getGetPrivateMessagesThreadsByThreadIdQueryOptions = <TData = Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>, TError = ErrorType<void>>(threadId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrivateMessagesThreadsByThreadIdQueryKey(threadId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>> = ({ signal }) => getPrivateMessagesThreadsByThreadId(threadId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: threadId !== null && threadId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrivateMessagesThreadsByThreadIdQueryResult = NonNullable<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>>
+export type GetPrivateMessagesThreadsByThreadIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /private-messages/threads/{threadId}
+ */
+
+export function useGetPrivateMessagesThreadsByThreadId<TData = Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>, TError = ErrorType<void>>(
+ threadId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadId>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrivateMessagesThreadsByThreadIdQueryOptions(threadId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPrivateMessagesThreadsByThreadIdMessagesUrl = (threadId: string,) => {
+
+
+
+
+  return `/api/private-messages/threads/${threadId}/messages`
+}
+
+/**
+ * @summary Get /private-messages/threads/{threadId}/messages
+ */
+export const getPrivateMessagesThreadsByThreadIdMessages = async (threadId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetPrivateMessagesThreadsByThreadIdMessagesUrl(threadId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrivateMessagesThreadsByThreadIdMessagesQueryKey = (threadId: string,) => {
+    return [
+    `/api/private-messages/threads/${threadId}/messages`
+    ] as const;
+    }
+
+
+export const getGetPrivateMessagesThreadsByThreadIdMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>, TError = ErrorType<void>>(threadId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrivateMessagesThreadsByThreadIdMessagesQueryKey(threadId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>> = ({ signal }) => getPrivateMessagesThreadsByThreadIdMessages(threadId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: threadId !== null && threadId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrivateMessagesThreadsByThreadIdMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>>
+export type GetPrivateMessagesThreadsByThreadIdMessagesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /private-messages/threads/{threadId}/messages
+ */
+
+export function useGetPrivateMessagesThreadsByThreadIdMessages<TData = Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>, TError = ErrorType<void>>(
+ threadId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivateMessagesThreadsByThreadIdMessages>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrivateMessagesThreadsByThreadIdMessagesQueryOptions(threadId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPostPrivateMessagesThreadsByThreadIdMessagesUrl = (threadId: string,) => {
+
+
+
+
+  return `/api/private-messages/threads/${threadId}/messages`
+}
+
+/**
+ * @summary Post /private-messages/threads/{threadId}/messages
+ */
+export const postPrivateMessagesThreadsByThreadIdMessages = async (threadId: string,
+    postPrivateMessagesThreadsByThreadIdMessagesBody?: PostPrivateMessagesThreadsByThreadIdMessagesBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostPrivateMessagesThreadsByThreadIdMessagesUrl(threadId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postPrivateMessagesThreadsByThreadIdMessagesBody)
+  }
+);}
+
+
+
+
+
+export const getPostPrivateMessagesThreadsByThreadIdMessagesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivateMessagesThreadsByThreadIdMessages>>, TError,{threadId: string;data?: BodyType<PostPrivateMessagesThreadsByThreadIdMessagesBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postPrivateMessagesThreadsByThreadIdMessages>>, TError,{threadId: string;data?: BodyType<PostPrivateMessagesThreadsByThreadIdMessagesBody>}, TContext> => {
+
+const mutationKey = ['postPrivateMessagesThreadsByThreadIdMessages'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postPrivateMessagesThreadsByThreadIdMessages>>, {threadId: string;data?: BodyType<PostPrivateMessagesThreadsByThreadIdMessagesBody>}> = (props) => {
+          const {threadId,data} = props ?? {};
+
+          return  postPrivateMessagesThreadsByThreadIdMessages(threadId,data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostPrivateMessagesThreadsByThreadIdMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof postPrivateMessagesThreadsByThreadIdMessages>>>
+    export type PostPrivateMessagesThreadsByThreadIdMessagesMutationBody = BodyType<PostPrivateMessagesThreadsByThreadIdMessagesBody> | undefined
+    export type PostPrivateMessagesThreadsByThreadIdMessagesMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /private-messages/threads/{threadId}/messages
+ */
+export const usePostPrivateMessagesThreadsByThreadIdMessages = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postPrivateMessagesThreadsByThreadIdMessages>>, TError,{threadId: string;data?: BodyType<PostPrivateMessagesThreadsByThreadIdMessagesBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postPrivateMessagesThreadsByThreadIdMessages>>,
+        TError,
+        {threadId: string;data?: BodyType<PostPrivateMessagesThreadsByThreadIdMessagesBody>},
+        TContext
+      > => {
+      return useMutation(getPostPrivateMessagesThreadsByThreadIdMessagesMutationOptions(options));
     }
 
 export const getGetProductsUrl = () => {
@@ -12597,6 +14337,83 @@ export const usePostReports = <TError = ErrorType<void>,
       return useMutation(getPostReportsMutationOptions(options));
     }
 
+export const getGetReportsByReportIdHistoryUrl = (reportId: string,) => {
+
+
+
+
+  return `/api/reports/${reportId}/history`
+}
+
+/**
+ * @summary Get /reports/{reportId}/history
+ */
+export const getReportsByReportIdHistory = async (reportId: string, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getGetReportsByReportIdHistoryUrl(reportId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReportsByReportIdHistoryQueryKey = (reportId: string,) => {
+    return [
+    `/api/reports/${reportId}/history`
+    ] as const;
+    }
+
+
+export const getGetReportsByReportIdHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError = ErrorType<void>>(reportId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError, TData>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsByReportIdHistoryQueryKey(reportId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsByReportIdHistory>>> = ({ signal }) => getReportsByReportIdHistory(reportId, { signal });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: reportId !== null && reportId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReportsByReportIdHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getReportsByReportIdHistory>>>
+export type GetReportsByReportIdHistoryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get /reports/{reportId}/history
+ */
+
+export function useGetReportsByReportIdHistory<TData = Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError = ErrorType<void>>(
+ reportId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsByReportIdHistory>>, TError, TData>, }
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReportsByReportIdHistoryQueryOptions(reportId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getPatchReportsByReportIdStatusUrl = (reportId: string,) => {
 
 
@@ -12609,14 +14426,14 @@ export const getPatchReportsByReportIdStatusUrl = (reportId: string,) => {
  * @summary Patch /reports/{reportId}/status
  */
 export const patchReportsByReportIdStatus = async (reportId: string,
-    patchReportsByReportIdStatusBody?: PatchReportsByReportIdStatusBody, options?: RequestInit): Promise<ApiEnvelope> => {
+    reportStatusUpdateRequest: ReportStatusUpdateRequest, options?: RequestInit): Promise<ApiEnvelope> => {
 
   return customFetch<ApiEnvelope>(getPatchReportsByReportIdStatusUrl(reportId),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(patchReportsByReportIdStatusBody)
+    body: JSON.stringify(reportStatusUpdateRequest)
   }
 );}
 
@@ -12625,8 +14442,8 @@ export const patchReportsByReportIdStatus = async (reportId: string,
 
 
 export const getPatchReportsByReportIdStatusMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data: BodyType<ReportStatusUpdateRequest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data: BodyType<ReportStatusUpdateRequest>}, TContext> => {
 
 const mutationKey = ['patchReportsByReportIdStatus'];
 const {mutation: mutationOptions} = options ?
@@ -12638,7 +14455,7 @@ const {mutation: mutationOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, {reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, {reportId: string;data: BodyType<ReportStatusUpdateRequest>}> = (props) => {
           const {reportId,data} = props ?? {};
 
           return  patchReportsByReportIdStatus(reportId,data,)
@@ -12652,18 +14469,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PatchReportsByReportIdStatusMutationResult = NonNullable<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>>
-    export type PatchReportsByReportIdStatusMutationBody = BodyType<PatchReportsByReportIdStatusBody> | undefined
+    export type PatchReportsByReportIdStatusMutationBody = BodyType<ReportStatusUpdateRequest>
     export type PatchReportsByReportIdStatusMutationError = ErrorType<void>
 
     /**
  * @summary Patch /reports/{reportId}/status
  */
 export const usePatchReportsByReportIdStatus = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchReportsByReportIdStatus>>, TError,{reportId: string;data: BodyType<ReportStatusUpdateRequest>}, TContext>, }
  ): UseMutationResult<
         Awaited<ReturnType<typeof patchReportsByReportIdStatus>>,
         TError,
-        {reportId: string;data?: BodyType<PatchReportsByReportIdStatusBody>},
+        {reportId: string;data: BodyType<ReportStatusUpdateRequest>},
         TContext
       > => {
       return useMutation(getPatchReportsByReportIdStatusMutationOptions(options));
@@ -12889,20 +14706,27 @@ export const usePatchReportsGrievanceByTicketIdStatus = <TError = ErrorType<void
       return useMutation(getPatchReportsGrievanceByTicketIdStatusMutationOptions(options));
     }
 
-export const getGetReportsGrievancesUrl = () => {
+export const getGetReportsGrievancesUrl = (params?: GetReportsGrievancesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/reports/grievances`
+  return stringifiedParams.length > 0 ? `/api/reports/grievances?${stringifiedParams}` : `/api/reports/grievances`
 }
 
 /**
  * @summary Get /reports/grievances
  */
-export const getReportsGrievances = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getReportsGrievances = async (params?: GetReportsGrievancesParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetReportsGrievancesUrl(),
+  return customFetch<ApiEnvelope>(getGetReportsGrievancesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -12915,23 +14739,23 @@ export const getReportsGrievances = async ( options?: RequestInit): Promise<ApiE
 
 
 
-export const getGetReportsGrievancesQueryKey = () => {
+export const getGetReportsGrievancesQueryKey = (params?: GetReportsGrievancesParams,) => {
     return [
-    `/api/reports/grievances`
+    `/api/reports/grievances`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetReportsGrievancesQueryOptions = <TData = Awaited<ReturnType<typeof getReportsGrievances>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
+export const getGetReportsGrievancesQueryOptions = <TData = Awaited<ReturnType<typeof getReportsGrievances>>, TError = ErrorType<void>>(params?: GetReportsGrievancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetReportsGrievancesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsGrievancesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsGrievances>>> = ({ signal }) => getReportsGrievances({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsGrievances>>> = ({ signal }) => getReportsGrievances(params, { signal });
 
 
 
@@ -12949,11 +14773,11 @@ export type GetReportsGrievancesQueryError = ErrorType<void>
  */
 
 export function useGetReportsGrievances<TData = Awaited<ReturnType<typeof getReportsGrievances>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
+ params?: GetReportsGrievancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsGrievances>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetReportsGrievancesQueryOptions(options)
+  const queryOptions = getGetReportsGrievancesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -12966,20 +14790,27 @@ export function useGetReportsGrievances<TData = Awaited<ReturnType<typeof getRep
 
 
 
-export const getGetReportsQueueUrl = () => {
+export const getGetReportsQueueUrl = (params?: GetReportsQueueParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/reports/queue`
+  return stringifiedParams.length > 0 ? `/api/reports/queue?${stringifiedParams}` : `/api/reports/queue`
 }
 
 /**
  * @summary Get /reports/queue
  */
-export const getReportsQueue = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getReportsQueue = async (params?: GetReportsQueueParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetReportsQueueUrl(),
+  return customFetch<ApiEnvelope>(getGetReportsQueueUrl(params),
   {
     ...options,
     method: 'GET'
@@ -12992,23 +14823,23 @@ export const getReportsQueue = async ( options?: RequestInit): Promise<ApiEnvelo
 
 
 
-export const getGetReportsQueueQueryKey = () => {
+export const getGetReportsQueueQueryKey = (params?: GetReportsQueueParams,) => {
     return [
-    `/api/reports/queue`
+    `/api/reports/queue`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetReportsQueueQueryOptions = <TData = Awaited<ReturnType<typeof getReportsQueue>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
+export const getGetReportsQueueQueryOptions = <TData = Awaited<ReturnType<typeof getReportsQueue>>, TError = ErrorType<void>>(params?: GetReportsQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetReportsQueueQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetReportsQueueQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsQueue>>> = ({ signal }) => getReportsQueue({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportsQueue>>> = ({ signal }) => getReportsQueue(params, { signal });
 
 
 
@@ -13026,11 +14857,11 @@ export type GetReportsQueueQueryError = ErrorType<void>
  */
 
 export function useGetReportsQueue<TData = Awaited<ReturnType<typeof getReportsQueue>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
+ params?: GetReportsQueueParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportsQueue>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetReportsQueueQueryOptions(options)
+  const queryOptions = getGetReportsQueueQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -16587,6 +18418,77 @@ export const usePostUsersMeConsent = <TError = ErrorType<void>,
       return useMutation(getPostUsersMeConsentMutationOptions(options));
     }
 
+export const getPostUsersMeConsentWithdrawalUrl = () => {
+
+
+
+
+  return `/api/users/me/consent-withdrawal`
+}
+
+/**
+ * @summary Post /users/me/consent-withdrawal
+ */
+export const postUsersMeConsentWithdrawal = async (postUsersMeConsentWithdrawalBody?: PostUsersMeConsentWithdrawalBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostUsersMeConsentWithdrawalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postUsersMeConsentWithdrawalBody)
+  }
+);}
+
+
+
+
+
+export const getPostUsersMeConsentWithdrawalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeConsentWithdrawal>>, TError,{data?: BodyType<PostUsersMeConsentWithdrawalBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeConsentWithdrawal>>, TError,{data?: BodyType<PostUsersMeConsentWithdrawalBody>}, TContext> => {
+
+const mutationKey = ['postUsersMeConsentWithdrawal'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeConsentWithdrawal>>, {data?: BodyType<PostUsersMeConsentWithdrawalBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postUsersMeConsentWithdrawal(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostUsersMeConsentWithdrawalMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersMeConsentWithdrawal>>>
+    export type PostUsersMeConsentWithdrawalMutationBody = BodyType<PostUsersMeConsentWithdrawalBody> | undefined
+    export type PostUsersMeConsentWithdrawalMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /users/me/consent-withdrawal
+ */
+export const usePostUsersMeConsentWithdrawal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeConsentWithdrawal>>, TError,{data?: BodyType<PostUsersMeConsentWithdrawalBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postUsersMeConsentWithdrawal>>,
+        TError,
+        {data?: BodyType<PostUsersMeConsentWithdrawalBody>},
+        TContext
+      > => {
+      return useMutation(getPostUsersMeConsentWithdrawalMutationOptions(options));
+    }
+
 export const getGetUsersMeContactShieldsUrl = () => {
 
 
@@ -17845,6 +19747,148 @@ export const usePutUsersMePrivacy = <TError = ErrorType<void>,
       return useMutation(getPutUsersMePrivacyMutationOptions(options));
     }
 
+export const getPostUsersMeRestrictionUrl = () => {
+
+
+
+
+  return `/api/users/me/restriction`
+}
+
+/**
+ * @summary Post /users/me/restriction
+ */
+export const postUsersMeRestriction = async (postUsersMeRestrictionBody?: PostUsersMeRestrictionBody, options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getPostUsersMeRestrictionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(postUsersMeRestrictionBody)
+  }
+);}
+
+
+
+
+
+export const getPostUsersMeRestrictionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeRestriction>>, TError,{data?: BodyType<PostUsersMeRestrictionBody>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postUsersMeRestriction>>, TError,{data?: BodyType<PostUsersMeRestrictionBody>}, TContext> => {
+
+const mutationKey = ['postUsersMeRestriction'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postUsersMeRestriction>>, {data?: BodyType<PostUsersMeRestrictionBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postUsersMeRestriction(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostUsersMeRestrictionMutationResult = NonNullable<Awaited<ReturnType<typeof postUsersMeRestriction>>>
+    export type PostUsersMeRestrictionMutationBody = BodyType<PostUsersMeRestrictionBody> | undefined
+    export type PostUsersMeRestrictionMutationError = ErrorType<void>
+
+    /**
+ * @summary Post /users/me/restriction
+ */
+export const usePostUsersMeRestriction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postUsersMeRestriction>>, TError,{data?: BodyType<PostUsersMeRestrictionBody>}, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postUsersMeRestriction>>,
+        TError,
+        {data?: BodyType<PostUsersMeRestrictionBody>},
+        TContext
+      > => {
+      return useMutation(getPostUsersMeRestrictionMutationOptions(options));
+    }
+
+export const getDeleteUsersMeRestrictionUrl = () => {
+
+
+
+
+  return `/api/users/me/restriction`
+}
+
+/**
+ * @summary Delete /users/me/restriction
+ */
+export const deleteUsersMeRestriction = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+
+  return customFetch<ApiEnvelope>(getDeleteUsersMeRestrictionUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteUsersMeRestrictionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUsersMeRestriction>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteUsersMeRestriction>>, TError,void, TContext> => {
+
+const mutationKey = ['deleteUsersMeRestriction'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteUsersMeRestriction>>, void> = () => {
+
+
+          return  deleteUsersMeRestriction()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteUsersMeRestrictionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteUsersMeRestriction>>>
+
+    export type DeleteUsersMeRestrictionMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete /users/me/restriction
+ */
+export const useDeleteUsersMeRestriction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUsersMeRestriction>>, TError,void, TContext>, }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteUsersMeRestriction>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteUsersMeRestrictionMutationOptions(options));
+    }
+
 export const getPutUsersMeSettingsUrl = () => {
 
 
@@ -18656,20 +20700,27 @@ export const usePostVideosByIdLike = <TError = ErrorType<void>,
       return useMutation(getPostVideosByIdLikeMutationOptions(options));
     }
 
-export const getGetVideosSavedUrl = () => {
+export const getGetVideosSavedUrl = (params?: GetVideosSavedParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/videos/saved`
+  return stringifiedParams.length > 0 ? `/api/videos/saved?${stringifiedParams}` : `/api/videos/saved`
 }
 
 /**
  * @summary Get /videos/saved
  */
-export const getVideosSaved = async ( options?: RequestInit): Promise<ApiEnvelope> => {
+export const getVideosSaved = async (params?: GetVideosSavedParams, options?: RequestInit): Promise<ApiEnvelope> => {
 
-  return customFetch<ApiEnvelope>(getGetVideosSavedUrl(),
+  return customFetch<ApiEnvelope>(getGetVideosSavedUrl(params),
   {
     ...options,
     method: 'GET'
@@ -18682,23 +20733,23 @@ export const getVideosSaved = async ( options?: RequestInit): Promise<ApiEnvelop
 
 
 
-export const getGetVideosSavedQueryKey = () => {
+export const getGetVideosSavedQueryKey = (params?: GetVideosSavedParams,) => {
     return [
-    `/api/videos/saved`
+    `/api/videos/saved`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetVideosSavedQueryOptions = <TData = Awaited<ReturnType<typeof getVideosSaved>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
+export const getGetVideosSavedQueryOptions = <TData = Awaited<ReturnType<typeof getVideosSaved>>, TError = ErrorType<void>>(params?: GetVideosSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetVideosSavedQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetVideosSavedQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideosSaved>>> = ({ signal }) => getVideosSaved({ signal });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideosSaved>>> = ({ signal }) => getVideosSaved(params, { signal });
 
 
 
@@ -18716,11 +20767,11 @@ export type GetVideosSavedQueryError = ErrorType<void>
  */
 
 export function useGetVideosSaved<TData = Awaited<ReturnType<typeof getVideosSaved>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
+ params?: GetVideosSavedParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVideosSaved>>, TError, TData>, }
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetVideosSavedQueryOptions(options)
+  const queryOptions = getGetVideosSavedQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

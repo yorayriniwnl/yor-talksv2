@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AudioLines, BarChart2, Check, Image as ImageIcon, Mic, Sparkles, Square, Type, Send, X, Upload } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { api, type BackendUser } from '@/lib/api-client';
@@ -82,6 +82,11 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef(0);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (isOpen) restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }, [isOpen]);
 
   const storyTextControlsLocked = premiumFeatures?.STORY_FONT === false;
   const storyTextContrastWarning = selectedGradient.id === 'gold' && storyTextStyle.background === 'none';
@@ -278,7 +283,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
       }
       await addStory({
         type: storyType,
-        textContent: storyType === 'text' || storyType === 'voice' ? textContent.trim() || undefined : undefined,
+        textContent: textContent.trim() || undefined,
         mediaId,
         backgroundGradient: selectedGradient.css,
         storyFontId,
@@ -341,17 +346,24 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-[480px] rounded-3xl font-sans overflow-hidden p-0 border-border/50">
+      <DialogContent showCloseButton={false} className="sm:max-w-[480px] rounded-3xl font-sans overflow-x-hidden p-0 border-border/50" onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        const target = restoreFocusRef.current;
+        if (target?.isConnected) target.focus();
+        else document.querySelector<HTMLButtonElement>('[aria-label="Add a story"]')?.focus();
+      }}>
+        <DialogTitle className="sr-only">Create Story</DialogTitle>
+        <DialogDescription className="sr-only">Share text, a photo with an optional description, or a voice recording. Review the audience and category before publishing.</DialogDescription>
         {/* Story Canvas Live Preview */}
         <div className={cn("relative w-full h-80 bg-gradient-to-br flex flex-col justify-between p-6 transition-all duration-500", selectedGradient.css)}>
           {/* Header Bar */}
           <div className="flex items-center justify-between text-white relative z-10">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-xs font-display backdrop-blur-md px-3 py-1 rounded-full bg-white/20">
+              <span className="font-bold text-xs font-display backdrop-blur-md px-3 py-1 rounded-full bg-black/70">
                 {(currentUser?.displayName || currentUser?.username || 'User')}'s Story
               </span>
             </div>
-            <button onClick={() => handleDialogChange(false)} className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white backdrop-blur-md">
+            <button type="button" aria-label="Close story builder" onClick={() => handleDialogChange(false)} className="w-8 h-8 rounded-full bg-black/70 flex items-center justify-center text-white backdrop-blur-md">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -365,17 +377,17 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
             ) : storyType === 'voice' ? (
               <div className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl border border-white/20 bg-black/25 p-5 text-white backdrop-blur-sm">
                 <AudioLines className="h-10 w-10" />
-                {voicePreviewUrl ? <audio controls src={voicePreviewUrl} className="story-controls w-full max-w-[280px]" /> : <p className="text-sm text-white/70">Record or upload a voice Story</p>}
+                  {voicePreviewUrl ? <audio aria-label="Live voice story preview" controls src={voicePreviewUrl} className="story-controls w-full max-w-[280px]" /> : <p className="text-sm text-white/70">Record or upload a voice Story</p>}
                 {textContent && <p className="text-sm font-semibold leading-snug">{textContent}</p>}
               </div>
             ) : imagePreviewUrl ? (
-              <img src={imagePreviewUrl} alt="Story preview" className="w-full h-full object-cover rounded-2xl shadow-xl border border-white/20" />
+              <img src={imagePreviewUrl} alt={textContent.trim() || 'Story preview'} className="w-full h-full object-cover rounded-2xl shadow-xl border border-white/20" />
             ) : (
-              <p className="text-white/70 text-sm font-mono">Enter image URL below...</p>
+              <p className="rounded-lg bg-black/70 px-3 py-2 text-white text-sm font-mono">Choose a photo below</p>
             )}
           </div>
 
-          <div className="text-[0.68rem] text-white/80 font-mono text-center relative z-10">
+          <div className="rounded-lg bg-black/70 px-2 py-1 text-[0.68rem] text-white font-mono text-center relative z-10">
                 Visible to {audience === 'public' ? 'everyone' : audience === 'close_friends' ? 'Close Friends' : audience === 'selected_people' ? `${audienceMembers.length} selected people` : audience === 'everyone_except' ? `everyone except ${audienceExclusions.length}` : audience === 'custom' ? 'custom audience' : 'followers'} for {durationHours} hours{publishMode === 'highlight_only' ? ' · Highlight only' : ''}
           </div>
         </div>
@@ -385,18 +397,24 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           {/* Type Toggle */}
           <div className="flex rounded-2xl surface-2 p-1 border border-border/40">
             <button
+              type="button"
+              aria-pressed={storyType === 'text'}
               onClick={() => setStoryType('text')}
               className={cn("flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5", storyType === 'text' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground")}
             >
               <Type className="w-3.5 h-3.5" /> Text Story
             </button>
             <button
+              type="button"
+              aria-pressed={storyType === 'image'}
               onClick={() => setStoryType('image')}
               className={cn("flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5", storyType === 'image' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground")}
             >
               <ImageIcon className="w-3.5 h-3.5" /> Photo Story
             </button>
             <button
+              type="button"
+              aria-pressed={storyType === 'voice'}
               onClick={() => setStoryType('voice')}
               className={cn("flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5", storyType === 'voice' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground")}
             >
@@ -406,6 +424,7 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
 
           {storyType === 'text' ? (
             <textarea
+              aria-label="Story text"
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
               placeholder="What's happening right now?"
@@ -417,6 +436,11 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
                 <Upload className="h-4 w-4" /> {imageFile ? imageFile.name : 'Upload a photo'}
               </label>
               <input id="story-image-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => handleImageFile(event.target.files?.[0])} className="sr-only" />
+              <div className="space-y-1.5 text-xs font-semibold">
+                <label htmlFor="story-photo-description">Photo description (optional)</label>
+                <textarea id="story-photo-description" aria-describedby="story-photo-description-help" value={textContent} onChange={(event) => setTextContent(event.target.value)} maxLength={500} placeholder="Describe the photo for someone who cannot see it." className="h-20 w-full resize-none rounded-xl border border-border/40 bg-background/60 p-3 text-xs font-normal outline-none placeholder:text-muted-foreground focus:border-primary/50" />
+                <p id="story-photo-description-help" className="text-[0.68rem] font-normal text-muted-foreground">Saved with this Story and read as its image description.</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-3 rounded-2xl border border-border/40 bg-background/30 p-3">
@@ -430,8 +454,8 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
                 <Upload className="h-4 w-4" /> {voiceFile && !isRecording ? voiceFile.name : 'Upload an audio file'}
               </label>
               <input id="story-voice-file" type="file" accept="audio/webm,audio/ogg,audio/mpeg,audio/wav" onChange={(event) => handleVoiceFile(event.target.files?.[0])} className="sr-only" />
-              {voicePreviewUrl && <audio controls src={voicePreviewUrl} className="w-full" />}
-              <textarea value={textContent} onChange={(event) => setTextContent(event.target.value)} placeholder="Add an optional caption…" maxLength={500} className="h-16 w-full resize-none rounded-xl border border-border/40 bg-background/60 p-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary/50" />
+              {voicePreviewUrl && <audio aria-label="Selected voice story preview" controls src={voicePreviewUrl} className="w-full" />}
+              <textarea aria-label="Voice story caption (optional)" value={textContent} onChange={(event) => setTextContent(event.target.value)} placeholder="Add an optional caption…" maxLength={500} className="h-16 w-full resize-none rounded-xl border border-border/40 bg-background/60 p-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary/50" />
               <p className="text-[0.68rem] text-muted-foreground">Voice Stories can be up to 60 seconds and are uploaded securely with the same content controls.</p>
             </div>
           )}
@@ -508,15 +532,15 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
           </div>
 
           <div className="rounded-2xl border border-border/40 bg-background/30 p-3">
-            <button type="button" onClick={() => setPollOpen((open) => !open)} className="flex w-full items-center gap-2 text-left text-xs font-bold">
+            <button type="button" aria-expanded={pollOpen} onClick={() => setPollOpen((open) => !open)} className="flex w-full items-center gap-2 text-left text-xs font-bold">
               <BarChart2 className="h-3.5 w-3.5 text-primary" /> Add a poll
               <span className="ml-auto text-[0.65rem] font-mono text-muted-foreground">{pollOpen ? 'On' : 'Off'}</span>
             </button>
             {pollOpen && (
               <div className="mt-3 space-y-2">
-                <input value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} placeholder="Ask your audience a question" maxLength={240} className="h-9 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+                <input aria-label="Story poll question" value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} placeholder="Ask your audience a question" maxLength={240} className="h-9 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
                 {pollOptions.map((option, index) => (
-                  <input key={index} value={option} onChange={(event) => setPollOptions((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder={`Option ${index + 1}`} maxLength={80} className="h-9 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
+                  <input key={index} aria-label={`Story poll option ${index + 1}`} value={option} onChange={(event) => setPollOptions((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder={`Option ${index + 1}`} maxLength={80} className="h-9 w-full rounded-xl border border-border/40 bg-background/60 px-3 text-xs outline-none focus:border-primary/50" />
                 ))}
               </div>
             )}
@@ -530,6 +554,9 @@ export function StoryBuilderModal({ isOpen, onOpenChange, isHighlight = false }:
               {STORY_GRADIENTS.map((g) => (
                 <button
                   key={g.id}
+                  type="button"
+                  aria-label={`${g.name} background`}
+                  aria-pressed={selectedGradient.id === g.id}
                   onClick={() => {
                     sounds.playPop();
                     setSelectedGradient(g);

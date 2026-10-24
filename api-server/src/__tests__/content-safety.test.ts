@@ -30,6 +30,9 @@ test("an author supplied child-safe rating needs approval for the exact current 
   assert.equal(effectiveContentRating(item, "posts", approval), "child_safe");
   assert.equal(effectiveContentRating({ ...item, content: "Changed text" }, "posts", approval), "regular",
     "an older approval cannot carry over after content changes");
+  const liked = { ...item, likesCount: 1, updatedAt: "2026-10-11T00:02:00.000Z" };
+  assert.equal(contentRevisionFor(liked),approval.contentRevision,"engagement timestamps do not invalidate content review");
+  assert.equal(effectiveContentRating(liked,"posts",approval),"child_safe");
 });
 
 test("current eligibility ceiling overrides a mature saved preference", async (t) => {
@@ -85,4 +88,28 @@ test("author visibility denies content across a mutual block", async () => {
   const service = new ContentSafetyService(repository);
 
   assert.equal(await service.isVisible({ contentRating: "regular" }, viewer.id, author.id), false);
+});
+
+test("age based privacy overrides stale public profile settings when filtering authored content", async t => {
+  const originalNodeEnv=env.NODE_ENV;
+  env.NODE_ENV='production';
+  t.after(()=>{env.NODE_ENV=originalNodeEnv;});
+  const adult: EligibilityDecision={experience:'adult_18_plus',activated:true,
+    capabilities:{social:true,publish:true,messaging:true,payments:false,seller:false,memberships:false,live:false,rtc:false,ai:false,analytics:false,profiling:false},
+    maximumContentRating:'mature',policyVersions:['fixture:1'],revision:'adult',reason:null,publicBrowsingAllowed:true};
+  const teen: EligibilityDecision={...adult,experience:'teen_13_17',maximumContentRating:'regular',revision:'teen'};
+  t.mock.method(EligibilityService.prototype,'decisionFor',async (id:string)=>id==='minor'?teen:adult);
+  t.mock.method(EligibilityService.prototype,'decisionForMany',async (ids:string[])=>new Map(ids.map(id=>[id,id==='minor'?teen:adult])));
+  let following=false;
+  const records=new Map([
+    ['adult',{id:'adult',accountStatus:'active',settings:{privateAccount:false,contentFilter:'mature'},privacy:{profileVisibility:'public'},blockedUsers:[]}],
+    ['minor',{id:'minor',accountStatus:'active',settings:{privateAccount:false,contentFilter:'regular'},privacy:{profileVisibility:'public'},blockedUsers:[]}],
+  ]);
+  const repository={findById:async(id:string)=>records.get(id),findByIds:async(ids:string[])=>ids.flatMap(id=>records.get(id)??[]),
+    audienceRelationships:async()=>({following:new Set(following?['minor']:[]),closeFriends:new Set<string>()})};
+  const service=new ContentSafetyService(repository as never,undefined,{findApproved:async()=>[]} as never);
+  const post={id:'minor-post',authorId:'minor',content:'Regular post',contentRating:'regular',createdAt:'2026-10-14T00:00:00.000Z',distributionMode:'feed_and_profile',audience:'public'};
+  assert.equal(await service.isVisible(post,'adult','minor'),false,'legacy public settings cannot make a minor profile public');
+  following=true;
+  assert.equal(await service.isVisible(post,'adult','minor'),true,'an established follower can still see the post');
 });

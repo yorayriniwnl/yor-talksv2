@@ -12,56 +12,8 @@ export interface GifItem {
   previewUrl: string;
 }
 
-const TRENDING_GIFS: GifItem[] = [
-  {
-    id: 'g1',
-    title: 'Mind Blown',
-    url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif',
-  },
-  {
-    id: 'g2',
-    title: 'Global Celebrations / Dance',
-    url: 'https://media.giphy.com/media/l1IY8mBoHYpksZG7C/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/l1IY8mBoHYpksZG7C/giphy.gif',
-  },
-  {
-    id: 'g3',
-    title: 'Popcorn / Shocked',
-    url: 'https://media.giphy.com/media/tyqcJoNjNv0Fq/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/tyqcJoNjNv0Fq/giphy.gif',
-  },
-  {
-    id: 'g4',
-    title: 'Namaste / Respect',
-    url: 'https://media.giphy.com/media/3o7TKqTOqevMCYB04g/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/3o7TKqTOqevMCYB04g/giphy.gif',
-  },
-  {
-    id: 'g5',
-    title: 'Fire / Lit',
-    url: 'https://media.giphy.com/media/nrXif9YExO9EI/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/nrXif9YExO9EI/giphy.gif',
-  },
-  {
-    id: 'g6',
-    title: 'Laughing Cat',
-    url: 'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif',
-  },
-  {
-    id: 'g7',
-    title: 'GG / High Five',
-    url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif',
-  },
-  {
-    id: 'g8',
-    title: 'Clapping Ovation',
-    url: 'https://media.giphy.com/media/7rj2ZgttvgomY/giphy.gif',
-    previewUrl: 'https://media.giphy.com/media/7rj2ZgttvgomY/giphy.gif',
-  },
-];
+// No externally hosted gallery is configured. The active composer does not mount this picker.
+const FEATURED_GIFS: GifItem[] = [];
 
 export function GifPickerModal({
   isOpen,
@@ -74,7 +26,7 @@ export function GifPickerModal({
 }) {
   const [search, setSearch] = useState('');
 
-  const filteredGifs = TRENDING_GIFS.filter((g) =>
+  const filteredGifs = FEATURED_GIFS.filter((g) =>
     g.title.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -100,7 +52,7 @@ export function GifPickerModal({
           />
         </div>
 
-        <p className="text-xs text-muted-foreground">A small selection of GIFs hosted by GIPHY.</p>
+        <p className="text-xs text-muted-foreground">Featured GIFs are unavailable until an approved catalogue is configured. Static image uploads remain available in the comment composer.</p>
         {filteredGifs.length === 0 && <p role="status" className="py-6 text-sm text-center">No featured GIFs match that search.</p>}
 
         {/* GIF Grid */}

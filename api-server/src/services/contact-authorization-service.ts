@@ -44,9 +44,10 @@ export class ContactAuthorizationService {
     return {decisions,rules,snapshot:canonical(snapshot),guardianContactsRequired:aRules.guardianContactsRequired||bRules.guardianContactsRequired};
   }
   private async authorityFor(aId:string,bId:string):Promise<PairAuthority>{
-    const [a,b,aRules,bRules]=await Promise.all([this.users.findById(aId),this.users.findById(bId),
-      this.eligibility.contactRulesFor(aId),this.eligibility.contactRulesFor(bId)]);
-    return this.authorityFrom(aId,bId,a,b,aRules,bRules);
+    const users=await this.users.findByIds([aId,bId]);
+    const usersById=new Map(users.map(user=>[user.id,user]));
+    const rules=await this.eligibility.contactRulesForMany([aId,bId]);
+    return this.authorityFrom(aId,bId,usersById.get(aId),usersById.get(bId),rules.get(aId)!,rules.get(bId)!);
   }
 
   private guardianRequiredUsers(initiatorId:string,recipientId:string,authority:PairAuthority):string[]{
@@ -145,9 +146,9 @@ export class ContactAuthorizationService {
     const members=[...new Set(memberIds)].sort();
     if(!members.includes(inviterId)||members.includes(inviteeId)||!inviteeId)throw denied();
     const allIds=[...new Set([...members,inviteeId])].sort();
-    const [users,ruleRows]=await Promise.all([this.users.findByIds(allIds),
-      Promise.all(allIds.map(async id=>[id,await this.eligibility.contactRulesFor(id)] as const))]);
-    const usersById=new Map(users.map(user=>[user.id,user])),rulesById=new Map(ruleRows);
+    const users=await this.users.findByIds(allIds);
+    const rulesById=await this.eligibility.contactRulesForMany(allIds);
+    const usersById=new Map(users.map(user=>[user.id,user]));
     if(allIds.some(id=>!usersById.has(id)||!rulesById.get(id)))throw denied();
     const decisions=new Map(allIds.map(id=>[id,rulesById.get(id)!.decision]));
     for(const id of allIds){
@@ -243,7 +244,7 @@ export class ContactAuthorizationService {
       policyVersions:approval.policyVersions as Record<string,string>});approvalsByInvitation.set(approval.invitationId,rows);}
     const invitationCache=new Map<string,Promise<boolean>>();
     const userRows=await this.users.findByIds(members),usersById=new Map(userRows.map(user=>[user.id,user]));
-    const ruleRows=await Promise.all(members.map(async id=>[id,await this.eligibility.contactRulesFor(id)] as const)),rulesById=new Map(ruleRows);
+    const rulesById=await this.eligibility.contactRulesForMany(members);
     for(const id of members){
       const user=usersById.get(id),decision=rulesById.get(id)?.decision;
       if(!user||(user.accountStatus??'active')!=='active'||!decision?.activated||!decision.capabilities.social||decision.experience==='unknown')throw denied();
@@ -338,10 +339,10 @@ export class ContactAuthorizationService {
   }
   async requirePairwiseContacts(userIds:string[],action:'read'|'send'|'deliver'):Promise<void>{
     const members=[...new Set(userIds)].sort();if(members.length<2)return;
-    const [userRows,ruleRows,records]=await Promise.all([this.users.findByIds(members),
-      Promise.all(members.map(async id=>[id,await this.eligibility.contactRulesFor(id)] as const)),this.repository.listLiveForMembers(members)]);
+    const userRows=await this.users.findByIds(members);
+    const rulesById=await this.eligibility.contactRulesForMany(members);
+    const records=await this.repository.listLiveForMembers(members);
     const usersById=new Map(userRows.map(user=>[user.id,user]));
-    const rulesById=new Map(ruleRows);
     const recordByPair=new Map(records.map(record=>[pair(record.userAId,record.userBId).join(':'),record]));
     const approvalMap=await this.repository.guardianApprovalsForRequests(records.map(record=>record.id));
     const factCache=new Map<string,Promise<EligibilityFacts|undefined>>();

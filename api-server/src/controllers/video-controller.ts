@@ -1,5 +1,6 @@
 import { MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
+import { InvalidCollectionCursorError, savedCollectionQuerySchema } from '../utils/saved-collection-page.js';
 import { VideoService } from "../services/video-service.js";
 import { createResponse } from "../utils/response.js";
 import { ContentPolicyViolationError } from "../services/content-policy-service.js";
@@ -46,8 +47,14 @@ export class VideoController {
   saved = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json(createResponse("Unauthorized", null, {}, ["Unauthorized"]));
-    const videos = await this.videoService.listBookmarkedVideos(userId);
-    return res.status(200).json(createResponse("Saved videos retrieved", videos.map((video) => this.view(video, userId))));
+    const query = savedCollectionQuerySchema.parse(req.query);
+    try {
+      const page = await this.videoService.listBookmarkedVideosPage(userId, Number(query.limit ?? 50), query.cursor);
+      return res.status(200).json(createResponse('Saved videos retrieved', page.data.map(video => this.view(video, userId)), page.meta));
+    } catch (error) {
+      if (error instanceof InvalidCollectionCursorError) return res.status(400).json(createResponse(error.message, null, {}, ['Invalid cursor']));
+      throw error;
+    }
   };
 
   toggleLike = async (req: Request, res: Response) => {

@@ -1,5 +1,6 @@
 import { MediaService, MediaLifecycleError } from "../services/media-service.js";
 import { type Request, type Response } from "express";
+import { InvalidCollectionCursorError, savedCollectionQuerySchema } from '../utils/saved-collection-page.js';
 import { encodePostCursor, encodeTrendingCursor } from "../repositories/post-repository.js";
 import { ContentPolicyViolationError, PostService, PremiumFeatureUnavailableError, ProfilePinLimitError } from "../services/post-service.js";
 import { PaginationService } from "../services/pagination-service.js";
@@ -241,9 +242,14 @@ export class PostController {
   };
 
   saved = async (req: Request, res: Response) => {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
-    const items = await this.postService.getSavedPosts(req.user?.id ?? "", limit);
-    return res.status(200).json(createResponse("Saved posts loaded", items, { nextCursor: null, hasMore: false, limit }));
+    const query = savedCollectionQuerySchema.parse(req.query);
+    try {
+      const page = await this.postService.getSavedPostsPage(req.user?.id ?? '', Number(query.limit ?? 50), query.cursor);
+      return res.status(200).json(createResponse('Saved posts loaded', page.data, page.meta));
+    } catch (error) {
+      if (error instanceof InvalidCollectionCursorError) return res.status(400).json(createResponse(error.message, null, {}, ['Invalid cursor']));
+      throw error;
+    }
   };
 
   liked = async (req: Request, res: Response) => {

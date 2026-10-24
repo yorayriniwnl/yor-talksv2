@@ -31,16 +31,21 @@ tags:
   - name: healthz
   - name: highlights
   - name: invites
+  - name: launch
   - name: livez
   - name: media
   - name: messages
   - name: metrics
+  - name: moderation
   - name: notes
   - name: notifications
   - name: onboarding
   - name: operations
   - name: posts
   - name: premium
+  - name: preregister
+  - name: privacy
+  - name: private-messages
   - name: products
   - name: projects
   - name: readyz
@@ -2355,6 +2360,42 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /launch/unsubscribe:
+    get:
+      operationId: getLaunchUnsubscribe
+      summary: Get /launch/unsubscribe
+      tags: [launch]
+      security: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+    post:
+      operationId: postLaunchUnsubscribe
+      summary: Post /launch/unsubscribe
+      tags: [launch]
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
   /livez:
     get:
       operationId: getLivez
@@ -2793,6 +2834,209 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "400":
           description: Invalid request
+  /moderation/appeals:
+    get:
+      operationId: getModerationAppeals
+      summary: Get /moderation/appeals
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+    post:
+      operationId: postModerationAppeals
+      summary: Post /moderation/appeals
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ModerationAppealRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicModerationAppeal"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /moderation/appeals/{appealId}/review:
+    patch:
+      operationId: patchModerationAppealsByAppealIdReview
+      summary: Patch /moderation/appeals/{appealId}/review
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appealId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ModerationReviewRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+  /moderation/appeals/mine:
+    get:
+      operationId: getModerationAppealsMine
+      summary: Get /moderation/appeals/mine
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PublicModerationAppealList"}}}]}
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /moderation/decisions:
+    get:
+      operationId: getModerationDecisions
+      summary: Get /moderation/decisions
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+    post:
+      operationId: postModerationDecisions
+      summary: Post /moderation/decisions
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ModerationDecisionRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+  /moderation/enforcements/{targetType}/{targetId}:
+    get:
+      operationId: getModerationEnforcementsByTargetTypeByTargetId
+      summary: Get /moderation/enforcements/{targetType}/{targetId}
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: targetType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
+  /moderation/notices:
+    get:
+      operationId: getModerationNotices
+      summary: Get /moderation/notices
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /moderation/notices/{noticeId}/acknowledge:
+    post:
+      operationId: postModerationNoticesByNoticeIdAcknowledge
+      summary: Post /moderation/notices/{noticeId}/acknowledge
+      tags: [moderation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /notes:
     get:
       operationId: getNotes
@@ -3608,6 +3852,23 @@ paths:
       tags: [posts]
       security:
         - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -3791,6 +4052,261 @@ paths:
         - bearerAuth: []
       parameters:
         - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /preregister:
+    post:
+      operationId: postPreregister
+      summary: Post /preregister
+      tags: [preregister]
+      security: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PreregistrationRequest"}}}}
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PreregistrationReceipt"}}}]}
+        "400":
+          description: Invalid request
+        "200":
+          description: Generic repeat-submission receipt; saved registration details are not disclosed
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PreregistrationExistingReceipt"}}}]}
+        "409":
+          description: Choose another preferred username
+        "429":
+          description: Pre-registration request allowance exceeded
+        "503":
+          description: Registration storage is unavailable; no fabricated success or count is returned
+  /preregister/stats:
+    get:
+      operationId: getPreregisterStats
+      summary: Get /preregister/stats
+      tags: [preregister]
+      security: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PreregistrationStats"}}}]}
+        "400":
+          description: Invalid request
+        "503":
+          description: Registration storage is unavailable; no fabricated success or count is returned
+  /privacy/challenge:
+    post:
+      operationId: postPrivacyChallenge
+      summary: Post /privacy/challenge
+      tags: [privacy]
+      security: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PrivacyChallengeRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PrivacyChallengeReceipt"}}}]}
+        "400":
+          description: Invalid request
+  /privacy/request:
+    post:
+      operationId: postPrivacyRequest
+      summary: Post /privacy/request
+      tags: [privacy]
+      security: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PrivacyRightsRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PrivacyRightsResult"}}}]}
+        "400":
+          description: Invalid request
+  /privacy/verify:
+    post:
+      operationId: postPrivacyVerify
+      summary: Post /privacy/verify
+      tags: [privacy]
+      security: []
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PrivacyVerifyRequest"}}}}
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                {"allOf":[{"$ref":"#/components/schemas/ApiEnvelope"},{"properties":{"data":{"$ref":"#/components/schemas/PrivacyVerifyReceipt"}}}]}
+        "400":
+          description: Invalid request
+  /private-messages/identity:
+    get:
+      operationId: getPrivateMessagesIdentity
+      summary: Get /private-messages/identity
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    put:
+      operationId: putPrivateMessagesIdentity
+      summary: Put /private-messages/identity
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /private-messages/threads:
+    get:
+      operationId: getPrivateMessagesThreads
+      summary: Get /private-messages/threads
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    post:
+      operationId: postPrivateMessagesThreads
+      summary: Post /private-messages/threads
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /private-messages/threads/{threadId}:
+    get:
+      operationId: getPrivateMessagesThreadsByThreadId
+      summary: Get /private-messages/threads/{threadId}
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+  /private-messages/threads/{threadId}/messages:
+    get:
+      operationId: getPrivateMessagesThreadsByThreadIdMessages
+      summary: Get /private-messages/threads/{threadId}/messages
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    post:
+      operationId: postPrivateMessagesThreadsByThreadIdMessages
+      summary: Post /private-messages/threads/{threadId}/messages
+      tags: [private-messages]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: threadId
           in: path
           required: true
           schema:
@@ -4225,6 +4741,32 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /reports/{reportId}/history:
+    get:
+      operationId: getReportsByReportIdHistory
+      summary: Get /reports/{reportId}/history
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: "Required role: admin, moderator"
   /reports/{reportId}/status:
     patch:
       operationId: patchReportsByReportIdStatus
@@ -4238,13 +4780,7 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+      requestBody: {"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ReportStatusUpdateRequest"}}}}
       responses:
         "200":
           description: Successful response
@@ -4341,6 +4877,30 @@ paths:
       tags: [reports]
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Return only records currently in this status.
+          schema:
+            type: string
+            enum: [received, under_review, resolved, dismissed]
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, status-scoped keyset cursor returned in meta.nextCursor.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -4361,6 +4921,30 @@ paths:
       tags: [reports]
       security:
         - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Return only records currently in this status.
+          schema:
+            type: string
+            enum: [pending, reviewed, resolved, dismissed]
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, status-scoped keyset cursor returned in meta.nextCursor.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -5556,6 +6140,31 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/consent-withdrawal:
+    post:
+      operationId: postUsersMeConsentWithdrawal
+      summary: Post /users/me/consent-withdrawal
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /users/me/contact-shields:
     get:
       operationId: getUsersMeContactShields
@@ -5981,6 +6590,48 @@ paths:
           description: Invalid request
         "401":
           description: Authentication required
+  /users/me/restriction:
+    post:
+      operationId: postUsersMeRestriction
+      summary: Post /users/me/restriction
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+    delete:
+      operationId: deleteUsersMeRestriction
+      summary: Delete /users/me/restriction
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
   /users/me/settings:
     put:
       operationId: putUsersMeSettings
@@ -6254,6 +6905,23 @@ paths:
       tags: [videos]
       security:
         - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size from 1 to 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Signed, owner- and collection-scoped keyset cursor returned in meta.nextCursor. An empty filtered page can still have more records.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$'
       responses:
         "200":
           description: Successful response
@@ -6293,7 +6961,13 @@ components:
     MediaFinalizeRequest: {"type":"object","additionalProperties":false}
     MediaReservation: {"type":"object","required":["id","mediaId","status","purpose","mimeType","maxFileSize","mode","uploadUrl"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"const":"pending"},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"maxFileSize":{"type":"integer"},"mode":{"type":"string","enum":["server","direct"]},"uploadUrl":{"type":"string"},"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Present only for restricted direct uploads. Send every field unchanged. Provider response URLs are never publication credentials."}},"allOf":[{"if":{"properties":{"mode":{"const":"direct"}}},"then":{"required":["fields"]},"else":{"not":{"required":["fields"]}}}]}
     MediaResult: {"type":"object","required":["id","mediaId","status"],"properties":{"id":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"mediaId":{"type":"string","format":"uuid","description":"Server-generated lifecycle record ID."},"status":{"type":"string","enum":["pending","uploaded","verifying","approved","rejected","failed","deleted"]},"purpose":{"type":"string","enum":["avatar","post","comment","video_comment","message","story","video","product","article","event","live_stream","broadcast_channel","highlight","showcase","business","community"]},"url":{"type":"string","description":"Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval."},"thumbnailUrl":{"type":["string","null"]},"mimeType":{"type":"string","enum":["image/jpeg","image/png","image/webp","video/mp4","video/webm","audio/mpeg","audio/wav","audio/webm","audio/ogg"]},"size":{"type":"integer"},"width":{"type":"integer"},"height":{"type":"integer"},"duration":{"type":"number","description":"Verified seconds."}},"allOf":[{"if":{"properties":{"status":{"const":"approved"}}},"then":{"required":["purpose","url","mimeType","size"]},"else":{"not":{"anyOf":[{"required":["url"]},{"required":["thumbnailUrl"]}]}}}]}
-    PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"},"slaDeadline":{"type":"string","format":"date-time","description":"Operational review target, not a universal statutory deadline."}}}
+    PublicGrievanceReceipt: {"type":"object","additionalProperties":false,"required":["ticketId","status","createdAt"],"properties":{"ticketId":{"type":"string"},"status":{"type":"string","enum":["received","under_review","resolved","dismissed"]},"createdAt":{"type":"string","format":"date-time"}}}
+    ModerationDecisionRequest: {"type":"object","additionalProperties":false,"required":["targetType","targetId","action","rationale"],"properties":{"targetType":{"type":"string","enum":["post","user","comment","message","video"]},"targetId":{"type":"string","format":"uuid"},"action":{"type":"string","enum":["no_action","restrict","remove","restore"]},"scope":{"type":"string","enum":["public","direct_only","global"],"default":"global","description":"Removal, user, comment and message decisions require global scope. Public suppresses discovery; direct_only permits only owner/follower direct reads."},"rationale":{"type":"string","minLength":10,"maxLength":5000,"description":"Public explanation shown to the content author. Never include private evidence or reporter identity."},"internalNotes":{"type":"string","maxLength":5000},"expiresAt":{"type":"string","format":"date-time"},"reportId":{"type":"string","format":"uuid"},"grievanceTicketId":{"type":"string","format":"uuid"}}}
+    ModerationAppealRequest: {"type":"object","additionalProperties":false,"required":["decisionId","statement"],"properties":{"decisionId":{"type":"string","format":"uuid"},"statement":{"type":"string","minLength":10,"maxLength":5000},"relationship":{"type":"string","enum":["author","reporter","affected_party"],"description":"If supplied, must match the private notice already issued to this account. It cannot establish authority."}}}
+    ModerationReviewRequest: {"type":"object","additionalProperties":false,"required":["outcome","reviewerNotes","rationale"],"properties":{"outcome":{"type":"string","enum":["upheld","reversed","rejected"]},"action":{"type":"string","enum":["restore","restrict","remove"],"description":"Only for reversals. Adverse decisions reverse to restore. Reversing no-action or restoration requires an explicit restrict/remove action."},"reviewerNotes":{"type":"string","minLength":10,"maxLength":5000,"description":"Staff-only review evidence."},"rationale":{"type":"string","minLength":10,"maxLength":5000,"description":"Public review explanation visible only to the affected parties."}}}
+    PublicModerationAppeal: {"type":"object","additionalProperties":false,"required":["id","decisionId","relationship","statement","status","rationale","outcomeDecisionId","reviewedAt","createdAt","updatedAt"],"properties":{"id":{"type":"string","format":"uuid"},"decisionId":{"type":"string","format":"uuid"},"relationship":{"type":"string","enum":["author","reporter","affected_party"]},"statement":{"type":"string"},"status":{"type":"string","enum":["pending","under_review","upheld","reversed","rejected"]},"rationale":{"type":["string","null"]},"outcomeDecisionId":{"type":["string","null"],"format":"uuid"},"reviewedAt":{"type":["string","null"],"format":"date-time"},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"}}}
+    PublicModerationAppealList: {"type":"array","items":{"$ref":"#/components/schemas/PublicModerationAppeal"}}
+    ReportStatusUpdateRequest: {"oneOf":[{"type":"object","additionalProperties":false,"required":["status"],"properties":{"status":{"type":"string","enum":["pending","reviewed"]}}},{"type":"object","additionalProperties":false,"required":["status","decisionReason"],"properties":{"status":{"type":"string","enum":["resolved","dismissed"]},"decisionReason":{"type":"string","minLength":10,"maxLength":2000,"description":"Staff-only rationale required for a resolved or dismissed decision."}}}]}
     RegisterRequest: {"type":"object","additionalProperties":false,"required":["enrollmentId","registrationNonce","username","email","password","fullName","acceptedTerms"],"properties":{"enrollmentId":{"type":"string","format":"uuid"},"registrationNonce":{"type":"string","minLength":32,"maxLength":128,"description":"Short-lived opaque one-time registration credential. Never place it in a URL or log."},"username":{"type":"string","pattern":"^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$"},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":8},"fullName":{"type":"string","minLength":2},"acceptedTerms":{"const":true}}}
     EnrollmentPrescreenRequest: {"type":"object","additionalProperties":false,"required":["requestedExperience","territory"],"properties":{"requestedExperience":{"type":"string","enum":["under_13","teen_13_17","adult_18_plus"]},"territory":{"type":"string","pattern":"^[A-Z]{2}$"}}}
     EnrollmentCredentialRequest: {"type":"object","additionalProperties":false,"required":["registrationNonce"],"properties":{"registrationNonce":{"type":"string","minLength":32,"maxLength":128}}}
@@ -6319,3 +6993,14 @@ components:
     SafeGroupAcceptanceResult: {"type":"object","additionalProperties":false,"required":["invitation","refreshedInvitations"],"properties":{"invitation":{"$ref":"#/components/schemas/SafeGroupInvitation"},"refreshedInvitations":{"$ref":"#/components/schemas/SafeGroupInvitationList"}}}
     NullReceipt: {"type":"null"}
     ContactWithdrawalReceipt: {"type":"null"}
+    PrivacyChallengeRequest: {"type":"object","additionalProperties":false,"required":["email"],"properties":{"email":{"type":"string","format":"email","maxLength":255},"purpose":{"type":"string","enum":["correction","restriction","objection","erasure","access"],"default":"access"}}}
+    PrivacyChallengeReceipt: {"type":"object","additionalProperties":false,"required":["initiated"],"properties":{"initiated":{"type":"boolean","const":true}}}
+    PrivacyVerifyRequest: {"type":"object","additionalProperties":false,"required":["token"],"properties":{"token":{"type":"string","pattern":"^[a-f0-9]{64}$","description":"Single-use email challenge, bound to its issued purpose and 15-minute database expiry."}}}
+    PrivacyVerifyReceipt: {"type":"object","additionalProperties":false,"required":["valid","purpose"],"properties":{"valid":{"type":"boolean","const":true},"purpose":{"type":"string","enum":["correction","restriction","objection","erasure","access"]}}}
+    PrivacyRightsRequest: {"type":"object","additionalProperties":false,"required":["token","requestType"],"properties":{"token":{"type":"string","pattern":"^[a-f0-9]{64}$","description":"Single-use email challenge, bound to its issued purpose and 15-minute database expiry."},"requestType":{"type":"string","enum":["correction","restriction","objection","erasure","access"]},"details":{"type":"object","additionalProperties":false,"properties":{"reason":{"type":"string","maxLength":500},"preferredUsername":{"type":"string","pattern":"^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$"}}}}}
+    PrivacyRightsResult: {"type":"object","additionalProperties":false,"required":["executed","requestType","message"],"properties":{"executed":{"type":"boolean"},"requestType":{"type":"string","enum":["correction","restriction","objection","erasure","access"]},"message":{"type":"string"},"recordStatus":{"type":"string"},"erasedAt":{"type":"string","format":"date-time"},"details":{"type":"object","additionalProperties":true}}}
+    PreregistrationRequest: {"type":"object","additionalProperties":false,"required":["email","username","launchUpdatesConsent"],"properties":{"email":{"type":"string","format":"email","maxLength":255,"description":"Trimmed and lowercased before storage."},"username":{"type":"string","minLength":3,"maxLength":24,"pattern":"^[a-zA-Z0-9_][a-zA-Z0-9_-]{2,23}$","description":"Preferred username, trimmed and lowercased. Availability is confirmed when an account is created."},"launchUpdatesConsent":{"type":"boolean","const":true,"description":"Explicit agreement to receive launch and early member updates."},"referralCode":{"type":"string","maxLength":28,"pattern":"^[Yy][Oo][Rr]-[A-Fa-f0-9]{6,24}$"},"perks":{"type":"array","maxItems":4,"items":{"type":"string","enum":["founder-badge","priority-access","community-input","username-preference"]}}}}
+    PreregistrationPerk: {"type":"object","additionalProperties":false,"required":["id","title","description","icon"],"properties":{"id":{"type":"string","enum":["founder-badge","priority-access","community-input","username-preference"]},"title":{"type":"string"},"description":{"type":"string"},"icon":{"type":"string"}}}
+    PreregistrationReceipt: {"type":"object","additionalProperties":false,"required":["id","username","referralCode","createdAt","passNumber","launchDate","perks","isExisting"],"properties":{"id":{"type":"string","format":"uuid"},"username":{"type":"string"},"referralCode":{"type":["string","null"]},"createdAt":{"type":"string","format":"date-time"},"passNumber":{"type":"string","pattern":"^FOUNDER-[0-9A-F-]{36}$","description":"Unique registration reference; it is not a queue position or authentication credential."},"launchDate":{"type":"string","format":"date-time","description":"Launch is 1 December 2026 at midnight in Asia/Kolkata."},"perks":{"type":"array","items":{"$ref":"#/components/schemas/PreregistrationPerk"},"description":"Planned early member benefits; no paid entitlement or handle reservation is granted."},"isExisting":{"type":"boolean","const":false}}}
+    PreregistrationExistingReceipt: {"type":"object","additionalProperties":false,"required":["isExisting","launchDate","perks"],"properties":{"launchDate":{"type":"string","format":"date-time","description":"Launch is 1 December 2026 at midnight in Asia/Kolkata."},"perks":{"type":"array","items":{"$ref":"#/components/schemas/PreregistrationPerk"},"description":"Planned early member benefits; no paid entitlement or handle reservation is granted."},"isExisting":{"type":"boolean","const":true}},"description":"Generic repeat-submission receipt. Saved profile, pass, referral code and email are never returned."}
+    PreregistrationStats: {"type":"object","additionalProperties":false,"required":["totalRegistered","launchDate","perks"],"properties":{"totalRegistered":{"type":"integer","minimum":0,"description":"Actual stored registrations with no artificial offset."},"launchDate":{"type":"string","format":"date-time","description":"Launch is 1 December 2026 at midnight in Asia/Kolkata."},"perks":{"type":"array","items":{"$ref":"#/components/schemas/PreregistrationPerk"},"description":"Planned early member benefits; no paid entitlement or handle reservation is granted."}}}

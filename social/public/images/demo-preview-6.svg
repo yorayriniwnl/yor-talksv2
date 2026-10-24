@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <!-- Code-native geometric preview, authored for this audit; no external image or font. -->
+  <defs><linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#14243c"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs>
+  <rect width="1200" height="800" fill="url(#background)"/>
+  <circle cx="558" cy="298" r="137" fill="#93c5fd" opacity=".2"/>
+  <path d="M-100 518 L604 120 L1320 528" fill="none" stroke="#93c5fd" stroke-width="30" opacity=".22"/>
+  <rect x="332" y="356" width="408" height="192" rx="36" fill="none" stroke="#93c5fd" stroke-width="4" opacity=".55"/>
+</svg>

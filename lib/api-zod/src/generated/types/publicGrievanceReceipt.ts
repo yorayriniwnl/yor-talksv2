@@ -11,6 +11,4 @@ export interface PublicGrievanceReceipt {
   ticketId: string;
   status: PublicGrievanceReceiptStatus;
   createdAt: Date;
-  /** Operational review target, not a universal statutory deadline. */
-  slaDeadline?: Date;
 }

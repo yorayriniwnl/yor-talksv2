@@ -13,15 +13,20 @@ import { assertMetricsTokenFile } from "./lib/metrics-auth.js";
 import { closeRateLimitRedis } from "./middlewares/rate-limit.js";
 import { startLifecycleWorker } from './workers/lifecycle-worker.js';
 import { createPaymentRuntime } from './services/payment-runtime.js';
+import { assertPrivacySchema, assertRecoveryReplay } from './services/privacy-readiness.js';
+import { assertModerationSchema } from './services/moderation-readiness.js';
+import { assertPrivateChatSchema } from './services/private-chat-readiness.js';
 
 async function ensureProductionDependencies(): Promise<void> {
   if (env.NODE_ENV !== "production") return;
 
   try {
-    await pool.query("SELECT 1");
+    await Promise.all([assertPrivacySchema(),assertModerationSchema(),assertPrivateChatSchema()]);
+    await assertRecoveryReplay({ enabled: env.RECOVERY_REPLAY_GATE,
+      through: env.RESTORE_DELETION_JOURNAL_THROUGH,sha256: env.RESTORE_DELETION_MANIFEST_SHA256 });
   } catch (error) {
-    logger.error({ error }, "Production dependency check failed: PostgreSQL unavailable");
-    throw new Error("Production dependency check failed: PostgreSQL unavailable");
+    logger.error("Production dependency check failed: database schema or recovery reconciliation unavailable");
+    throw new Error("Production dependency check failed: database schema or recovery reconciliation unavailable");
   }
 
   const redis = await inspectRedisCompatibility(env.REDIS_URL);
@@ -41,7 +46,10 @@ async function main() {
 
   const httpServer = createServer(app);
   const io = await attachSocketServer(httpServer);
-  const lifecycleWorker = await startLifecycleWorker(createPaymentRuntime().handlers);
+  const lifecycleWorker = await startLifecycleWorker(createPaymentRuntime().handlers).catch((err) => {
+    logger.warn({ err: err?.message || err }, "Lifecycle worker failed to start");
+    return null;
+  });
   const feedWorker = await startFeedWorker().catch((err) => { logger.warn({ err }, "Feed worker failed to start"); return null; });
   const notificationWorker = await startNotificationWorker().catch((err) => {
     logger.warn({ err }, "Notification worker failed to start");
@@ -50,6 +58,9 @@ async function main() {
 
   if (env.NODE_ENV === "production" && (!notificationWorker || !notificationWorker.isHealthy())) {
     throw new Error("Production dependency check failed: notification worker unavailable");
+  }
+  if (env.NODE_ENV === 'production' && (!lifecycleWorker || !lifecycleWorker.isHealthy())) {
+    throw new Error('Production dependency check failed: lifecycle worker unavailable');
   }
 
   httpServer.on("error", (err: Error) => {
@@ -82,7 +93,7 @@ async function main() {
       await feedWorker?.close();
       await operationalMetrics.close();
       await closeAuthenticationDependencies();
-      await lifecycleWorker.close();
+      await lifecycleWorker?.close();
       await closeRateLimitRedis();
       await pool.end();
       logger.info("Shutdown complete");

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --config vite.config.ts",
+    "build": "node scripts/build.mjs",
     "postbuild": "node ./scripts/sync-dist.mjs",
     "analyze": "node scripts/analyze-build.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
@@ -90,6 +90,7 @@
     "@types/three": "^0.185.4",
     "d3-force": "^3.0.0",
     "livekit-client": "^2.22.0",
+    "openpgp": "6.3.2",
     "qrcode": "^1.5.4",
     "socket.io-client": "^4.8.1",
     "three": "^0.185.1",

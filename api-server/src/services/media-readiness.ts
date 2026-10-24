@@ -14,10 +14,46 @@ async function readMediaReadiness() {
     errorCodes: [...provider.errorCodes, ...(!decoder ? ["media_decoder_unavailable"] : []), ...(!moderation ? ["media_moderation_unavailable"] : [])],
   };
 }
-let cached: { expiresAt: number; report: ReturnType<typeof readMediaReadiness> } | undefined;
-export function inspectMediaReadiness(force = false) {
-  // Health polling must not exhaust Cloudinary's Admin API quota. Upload/finalize gates always make fresh provider checks.
-  if (!force && cached && cached.expiresAt > Date.now()) return cached.report;
-  const report = readMediaReadiness(); cached = { expiresAt: Date.now() + 60_000, report };
-  return report;
+export type MediaReadiness = Awaited<ReturnType<typeof readMediaReadiness>>;
+
+function unavailableMediaReadiness(code: string): MediaReadiness {
+  return { storage: false, presets: false, direct: false, decoder: false, moderation: false, ready: false, errorCodes: [code] };
 }
+
+export function createMediaReadinessMonitor(
+  probe: () => Promise<MediaReadiness>,
+  now: () => number = Date.now,
+  ttlMs = 60_000,
+) {
+  let cached: { expiresAt: number; report: MediaReadiness } | undefined;
+  let inFlight: Promise<MediaReadiness> | undefined;
+  const inspect = (force = false): Promise<MediaReadiness> => {
+    // Share an active probe even after its original start time passes the TTL.
+    if (inFlight) return inFlight;
+    if (!force && cached && cached.expiresAt > now()) return Promise.resolve(cached.report);
+    inFlight = Promise.resolve().then(probe)
+      .catch(() => unavailableMediaReadiness('media_readiness_unavailable'))
+      .then((report) => {
+        cached = { expiresAt: now() + ttlMs, report };
+        return report;
+      })
+      .finally(() => { inFlight = undefined; });
+    return inFlight;
+  };
+  return {
+    inspect,
+    snapshot(): MediaReadiness {
+      // Optional provider latency must never delay core readiness. Expired or
+      // unfinished diagnostics cannot attest that media is ready.
+      if (cached && cached.expiresAt > now()) return cached.report;
+      void inspect();
+      return unavailableMediaReadiness('media_readiness_pending');
+    },
+  };
+}
+
+// Health polling must not exhaust Cloudinary's Admin API quota. Upload/finalize
+// gates always make fresh provider checks independently of this diagnostics cache.
+const monitor = createMediaReadinessMonitor(readMediaReadiness);
+export const inspectMediaReadiness = monitor.inspect;
+export const getMediaReadinessSnapshot = monitor.snapshot;

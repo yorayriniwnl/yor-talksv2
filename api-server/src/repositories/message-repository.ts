@@ -2,11 +2,12 @@ import { eq, or, and, asc, desc, inArray, gt, lt, isNull, sql } from "drizzle-or
 import { messagesTable, messageReadsTable, messagePreviewEventsTable, conversationsTable, conversationMembersTable,
   conversationInvitationsTable, conversationInvitationApprovalsTable } from "@workspace/db/schema";
 import { db, runInDatabaseTransaction } from "@workspace/db";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
 import { visibleMessagePredicate, toMessageTombstone } from "../utils/message-visibility.js";
 
-const currentVisibility = () => visibleMessagePredicate(sql`(clock_timestamp() AT TIME ZONE 'UTC')`);
+const currentVisibility = () => visibleMessagePredicate(sql`clock_timestamp()`);
 const membershipPredicate = (userId: string) => sql`EXISTS (
   SELECT 1 FROM conversations c WHERE c.id = ${messagesTable.conversationId} AND
   CASE WHEN c.is_group
@@ -103,47 +104,48 @@ export class MessageRepository {
   }
 
   async findById(messageId: string): Promise<MessageRecord | undefined> {
-    const [message] = await db.select().from(messagesTable).where(and(
-      eq(messagesTable.id, messageId),
-      isNull(messagesTable.deletedAt),
-      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-    ));
+    // Never expose deleted or expired message content through ordinary lookups.
+    const [message] = await db.select().from(messagesTable)
+      .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
     return message as MessageRecord | undefined;
   }
 
+  async findVisibleById(messageId: string): Promise<MessageRecord | undefined> {
+    const [visible] = await db.select().from(messagesTable)
+      .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
+    return visible as MessageRecord | undefined;
+  }
+
   async recordPreview(messageId: string, userId: string, previewedAt = new Date().toISOString()): Promise<MessageRecord | undefined> {
-    class PreviewNoLongerAvailable extends Error {}
+    return this.recordVisiblePreview(messageId, userId, new Date(previewedAt));
+  }
+
+  async recordVisiblePreview(messageId: string, userId: string, boundary = new Date(), authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
     try {
-      return await db.transaction(async (tx) => {
-        // The row lock serializes previews against reads and deletes.
-        const [visible] = await tx.select().from(messagesTable).where(and(
-          eq(messagesTable.id, messageId),
-          isNull(messagesTable.deletedAt),
-          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, previewedAt)),
-        )).for("update");
+      return await runInDatabaseTransaction(async tx => {
+        // Serialize previews against reads and erasure. A stale or expired row must not become visible.
+        const [visible] = await tx.select().from(messagesTable)
+          .where(and(eq(messagesTable.id, messageId), currentVisibility())).for("update");
         if (!visible) return undefined;
-        // A recipient read may have committed while the preview waited for the lock.
+        await authorize?.();
         const [read] = await tx.select({ messageId: messageReadsTable.messageId })
           .from(messageReadsTable)
-          .where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId)))
-          .limit(1);
+          .where(and(eq(messageReadsTable.messageId, messageId), eq(messageReadsTable.userId, userId))).limit(1);
         if (read || (visible.recipientId === userId && visible.seenAt != null)) return undefined;
-        await tx.insert(messagePreviewEventsTable).values({ messageId, userId, previewedAt }).onConflictDoUpdate({
+        await tx.insert(messagePreviewEventsTable).values({
+          messageId, userId, previewedAt: boundary.toISOString(),
+        }).onConflictDoUpdate({
           target: [messagePreviewEventsTable.messageId, messagePreviewEventsTable.userId],
-          set: { previewedAt },
+          set: { previewedAt: boundary.toISOString() },
         });
-        // Use the database wall clock after the potentially delayed INSERT.
-        // Roll back its event if the message expired during this transaction.
-        const [message] = await tx.select().from(messagesTable).where(and(
-          eq(messagesTable.id, messageId),
-          isNull(messagesTable.deletedAt),
-          or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, sql`clock_timestamp() AT TIME ZONE 'UTC'`)),
-        ));
-        if (!message) throw new PreviewNoLongerAvailable();
-        return message as MessageRecord;
+        // The database clock may advance past expiry while the insert executes.
+        const [stillVisible] = await tx.select().from(messagesTable)
+          .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
+        if (!stillVisible) throw new PreviewNoLongerVisible();
+        return stillVisible as MessageRecord;
       });
     } catch (error) {
-      if (error instanceof PreviewNoLongerAvailable) return undefined;
+      if (error instanceof PreviewNoLongerVisible) return undefined;
       throw error;
     }
   }
@@ -174,10 +176,6 @@ export class MessageRepository {
     });
   }
 
-  async updateVisible(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
-    return this.update(messageId, updates, authorize);
-  }
-
   async recordVisibleRead(messageId: string, userId: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
     return runInDatabaseTransaction(async (tx) => {
       const readAt = new Date().toISOString();
@@ -206,20 +204,38 @@ export class MessageRepository {
     });
   }
 
-  async addReaction(messageId: string, userId: string, reaction: string): Promise<MessageRecord | undefined> {
-    const currentReactions = sql`COALESCE(${messagesTable.reactions}, '{}'::jsonb)`;
-    const usersForReaction = sql`COALESCE(${messagesTable.reactions} -> ${reaction}, '[]'::jsonb)`;
-    const [updated] = await db.update(messagesTable).set({
-      reactions: sql`CASE
-        WHEN ${usersForReaction} @> jsonb_build_array(${userId}::text) THEN ${currentReactions}
-        ELSE jsonb_set(${currentReactions}, ARRAY[${reaction}]::text[], ${usersForReaction} || jsonb_build_array(${userId}::text), true)
-      END`,
-    }).where(and(
-      eq(messagesTable.id, messageId),
-      isNull(messagesTable.deletedAt),
-      or(isNull(messagesTable.expiresAt), gt(messagesTable.expiresAt, new Date().toISOString())),
-    )).returning();
-    return updated as MessageRecord | undefined;
+  async updateVisible(messageId: string, updates: Partial<MessageRecord>, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async tx=>{
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable).set(updates)
+        .where(and(eq(messagesTable.id, messageId), currentVisibility())).returning();
+      return updated as MessageRecord | undefined;
+    });
+  }
+
+  async addVisibleReaction(messageId: string, userId: string, reaction: string, authorize?: () => Promise<void>): Promise<MessageRecord | undefined> {
+    return runInDatabaseTransaction(async tx => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
+      await authorize?.();
+      const [updated] = await tx.update(messagesTable).set({
+        reactions: sql`jsonb_set(
+          COALESCE(${messagesTable.reactions}, '{}'::jsonb),
+          ARRAY[${reaction}]::text[],
+          (
+            SELECT COALESCE(jsonb_agg(to_jsonb(users.user_id) ORDER BY users.user_id), '[]'::jsonb)
+            FROM (
+              SELECT DISTINCT user_id
+              FROM (
+                SELECT jsonb_array_elements_text(COALESCE(${messagesTable.reactions}->${reaction}, '[]'::jsonb)) AS user_id
+                UNION ALL SELECT ${userId}::text
+              ) current_users
+            ) users
+          ),
+          true
+        )`,
+      }).where(and(eq(messagesTable.id, messageId), currentVisibility())).returning();
+      return updated as MessageRecord | undefined;
+    });
   }
 }
 

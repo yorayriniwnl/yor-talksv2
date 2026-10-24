@@ -1,0 +1,69 @@
+{
+  "executedAt": "2026-10-18T21:59:42.878Z",
+  "toolVersions": {
+    "eslint": "9.39.1",
+    "parser": "8.46.1",
+    "typescript": "5.6.3"
+  },
+  "files": 250,
+  "errors": 0,
+  "warnings": 5,
+  "warningDetails": [
+    {
+      "file": "social/src/App.tsx",
+      "ruleId": null,
+      "message": "'// eslint-disable-next-line react-hooks/exhaustive-deps' has no effect because you have 'noInlineConfig' setting in your config.",
+      "line": 224,
+      "column": 5,
+      "endLine": 224,
+      "endColumn": 60,
+      "severity": 1,
+      "nodeType": null
+    },
+    {
+      "file": "social/src/components/messages/WebRtcCallModal.tsx",
+      "ruleId": null,
+      "message": "'// eslint-disable-next-line react-hooks/exhaustive-deps' has no effect because you have 'noInlineConfig' setting in your config.",
+      "line": 206,
+      "column": 3,
+      "endLine": 206,
+      "endColumn": 58,
+      "severity": 1,
+      "nodeType": null
+    },
+    {
+      "file": "social/src/components/notifications/PushNotificationManager.tsx",
+      "ruleId": null,
+      "message": "'// eslint-disable-next-line react-hooks/exhaustive-deps' has no effect because you have 'noInlineConfig' setting in your config.",
+      "line": 98,
+      "column": 5,
+      "endLine": 98,
+      "endColumn": 60,
+      "severity": 1,
+      "nodeType": null
+    },
+    {
+      "file": "social/src/components/perf/AppProfiler.tsx",
+      "ruleId": null,
+      "message": "'// eslint-disable-next-line no-console' has no effect because you have 'noInlineConfig' setting in your config.",
+      "line": 26,
+      "column": 7,
+      "endLine": 26,
+      "endColumn": 45,
+      "severity": 1,
+      "nodeType": null
+    },
+    {
+      "file": "social/src/lib/telemetryBatcher.ts",
+      "ruleId": null,
+      "message": "'// eslint-disable-next-line no-console' has no effect because you have 'noInlineConfig' setting in your config.",
+      "line": 168,
+      "column": 5,
+      "endLine": 168,
+      "endColumn": 43,
+      "severity": 1,
+      "nodeType": null
+    }
+  ],
+  "scope": "17 named correctness rules; not full recommended React/typed lint; inline suppressions disabled"
+}

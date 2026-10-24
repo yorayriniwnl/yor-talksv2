@@ -1,7 +1,9 @@
-import { randomUUID } from "crypto";
-import { desc, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { grievanceTicketsTable } from "@workspace/db/schema";
+import { readStaffQueueCursor, staffQueueAfter, staffQueuePage } from "../utils/staff-queue-page.js";
+import { ModerationDecisionsService } from "./moderation-decisions-service.js";
 
 export interface ModerationResult {
   isSafe: boolean;
@@ -18,9 +20,90 @@ export interface GrievanceTicket {
   reporterEmail: string;
   description: string;
   status: "received" | "under_review" | "resolved" | "dismissed";
-  slaDeadline: string;
+  slaDeadline: string | null;
   createdAt: string;
   officerNote?: string | null;
+}
+
+export type ModerationTargetType = "post" | "user" | "comment" | "message" | "video";
+export type ModerationAction = "no_action" | "restrict" | "remove" | "restore";
+export type ModerationScope = "public" | "direct_only" | "global";
+export type ModerationEnforcementState = "restricted" | "removed";
+export type AppealRelationship = "author" | "reporter" | "affected_party";
+export type AppealStatus = "pending" | "under_review" | "upheld" | "reversed" | "rejected";
+
+export interface RecordDecisionInput {
+  actorId: string;
+  targetType: ModerationTargetType;
+  targetId: string;
+  action: ModerationAction;
+  scope?: ModerationScope;
+  rationale: string;
+  internalNotes?: string;
+  expiresAt?: string;
+  reportId?: string;
+  grievanceTicketId?: string;
+}
+
+export interface ModerationDecisionRecord {
+  id: string;
+  reportId: string | null;
+  grievanceTicketId: string | null;
+  targetType: ModerationTargetType;
+  targetId: string;
+  action: ModerationAction;
+  scope: ModerationScope;
+  actorId: string | null;
+  rationale: string;
+  internalNotes: string | null;
+  expiresAt: string | null;
+  supersededAt: string | null;
+  supersededBy: string | null;
+  createdAt: string;
+}
+
+export interface ModerationEnforcementRecord {
+  id: string;
+  targetType: ModerationTargetType;
+  targetId: string;
+  activeDecisionId: string;
+  state: ModerationEnforcementState;
+  scope: ModerationScope;
+  reason: string;
+  appliedAt: string;
+  expiresAt: string | null;
+  updatedAt: string;
+}
+
+export interface ModerationNoticeRecord {
+  id: string;
+  decisionId: string;
+  recipientUserId: string;
+  recipientRole: "author" | "reporter" | "affected_party";
+  targetType: ModerationTargetType;
+  targetId: string;
+  safeSummary: string;
+  action: ModerationAction;
+  appealEligible: boolean;
+  appealDeadline: string | null;
+  acknowledgedAt: string | null;
+  createdAt: string;
+}
+
+export interface ModerationAppealRecord {
+  id: string;
+  decisionId: string;
+  appellantUserId: string;
+  relationship: AppealRelationship;
+  statement: string;
+  status: AppealStatus;
+  reviewerId: string | null;
+  reviewerNotes: string | null;
+  publicRationale: string | null;
+  outcomeDecisionId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const BLOCKED_PATTERNS = [
@@ -31,10 +114,11 @@ const BLOCKED_PATTERNS = [
 ];
 
 const FLAGGED_KEYWORDS = [
-  "scam", "phishing", "pirated", "free nitro", "hack tool", "illegal"
+  "scam", "phishing", "pirated", "free nitro", "hack tool", "illegal",
 ];
 
-export class ModerationService {
+export class ModerationService extends ModerationDecisionsService {
+
   /**
    * Screen text or caption for toxicity and safety
    */
@@ -90,9 +174,6 @@ export class ModerationService {
   }): Promise<GrievanceTicket> {
     const ticketId = `YT-GRV-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const now = new Date();
-    // 24 hours acknowledgment, 15 days redressal as mandated by Indian IT Rules 2021
-    const slaDeadline = new Date(now.getTime() + 15 * 86400 * 1000).toISOString();
-
     const [ticket] = await db.insert(grievanceTicketsTable).values({
       id: randomUUID(),
       ticketId,
@@ -102,7 +183,6 @@ export class ModerationService {
       reporterEmail: data.reporterEmail,
       description: data.description,
       status: "received",
-      slaDeadline,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     }).returning();
@@ -120,12 +200,14 @@ export class ModerationService {
     return (ticket as GrievanceTicket | undefined) ?? null;
   }
 
-  async listGrievances(status?: GrievanceTicket["status"]): Promise<GrievanceTicket[]> {
+  async listGrievances(status?: GrievanceTicket["status"], cursorValue?: string, limit = 50) {
+    const cursor = readStaffQueueCursor(cursorValue, 'grievances', status);
     const rows = await db.select().from(grievanceTicketsTable)
-      .where(status ? eq(grievanceTicketsTable.status, status) : undefined)
-      .orderBy(desc(grievanceTicketsTable.createdAt))
-      .limit(200);
-    return rows as GrievanceTicket[];
+      .where(and(status ? eq(grievanceTicketsTable.status, status) : undefined,
+        staffQueueAfter(grievanceTicketsTable.createdAt, grievanceTicketsTable.id, cursor)))
+      .orderBy(desc(grievanceTicketsTable.createdAt), desc(grievanceTicketsTable.id))
+      .limit(limit + 1);
+    return staffQueuePage(rows, limit, 'grievances', status);
   }
 
   async updateGrievanceStatus(ticketId: string, status: GrievanceTicket["status"], officerNote?: string): Promise<GrievanceTicket | null> {
@@ -139,4 +221,5 @@ export class ModerationService {
       .returning();
     return (updated as GrievanceTicket | undefined) ?? null;
   }
+
 }

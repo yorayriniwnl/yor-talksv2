@@ -2,14 +2,13 @@ import { Queue, type Job } from "bullmq";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { inspectRedisCompatibility } from "../lib/redis-compat.js";
+import { boundedQueueRetention, notificationJobOptions } from "../lib/queue-job-retention.js";
 
 export class QueueService {
   private queue: Queue | null = null;
   private initialization: Promise<Queue | null> | null = null;
   private nextRetryAt = 0;
   private readonly retryDelayMs = 30_000;
-  private readonly completedRetention = { age: 7 * 24 * 60 * 60, count: 1_000 };
-  private readonly failedRetention = { age: 30 * 24 * 60 * 60, count: 5_000 };
 
   constructor(private readonly redisUrl = env.REDIS_URL) {}
 
@@ -61,6 +60,11 @@ export class QueueService {
   }
 
   async enqueue(type: string, payload: unknown): Promise<Job | undefined> {
+    const record = typeof payload === 'object' && payload !== null ? payload as Record<string, unknown> : undefined;
+    const notificationId = record?.notificationId ?? record?.id;
+    if (type === 'notification:deliver' && (typeof notificationId !== 'string' || !notificationId)) {
+      throw new Error('Notification delivery requires a persisted notification ID');
+    }
     const queue = await this.initializeQueue();
     if (!queue) {
       logger.warn({ type }, "BullMQ queue unavailable; durable caller record will be retried when Redis recovers");
@@ -70,19 +74,15 @@ export class QueueService {
     const jobId = typeof payload === "object" && payload !== null && "id" in payload
       ? String((payload as { id: unknown }).id)
       : undefined;
-    const preserveForReview = /(?:moderation|audit|review|operator)/i.test(type);
-    const options = {
+    const options = type === 'notification:deliver' ? notificationJobOptions(notificationId as string) : {
+      // Review records require an explicit operator disposition. Ordinary
+      // delivery retention must not silently prune an outstanding review.
+      ...(type === 'moderation:review'
+        ? { removeOnComplete: false, removeOnFail: false }
+        : boundedQueueRetention()),
       ...(jobId ? { jobId } : {}),
-      ...(!preserveForReview ? {
-        removeOnComplete: this.completedRetention,
-        removeOnFail: this.failedRetention,
-      } : {
-        removeOnComplete: false,
-        removeOnFail: false,
-      }),
-      ...(type === "notification:deliver" ? { attempts: 5, backoff: { type: "exponential" as const, delay: 30_000 } } : {}),
     };
-    return queue.add(type, payload, options);
+    return queue.add(type, type === 'notification:deliver' ? { notificationId } : payload, options);
   }
 
   /** Removes and returns the next waiting job for administrative/manual processing. */

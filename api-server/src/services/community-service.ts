@@ -8,6 +8,7 @@ import { AIService } from "./ai-service.js";
 import { enforceTextContentPolicy } from "./content-policy-service.js";
 import { ContentSafetyService } from "./content-safety-service.js";
 import { DEFAULT_CONTENT_RATING } from "../utils/content-safety.js";
+import { lockActiveUser } from "../utils/active-user-lock.js";
 
 export class CommunityService {
   constructor(
@@ -134,6 +135,7 @@ export class CommunityService {
     if (!community) return undefined;
     if (!(await this.isMember(community.id, userId))) throw new Error("Join this community before liking a discussion");
     return db.transaction(async (tx) => {
+      if (!(await lockActiveUser(tx, userId))) return undefined;
       const [locked] = await tx.select().from(communitiesTable).where(eq(communitiesTable.id, community.id)).for("update");
       const [membership] = await tx.select({ userId: communityMembersTable.userId }).from(communityMembersTable).where(and(
         eq(communityMembersTable.communityId, community.id),
@@ -145,6 +147,7 @@ export class CommunityService {
       if (index < 0) return undefined;
       const current = discussions[index];
       if (!current.authorId) return undefined;
+      if (!(await this.contentSafetyService.isVisible(current, userId, current.authorId))) return undefined;
       const likedBy = Array.isArray(current.likedBy) ? current.likedBy : [];
       if (!likedBy.includes(userId)) {
         discussions[index] = { ...current, likedBy: [...likedBy, userId], likes: (current.likes ?? 0) + 1 };

@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAccessibilityPreferences } from '@/components/accessibility/AccessibilityProvider';
 import { useAppStore, type Post } from '@/lib/store';
 import { api, type CreatorWorkspaceItem, type CreatorWorkspaceKind } from '@/lib/api-client';
 import { CONTENT_CATEGORIES, resolveContentCategory, type ContentCategory } from '@/lib/content-category';
@@ -121,10 +122,8 @@ export default function ControlRoom() {
   const [collabTitle, setCollabTitle] = useState('');
   const [collabBrief, setCollabBrief] = useState('');
   const [collabRole, setCollabRole] = useState('Designer, engineer, or storyteller');
-  const [largeText, setLargeText] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const [captions, setCaptions] = useState(true);
+  const accessibility = useAccessibilityPreferences();
+  const { largeText, highContrast, reducedMotion, captions } = accessibility.preferences;
   const [worldDraft, setWorldDraft] = useState<WorldPreferences>(worldPreferences ?? DEFAULT_WORLD_PREFERENCES);
 
   useEffect(() => {
@@ -136,15 +135,7 @@ export default function ControlRoom() {
     return () => { active = false; };
   }, []);
 
-  const preferenceItem = workspace.find((item) => item.kind === 'preference' && item.itemKey === 'accessibility');
   const worldPreferenceItem = workspace.find((item) => item.kind === 'preference' && item.itemKey === 'world');
-  useEffect(() => {
-    const payload = itemPayload(preferenceItem);
-    setLargeText(payload.largeText === true);
-    setHighContrast(payload.highContrast === true);
-    setReducedMotion(payload.reducedMotion === true);
-    setCaptions(payload.captions !== false);
-  }, [preferenceItem]);
 
   useEffect(() => {
     if (!worldPreferenceItem) return;
@@ -152,15 +143,6 @@ export default function ControlRoom() {
     setWorldDraft((current) => ({ ...current, ...payload }));
     updateWorldPreferences(payload);
   }, [worldPreferenceItem]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('yor-accessibility-large-text', largeText);
-    document.documentElement.classList.toggle('yor-accessibility-high-contrast', highContrast);
-    document.documentElement.classList.toggle('yor-accessibility-reduced-motion', reducedMotion);
-    return () => {
-      document.documentElement.classList.remove('yor-accessibility-large-text', 'yor-accessibility-high-contrast', 'yor-accessibility-reduced-motion');
-    };
-  }, [largeText, highContrast, reducedMotion]);
 
   const saveItem = async (kind: CreatorWorkspaceKind, itemKey: string, payload: Record<string, unknown>) => {
     setSaving(true);
@@ -215,13 +197,12 @@ export default function ControlRoom() {
   const collections = workspace.filter((item) => item.kind === 'collection');
   const collaborations = workspace.filter((item) => item.kind === 'collaboration');
 
-  const updateAccessibility = async (key: string, value: boolean) => {
-    const next = { largeText, highContrast, reducedMotion, captions, [key]: value };
-    if (key === 'largeText') setLargeText(value);
-    if (key === 'highContrast') setHighContrast(value);
-    if (key === 'reducedMotion') setReducedMotion(value);
-    if (key === 'captions') setCaptions(value);
-    await saveItem('preference', 'accessibility', next);
+  const updateAccessibility = async (key: keyof typeof accessibility.preferences, value: boolean) => {
+    try {
+      await accessibility.update(key, value);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save your accessibility settings. Your previous settings have been restored.');
+    }
   };
 
   const toggleQuest = async (questKey: string) => {
@@ -436,7 +417,7 @@ export default function ControlRoom() {
 
         {panel === 'accessibility' && (
           <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="surface-1 rounded-3xl border border-border/40 p-6"><div className="mb-6 flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Accessibility className="h-6 w-6" /></div><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Personal access layer</p><h2 className="font-display text-xl font-black">Make the interface work for you.</h2></div></div><div className="space-y-3">{([['largeText', 'Large text', 'Increase reading scale across the whole Yor experience.', largeText], ['highContrast', 'High contrast', 'Increase separation between surfaces, borders, and text.', highContrast], ['reducedMotion', 'Reduced motion', 'Respect a calmer, lower-motion experience.', reducedMotion], ['captions', 'Captions & transcripts', 'Prefer captions whenever media supports them.', captions]] as const).map(([key, label, description, checked]) => <label key={key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border/40 bg-background/30 p-4"><input type="checkbox" checked={checked} onChange={(event) => void updateAccessibility(key, event.target.checked)} className="mt-1 h-4 w-4 accent-primary" /><span className="flex-1"><span className="block text-sm font-bold">{label}</span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{description}</span></span>{checked && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />}</label>)}</div></div><div className="space-y-6"><div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.16] to-card p-6"><Gauge className="mb-5 h-8 w-8 text-primary" /><h3 className="font-display text-xl font-black">Live preview</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Your settings apply instantly to this browser and persist to your Creator Workspace.</p><div className="mt-5 rounded-2xl border border-border/40 bg-background/50 p-4"><p className="text-xs font-bold">Readable by design.</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Every feature should be discoverable by keyboard, legible in contrast, and understandable without audio.</p></div></div><div className="surface-1 rounded-3xl border border-border/40 p-6"><div className="mb-4 flex items-center gap-2"><Radio className="h-4 w-4 text-rose-400" /><h3 className="font-display font-bold">Media checklist</h3></div><div className="space-y-2 text-xs text-muted-foreground"><p>✓ Audience rating required before publish</p><p>✓ Category required before publish</p><p>{captions ? '✓' : '○'} Captions preference saved</p><p>○ Transcript generation can be enabled when media processing is connected</p></div></div></div></section>
+            <div className="surface-1 rounded-3xl border border-border/40 p-6"><div className="mb-6 flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Accessibility className="h-6 w-6" /></div><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">Personal access layer</p><h2 className="font-display text-xl font-black">Make the interface work for you.</h2></div></div><div className="space-y-3">{accessibility.loading && <p role="status" className="text-sm text-muted-foreground">Loading your accessibility settings...</p>}{accessibility.error && <div role="alert" className="space-y-2 text-sm"><p>{accessibility.error}</p><Button variant="outline" onClick={accessibility.reload}>Retry accessibility settings</Button></div>}{accessibility.saving && <p role="status" className="text-sm text-muted-foreground">Saving accessibility settings...</p>}{([['largeText', 'Large text', 'Increase reading scale across the whole Yor experience.', largeText], ['highContrast', 'High contrast', 'Increase separation between surfaces, borders, and text.', highContrast], ['reducedMotion', 'Reduced motion', 'Respect a calmer, lower-motion experience.', reducedMotion], ['captions', 'Captions & transcripts', 'Prefer captions whenever media supports them.', captions]] as const).map(([key, label, description, checked]) => <label key={key} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border/40 bg-background/30 p-4"><input type="checkbox" checked={checked} disabled={accessibility.loading || accessibility.saving || Boolean(accessibility.error)} onChange={(event) => void updateAccessibility(key, event.target.checked)} className="mt-1 h-4 w-4 accent-primary" /><span className="flex-1"><span className="block text-sm font-bold">{label}</span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{description}</span></span>{checked && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />}</label>)}</div></div><div className="space-y-6"><div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.16] to-card p-6"><Gauge className="mb-5 h-8 w-8 text-primary" /><h3 className="font-display text-xl font-black">Live preview</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Your settings apply instantly to this browser and persist to your Creator Workspace.</p><div className="mt-5 rounded-2xl border border-border/40 bg-background/50 p-4"><p className="text-xs font-bold">Readable by design.</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Every feature should be discoverable by keyboard, legible in contrast, and understandable without audio.</p></div></div><div className="surface-1 rounded-3xl border border-border/40 p-6"><div className="mb-4 flex items-center gap-2"><Radio className="h-4 w-4 text-rose-400" /><h3 className="font-display font-bold">Media checklist</h3></div><div className="space-y-2 text-xs text-muted-foreground"><p>✓ Audience rating required before publish</p><p>✓ Category required before publish</p><p>{captions ? '✓' : '○'} Captions preference saved</p><p>○ Transcript generation can be enabled when media processing is connected</p></div></div></div></section>
         )}
       </section>
     </div>

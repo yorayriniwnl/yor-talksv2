@@ -1,0 +1,1 @@
+[production config] API env wiring covers 69 schema keys; Compose requirements are present in the production example and CI fixture.

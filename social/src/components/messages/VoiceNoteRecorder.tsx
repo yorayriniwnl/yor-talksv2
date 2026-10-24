@@ -173,7 +173,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel, purpose = 'messag
             </span>
           </div>
 
-          <canvas ref={canvasRef} width={160} height={32} className="h-6 w-32" />
+          <canvas aria-hidden="true" ref={canvasRef} width={160} height={32} className="h-6 w-32" />
 
           <Button
             size="sm"
@@ -190,6 +190,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel, purpose = 'messag
               size="icon"
               variant="ghost"
               onClick={togglePlayback}
+              aria-label={isPlaying ? 'Pause voice note preview' : 'Play voice note preview'}
               className="w-8 h-8 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-primary" />}
@@ -203,6 +204,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel, purpose = 'messag
             <Button
               size="icon"
               variant="ghost"
+              aria-label="Discard voice note"
               onClick={() => {
                 if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
                 setAudioBlobUrl(null);

@@ -1,0 +1,245 @@
+.pr-brand { white-space: nowrap; font-size: 38px; letter-spacing: -2px; gap: 5px; }
+.pr-social-hero { position: relative; isolation: isolate; padding-top: 76px; padding-bottom: 34px; }
+.pr-social-hero::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: min(780px, 80vw); height: 680px; right: -130px; top: -30px; background: radial-gradient(ellipse, #e4c9a008, transparent 65%); }
+.pr-social-hero-grid { display: grid; grid-template-columns: minmax(0, 1.13fr) minmax(0, 1fr); align-items: center; gap: clamp(34px, 5.4vw, 80px); }
+.pr-social-hero .pr-product-copy { min-width: 0; width: auto; margin: 0; padding: 0 0 12px; }
+.pr-social-hero h1 { max-width: 100%; font-size: clamp(61px, 5.7vw, 82px); font-weight: 450; letter-spacing: -.065em; line-height: 1.035; margin: 27px 0 27px; }
+.pr-social-hero h1 em { font-style: normal; color: var(--pr-accent); }
+.pr-social-hero .pr-hero-description { max-width: 460px; font-size: 16px; line-height: 1.9; color: #b7b8b2; letter-spacing: -.1px; }
+.pr-social-hero .pr-hero-description strong { font-weight: 500; color: #f1eee6; }
+.pr-social-hero .pr-product-actions { gap: 22px; margin-top: 29px; }
+.pr-social-hero .pr-hero-detail { margin-top: 17px; font-size: 11px; color: #969b92; }
+.pr-social-hero .pr-product-date { margin-top: 29px; }
+.pr-social-signoff { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 52px; color: #8d948b; font-family: 'JetBrains Mono', monospace; font-size: 8px; line-height: 1.8; letter-spacing: .7px; }
+.pr-social-signoff a { display: flex; align-items: center; gap: 12px; }
+
+.ys-preview { --ys-text: #efeee7; --ys-muted: #a2a79b; --ys-line: #ede5d51c; position: relative; min-width: 0; width: 100%; max-width: 494px; margin: 0 0 0 auto; }
+.ys-app { position: relative; overflow: hidden; border: 1px solid #e4c9a036; border-radius: 18px; background: #171a18; color: var(--ys-text); box-shadow: 0 28px 70px #0004, 0 1px 0 #ffffff08 inset; }
+.ys-app :is(button, a):focus-visible { outline: 2px solid #e4c9a0; outline-offset: -3px; }
+.ys-app-brand { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 25px 27px 22px; }
+.ys-app-brand > span:first-child { font-family: Outfit, sans-serif; font-size: 26px; font-weight: 550; letter-spacing: -1.3px; line-height: 1; }
+.ys-app-brand > span:first-child > span { font-size: 13px; color: #e4c9a0; vertical-align: top; margin-left: 4px; }
+.ys-preview-label { font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: 1.1px; color: #a3a79a; }
+.ys-navigation { display: flex; padding-inline: 27px; border-bottom: 1px solid var(--ys-line); gap: 28px; }
+.ys-navigation button { border: 0; border-bottom: 2px solid transparent; padding: 11px 0 13px; min-height: 44px; background: transparent; color: #a1a69a; font-size: 11px; font-weight: 500; cursor: pointer; transition: color .2s, border-color .2s; }
+.ys-navigation button:hover { color: #efeee7; }
+.ys-navigation button[aria-pressed=true] { border-color: #e4c9a0; color: #e4c9a0; }
+.ys-app-content { min-height: 456px; }
+.ys-feed-intro { display: flex; align-items: center; justify-content: space-between; padding: 23px 27px 20px; }
+.ys-feed-intro > div > span { font-family: 'JetBrains Mono', monospace; font-size: 6px; line-height: 1.7; letter-spacing: 1.2px; color: #989f92; }
+.ys-feed-intro h2 { font-family: Outfit, sans-serif; font-size: 25px; line-height: 1.15; letter-spacing: -.7px; font-weight: 400; margin: 7px 0 0; }
+.ys-feed-mark { font-size: 29px; font-weight: 300; line-height: 1; color: #e4c9a0; }
+.ys-avatar { display: grid; flex: 0 0 33px; place-items: center; width: 33px; height: 33px; border-radius: 50%; font: 450 19px/1 Outfit, sans-serif; letter-spacing: -.5px; }
+.ys-avatar--peach { background: #bda080; color: #2c241e; }
+.ys-avatar--blue { background: #839d9b; color: #1e302e; }
+.ys-avatar--lime { background: #a9b195; color: #2a3528; }
+.ys-post-heading { display: flex; align-items: center; gap: 9px; padding: 0 27px 15px; }
+.ys-post-heading > div { display: grid; gap: 4px; }
+.ys-post-heading strong { font-size: 11px; font-weight: 500; }
+.ys-post-heading > div > span { color: #9da494; font-size: 10px; }
+.ys-audience { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 6px 8px; border: 1px solid #becba62b; border-radius: 4px; color: #bac5a9; font-size: 9px; white-space: nowrap; }
+.ys-post-art { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; aspect-ratio: 1.68; overflow: hidden; margin-inline: 17px; padding: 25px 24px; border-radius: 5px; background: #e9decb; color: #39392f; }
+.ys-post-art::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(125deg, #fff9ef3d, transparent 55%), repeating-linear-gradient(90deg, transparent 0 81px, #4a3e2e06 82px); }
+.ys-art-edition { position: absolute; top: 19px; left: 24px; font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: 1.3px; color: #6e695a; }
+.ys-art-title { position: relative; font-family: Outfit, sans-serif; font-size: clamp(33px, 3.2vw, 46px); font-weight: 400; line-height: 1.04; letter-spacing: -1.8px; margin-top: 18px; }
+.ys-art-caption { position: absolute; left: 24px; bottom: 21px; font-size: 8px; color: #615f51; letter-spacing: .1px; }
+.ys-art-signature { position: absolute; right: 20px; bottom: 16px; font-family: Outfit, sans-serif; font-size: 22px; letter-spacing: -1.2px; color: #57573f; }
+.ys-art-sun { position: absolute; z-index: -1; width: 116px; height: 116px; top: 27px; right: -25px; border-radius: 50%; background: #b38453; opacity: .65; }
+.ys-art-arch { position: absolute; z-index: -1; top: 48px; right: 35px; width: 109px; height: 245px; border: 1px solid #7b7e6161; border-radius: 100px 100px 0 0; background: linear-gradient(100deg, #a5ac8f8f, #8b95724f); transform: rotate(19deg); box-shadow: 10px 0 0 #e9decb, 11px 0 0 #7b7e6130, 22px 0 0 #e9decb, 23px 0 0 #7b7e6120; }
+.ys-post-actions { display: flex; align-items: center; gap: 22px; padding: 4px 27px 0; }
+.ys-post-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 0; padding: 6px 0; background: transparent; color: #b8bcae; font-size: 11px; cursor: pointer; transition: color .2s; }
+.ys-post-actions button:hover { color: #e4c9a0; }
+.ys-post-actions button[aria-pressed=true] { color: #e4c9a0; }
+.ys-post-actions button:last-child { margin-left: auto; }
+.ys-caption { padding: 0 27px; margin: 1px 0 20px; color: #a5ac9c; font-size: 11px; line-height: 1.8; }
+.ys-caption strong { color: #e2e3d9; margin-right: 5px; font-weight: 500; }
+.ys-sample-replies { border-top: 1px solid var(--ys-line); padding: 12px 27px; color: #b1b7a6; font-size: 11px; line-height: 1.7; }
+.ys-sample-replies strong { margin-right: 7px; color: #e4e5dc; font-weight: 500; }
+.ys-app-footnote { display: flex; align-items: center; justify-content: center; gap: 6px; border-top: 1px solid var(--ys-line); padding: 13px 12px; color: #9da491; font-size: 10px; line-height: 1.7; text-align: center; }
+.ys-tiny-dot { flex: 0 0 4px; width: 4px; height: 4px; background: #aebd95; border-radius: 50%; }
+.ys-preview-caption { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 2px 0; color: #8f958a; font-size: 8px; line-height: 1.7; }
+.ys-preview-caption > span:first-child { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: 1px; color: #bdb09a; }
+.ys-preview-caption > span:last-child { display: flex; align-items: center; gap: 7px; }
+
+.ys-messages, .ys-communities { padding: 26px 27px; }
+.ys-conversation-heading { display: flex; align-items: center; gap: 10px; padding-bottom: 21px; border-bottom: 1px solid var(--ys-line); }
+.ys-conversation-heading > div { display: grid; gap: 5px; }
+.ys-conversation-heading strong { font-family: Outfit, sans-serif; font-size: 20px; font-weight: 400; letter-spacing: -.4px; }
+.ys-conversation-heading > div > span { font-size: 10px; color: #9ca58f; }
+.ys-conversation-count { margin-left: auto; color: #aab39b; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .4px; }
+.ys-day { margin: 23px 0; font-family: 'JetBrains Mono', monospace; text-align: center; font-size: 8px; line-height: 1.7; letter-spacing: .4px; color: #9aa48d; }
+.ys-message { max-width: 85%; margin-bottom: 17px; }
+.ys-message > span { display: block; font-size: 10px; margin: 0 0 6px 3px; color: #9ca791; }
+.ys-message p { width: fit-content; padding: 11px 14px; border-radius: 3px 11px 11px; background: #292f28; color: #d4dacb; font-size: 12px; line-height: 1.8; margin: 0; }
+.ys-message--mine { margin-left: auto; text-align: right; }
+.ys-message--mine p { margin-left: auto; border-radius: 11px 3px 11px 11px; background: #c5cfb4; color: #293125; }
+.ys-message-invitation { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 28px; padding: 9px 12px; border: 1px solid var(--ys-line); border-radius: 6px; font-size: 11px; color: #a5ad99; }
+.ys-message-invitation a { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 4px; background: #e4c9a0; color: #352f23; }
+.ys-mini-label { font-family: 'JetBrains Mono', monospace; font-size: 6px; line-height: 1.7; letter-spacing: 1px; margin: 2px 0 13px; color: #a5ad99; }
+.ys-communities h2 { margin: 0 0 24px; font-family: Outfit, sans-serif; font-weight: 400; font-size: 29px; line-height: 1.13; letter-spacing: -.8px; }
+.ys-community-list { display: grid; gap: 8px; }
+.ys-community-list button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 12px; border: 1px solid var(--ys-line); border-radius: 6px; background: transparent; color: #dfe3d6; text-align: left; cursor: pointer; transition: background .2s, border-color .2s; }
+.ys-community-list button[aria-pressed=true] { border-color: #c6b18e70; background: #e4c9a009; }
+.ys-community-list button:hover { background: #e4c9a00d; }
+.ys-community-list button > span:nth-child(2) { display: grid; gap: 5px; min-width: 0; }
+.ys-community-list strong { font-size: 11px; font-weight: 500; }
+.ys-community-list small { color: #a0ab93; font-size: 10px; line-height: 1.6; }
+.ys-community-list button > svg { flex-shrink: 0; margin-left: auto; color: #b4bca6; }
+.ys-community-note { display: flex; align-items: start; gap: 10px; min-height: 76px; padding: 18px 0; color: #b8bfa9; }
+.ys-community-note svg { flex-shrink: 0; margin-top: 1px; color: #e4c9a0; }
+.ys-community-note p { margin: 0; font-size: 11px; line-height: 1.8; }
+.ys-community-invitation { display: flex; align-items: center; justify-content: space-between; gap: 9px; min-height: 44px; font-size: 11px; font-weight: 500; padding-top: 3px; color: #e4c9a0 !important; }
+
+.ys-features { padding-block: 90px 10px; }
+.ys-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.ys-feature-grid article { display: flex; flex-direction: column; min-width: 0; padding: 29px 24px 25px; border: 1px solid #ede5d51f; border-radius: 8px; background: linear-gradient(145deg, #e4c9a004, #ffffff02); }
+.ys-feature-label { display: flex; align-items: center; gap: 9px; font-family: 'JetBrains Mono', monospace; font-size: 8px; line-height: 1.8; letter-spacing: .3px; color: #b7bbae; }
+.ys-feature-label svg { flex-shrink: 0; color: var(--pr-accent); }
+.ys-feature-grid h3 { font-family: Outfit, sans-serif; font-weight: 400; font-size: 29px; line-height: 1.18; letter-spacing: -.8px; margin: 25px 0 16px; color: #eeeee4; }
+.ys-feature-grid article > p { margin: 0 0 29px; font-size: 12px; color: #a4ac9a; line-height: 1.9; }
+.ys-note-preview { display: flex; align-items: start; gap: 10px; padding: 18px 13px; margin-top: auto; border: 1px solid #ede5d51c; border-radius: 5px; background: #1a1f19; }
+.ys-note-preview > div { min-width: 0; }
+.ys-note-audience { display: block; font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: .6px; color: #a9b99a; margin-bottom: 8px; }
+.ys-note-preview strong { font-size: 9px; line-height: 1.6; font-weight: 500; color: #e2e7d9; }
+.ys-note-preview p { font-size: 9px; line-height: 1.8; color: #aab69d; margin: 5px 0 0; }
+.ys-note-preview > svg { flex-shrink: 0; margin-left: auto; color: #c9b797; }
+.ys-chat-preview { display: grid; justify-items: start; gap: 9px; margin-top: auto; padding-block: 4px; }
+.ys-chat-preview > span { font-size: 10px; line-height: 1.8; padding: 10px 13px; background: #282f27; border-radius: 3px 11px 11px; color: #d3ddc8; }
+.ys-chat-preview > span:last-child { display: flex; align-items: center; gap: 8px; justify-self: end; color: #2a3225; background: #c7cfb7; border-radius: 11px 3px 11px 11px; }
+.ys-chat-preview svg { flex-shrink: 0; }
+.ys-interest-preview { display: flex; align-content: center; flex-wrap: wrap; gap: 8px; margin-top: auto; min-height: 100px; }
+.ys-interest-preview span { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #ede5d526; border-radius: 4px; padding: 10px 12px; font-size: 10px; color: #b9c5ad; }
+.ys-interest-preview span:first-child { background: #e4c9a00c; color: #dec9a6; border-color: #e4c9a03d; }
+.ys-interest-preview span:last-child { color: #bbc8ad; background: #aebd950a; border-color: #aebd9533; }
+.pr-world-section { padding-top: 0; padding-bottom: 90px; }
+
+@media (max-width: 1100px) {
+  .pr-brand { font-size: 31px; letter-spacing: -1.6px; }
+  .pr-social-hero { padding-top: 58px; }
+  .pr-social-hero-grid { grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr); gap: 32px; }
+  .pr-social-hero h1 { font-size: clamp(54px, 6.3vw, 69px); letter-spacing: -.065em; }
+  .pr-social-hero .pr-hero-description { font-size: 14px; line-height: 1.9; }
+  .pr-social-hero .pr-product-actions { gap: 12px; }
+  .pr-social-hero .pr-explore-link { font-size: 11px; }
+  .ys-app-brand { padding-inline: 21px; }
+  .ys-navigation { padding-inline: 21px; gap: 24px; }
+  .ys-feed-intro, .ys-post-heading { padding-inline: 21px; }
+  .ys-art-title { font-size: 36px; }
+  .ys-art-sun { width: 96px; height: 96px; }
+  .ys-art-arch { right: 18px; width: 83px; }
+  .ys-post-art { aspect-ratio: 1.4; margin-inline: 13px; padding-inline: 19px; }
+  .ys-art-edition, .ys-art-caption { left: 19px; }
+  .ys-post-actions, .ys-caption { padding-inline: 21px; }
+  .ys-feature-grid { gap: 14px; }
+  .ys-feature-grid article { padding: 25px 17px; }
+  .ys-feature-grid h3 { font-size: 26px; }
+  .ys-feature-label { font-size: 7px; }
+  .ys-note-preview { gap: 7px; padding-inline: 10px; }
+  .ys-note-preview > svg { display: none; }
+}
+@media (max-width: 850px) {
+  .pr-social-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .pr-social-hero .pr-product-copy { max-width: 610px; padding-bottom: 0; }
+  .pr-social-hero h1 { font-size: clamp(61px, 9.7vw, 78px); }
+  .pr-social-hero .pr-hero-description { max-width: 490px; font-size: 16px; }
+  .pr-social-hero .pr-product-actions { gap: 24px; }
+  .ys-preview { margin: 0 auto; width: min(100%, 494px); }
+  .ys-app-brand { padding: 25px 27px 22px; }
+  .ys-navigation { padding-inline: 27px; gap: 28px; }
+  .ys-feed-intro, .ys-post-heading, .ys-post-actions, .ys-caption { padding-inline: 27px; }
+  .ys-post-art { aspect-ratio: 1.68; margin-inline: 17px; padding-inline: 24px; }
+  .ys-art-edition, .ys-art-caption { left: 24px; }
+  .ys-art-title { font-size: 45px; }
+  .ys-art-arch { right: 35px; width: 109px; }
+  .ys-art-sun { width: 116px; height: 116px; }
+  .pr-social-signoff { margin-top: 35px; }
+  .ys-features { padding-top: 72px; }
+  .ys-feature-grid { grid-template-columns: 1fr; gap: 16px; }
+  .ys-feature-grid article { padding: 25px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; }
+  .ys-feature-label { grid-column: 1 / -1; font-size: 8px; }
+  .ys-feature-grid h3 { grid-column: 1; margin-block: 21px 14px; font-size: 28px; }
+  .ys-feature-grid article > p { grid-column: 1; margin-bottom: 0; }
+  .ys-feature-grid article > div { grid-column: 2; grid-row: 2 / 4; align-self: center; margin: 0; }
+  .pr-world-section { padding-bottom: 70px; }
+}
+@media (max-width: 600px) {
+  .pr-header { gap: 10px; }
+  .pr-brand { font-size: 27px; letter-spacing: -1.2px; gap: 3px; }
+  .pr-brand > span { font-size: 11px; margin-top: 2px; }
+  .pr-header-makers > svg { display: none; }
+  .pr-header-makers strong { font-size: 11px; }
+  .pr-header-makers > span { font-size: 7px; }
+  .pr-social-hero { padding-top: 40px; padding-bottom: 27px; }
+  .pr-social-hero-grid { gap: 35px; }
+  .pr-social-hero h1 { font-size: clamp(55px, 12.8vw, 65px); letter-spacing: -.065em; margin-block: 23px; }
+  .pr-social-hero .pr-hero-description { font-size: 14px; line-height: 1.9; max-width: 390px; }
+  .pr-social-hero .pr-product-actions { gap: 14px; margin-top: 25px; }
+  .pr-social-hero .pr-hero-detail { font-size: 10px; line-height: 1.8; }
+  .pr-social-hero .pr-product-date { margin-top: 22px; }
+  .pr-social-signoff { font-size: 6px; letter-spacing: .4px; gap: 20px; }
+  .pr-social-signoff > span { max-width: 130px; }
+  .pr-social-signoff a { gap: 8px; }
+  .ys-app { border-radius: 12px; }
+  .ys-app-brand { padding: 23px 20px 19px; }
+  .ys-app-brand > span:first-child { font-size: 24px; }
+  .ys-preview-label { font-size: 6px; letter-spacing: .7px; }
+  .ys-navigation { padding-inline: 20px; justify-content: space-between; gap: 12px; }
+  .ys-app-content { min-height: 423px; }
+  .ys-feed-intro { padding: 22px 20px 20px; }
+  .ys-feed-intro h2 { font-size: 24px; }
+  .ys-feed-intro > div > span { font-size: 5px; }
+  .ys-feed-mark { font-size: 26px; }
+  .ys-post-heading { padding-inline: 20px; }
+  .ys-post-art { aspect-ratio: 1.4; margin-inline: 12px; padding-inline: 19px; }
+  .ys-art-title { font-size: clamp(34px, 10.3vw, 45px); letter-spacing: -1.5px; }
+  .ys-art-edition { top: 17px; left: 19px; font-size: 5px; }
+  .ys-art-caption { left: 19px; bottom: 19px; font-size: 7px; }
+  .ys-art-sun { width: 100px; height: 100px; top: 27px; right: -25px; }
+  .ys-art-arch { width: 83px; right: 18px; top: 46px; }
+  .ys-audience { padding: 6px; }
+  .ys-post-actions, .ys-caption { padding-inline: 20px; }
+  .ys-post-actions { gap: 20px; }
+  .ys-app-footnote { padding-block: 12px; }
+  .ys-preview-caption { padding-top: 13px; font-size: 7px; }
+  .ys-preview-caption > span:first-child { font-size: 5px; letter-spacing: .8px; }
+  .ys-messages, .ys-communities { padding: 23px 20px; }
+  .ys-communities h2 { font-size: 27px; }
+  .ys-features { padding-top: 58px; }
+  .ys-feature-grid { gap: 15px; }
+  .ys-feature-grid article { display: flex; padding: 25px 20px; }
+  .ys-feature-grid h3 { font-size: 30px; }
+  .ys-feature-grid article > p { font-size: 12px; margin-bottom: 25px; }
+  .ys-feature-grid article > div { align-self: stretch; }
+  .ys-note-preview { padding: 18px 14px; gap: 11px; }
+  .ys-note-preview > svg { display: block; }
+  .ys-chat-preview { min-height: 100px; }
+  .ys-interest-preview { min-height: 80px; }
+  .pr-world-section { padding-bottom: 58px; }
+  .pr-footer__invitation h2 { font-size: clamp(40px, 11.5vw, 65px); letter-spacing: -2px; }
+}
+@media (max-width: 380px) {
+  .pr-header { gap: 8px; }
+  .pr-brand { font-size: 23px; }
+  .pr-header-makers strong { font-size: 10px; }
+  .pr-header-cta { font-size: 8px; padding-inline: 8px; }
+  .pr-social-hero h1 { font-size: clamp(48px, 15vw, 55px); letter-spacing: -.072em; }
+  .pr-social-hero .pr-product-actions { gap: 10px; }
+  .pr-social-hero .pr-product-primary { padding-inline: 13px; gap: 15px; }
+  .pr-social-hero .pr-explore-link { gap: 7px; font-size: 10px; }
+  .pr-social-hero .pr-explore-link > span { width: 30px; height: 30px; }
+  .ys-app-brand, .ys-navigation { padding-inline: 16px; }
+  .ys-feed-intro, .ys-post-heading, .ys-post-actions, .ys-caption { padding-inline: 16px; }
+  .ys-app-brand > span:first-child { font-size: 22px; }
+  .ys-preview-label { font-size: 5px; }
+  .ys-post-heading { gap: 7px; }
+  .ys-audience { gap: 4px; }
+  .ys-art-title { font-size: 34px; }
+  .ys-art-arch { right: 6px; width: 70px; }
+  .ys-art-caption { bottom: 15px; font-size: 6px; }
+  .ys-art-signature { font-size: 20px; right: 14px; bottom: 11px; }
+  .ys-app-content { min-height: 401px; }
+  .ys-messages, .ys-communities { padding-inline: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ys-preview *, .ys-feature-grid * { transition: none !important; animation: none !important; }
+}

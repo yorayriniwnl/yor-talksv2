@@ -58,6 +58,7 @@ test("expired and deleted messages are excluded at the conversation response bou
     expiresAt: new Date(Date.now() - 1).toISOString(),
   };
   const deleted = { ...expired, id: "deleted-message", expiresAt: null, deletedAt: new Date().toISOString() };
+  let historyReads = 0;
   const service = new MessageService(
     { getMembers: async () => ["sender", "recipient"], findById: async () => ({ isGroup: false }) } as never,
     { listConversation: async () => [expired, deleted] } as never,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Loader2, LogOut, RotateCw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EligibilitySummary } from '@/components/auth/EligibilitySummary';
@@ -23,13 +23,25 @@ export default function EligibilityPage() {
   const [purpose, setPurpose] = useState<'age_assessment' | 'guardian_authorization'>('age_assessment');
   const [permissions, setPermissions] = useState<Array<typeof permissionOptions[number]['value']>>(['account_activation']);
   const [guardians, setGuardians] = useState<GuardianAuthorizationSummary[]>([]);
+  const [guardiansLoading, setGuardiansLoading] = useState(true);
+  const [guardiansError, setGuardiansError] = useState('');
+  const guardiansRequest = useRef(0);
   const [challenge, setChallenge] = useState<ChallengeStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const loadGuardians = async () => {
-    try { setGuardians(await api.getGuardianAuthorizations()); }
-    catch { setGuardians([]); }
+    const revision = ++guardiansRequest.current;
+    setGuardiansLoading(true);
+    setGuardiansError('');
+    try {
+      const records = await api.getGuardianAuthorizations();
+      if (revision === guardiansRequest.current) setGuardians(records);
+    } catch {
+      if (revision === guardiansRequest.current) setGuardiansError('Parent or guardian permissions could not be refreshed. Any permissions shown are the last confirmed records.');
+    } finally {
+      if (revision === guardiansRequest.current) setGuardiansLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -39,6 +51,7 @@ export default function EligibilityPage() {
       const challengeId = sessionStorage.getItem(CHALLENGE_KEY);
       if (challengeId) api.getOwnerEligibilityChallenge(challengeId).then(setChallenge).catch(() => sessionStorage.removeItem(CHALLENGE_KEY));
     } catch { /* Session storage may be disabled. */ }
+    return () => { guardiansRequest.current++; };
   }, [refreshEligibility]);
 
   useEffect(() => {
@@ -135,15 +148,18 @@ export default function EligibilityPage() {
           </div>
         </section>
 
-        {guardians.length > 0 && <section className="rounded-3xl border border-border/70 bg-card p-6 sm:p-8">
+        <section className="rounded-3xl border border-border/70 bg-card p-6 sm:p-8" aria-busy={guardiansLoading}>
           <h2 className="text-lg font-bold">Parent or guardian permissions</h2>
+          {guardiansLoading && <p role="status" className="mt-3 text-sm text-muted-foreground">Checking recorded permissions…</p>}
+          {guardiansError && <div className="mt-3 space-y-3"><p role="alert" className="text-sm text-destructive">{guardiansError}</p><Button variant="outline" disabled={guardiansLoading || busy} onClick={() => void loadGuardians()}>Retry permissions</Button></div>}
+          {!guardiansLoading && !guardiansError && guardians.length === 0 && <p className="mt-3 text-sm text-muted-foreground">No parent or guardian permissions are recorded for this account.</p>}
           <ul className="mt-4 space-y-3">
             {guardians.map((authorization) => <li key={authorization.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 p-4 text-sm">
               <div><strong className="capitalize">{authorization.status}</strong><p className="mt-1 text-muted-foreground">{authorization.purposes.join(', ').replaceAll('_', ' ')} · expires {new Date(authorization.expiresAt).toLocaleDateString()}</p></div>
               {authorization.status === 'granted' && <Button variant="outline" size="sm" disabled={busy} onClick={() => void withdraw(authorization.id)}>Withdraw permission</Button>}
             </li>)}
           </ul>
-        </section>}
+        </section>
 
         <p className="px-2 text-center text-xs leading-5 text-muted-foreground">You can open Settings at any time to manage safety, download your information, or delete your account.</p>
       </div>

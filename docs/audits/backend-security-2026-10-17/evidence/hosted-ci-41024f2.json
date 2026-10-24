@@ -1,0 +1,297 @@
+{
+  "id": 39143532456,
+  "head": "41024f2755723395b02a0d9184d9189e54943b86",
+  "url": "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39143532456",
+  "status": "completed",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "id": 117722619699,
+      "name": "backend",
+      "url": "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39143532456/job/117722619699",
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Initialize containers",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out repository",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Audit runtime and build dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify API contract is synchronized",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run backend infrastructure regression tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build database package",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply schema migration",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Typecheck API",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install media verification runtime",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run API tests serially",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build API",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify production configuration wiring",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify backup and restore failure cleanup",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify restricted database runtime role",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out repository",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop containers",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 117722619940,
+      "name": "verify",
+      "url": "https://github.com/[REDACTED legacy test credential]/yor-talksv2/actions/runs/39143532456/job/117722619940",
+      "status": "completed",
+      "conclusion": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Initialize containers",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out repository",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up pnpm",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Audit runtime and build dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify API contract is synchronized",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify YOR visual framework tokens",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run browser-state and session-boundary unit tests",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Build database package",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Apply schema migration",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Typecheck API and web",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Install media verification runtime",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run API tests serially",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Install browser test runtime",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run browser smoke tests",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Retain browser failure evidence",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build API and web",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify production configuration wiring",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify backup and restore failure cleanup",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify restricted database runtime role",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Validate production Compose file",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify Linux production secret permissions",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build production container images",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Smoke test production container stack",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Set up Node.js",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Set up pnpm",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out repository",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop containers",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

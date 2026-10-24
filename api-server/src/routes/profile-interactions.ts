@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 import { MediaLifecycleError } from "../services/media-service.js";
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.js";
@@ -27,7 +28,7 @@ router.get("/users/:userId/profile-comments", authenticate, validateParams(userI
   } catch (error) {
     if (error instanceof ProfileInteractionForbiddenError) return res.status(403).json(createResponse("Profile comments are unavailable", null, {}, [error.message]));
     if (error instanceof ProfileInteractionRequestError) return res.status(404).json(createResponse("Profile not found", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Profile comments could not be loaded", null, {}, ["Internal server error"]));
   }
 });
@@ -46,7 +47,7 @@ router.post("/users/:userId/profile-comments", authenticate, validateParams(user
     if (error instanceof ContentPolicyViolationError) return res.status(422).json(createResponse(error.message, null, {}, ["content_policy_violation"]));
     if (error instanceof ProfileInteractionForbiddenError) return res.status(403).json(createResponse("Profile comment could not be created", null, {}, [error.message]));
     if (error instanceof ProfileInteractionRequestError) return res.status(404).json(createResponse("Profile not found", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Profile comment could not be created", null, {}, ["Internal server error"]));
   }
 });
@@ -58,7 +59,7 @@ router.delete("/users/:userId/profile-comments/:commentId", authenticate, valida
   } catch (error) {
     if (error instanceof ProfileInteractionForbiddenError) return res.status(403).json(createResponse("Profile comment could not be deleted", null, {}, [error.message]));
     if (error instanceof ProfileInteractionRequestError) return res.status(404).json(createResponse("Profile comment not found", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Profile comment could not be deleted", null, {}, ["Internal server error"]));
   }
 });
@@ -69,7 +70,7 @@ router.get("/users/:userId/showcases", authenticate, validateParams(userIdParamS
   } catch (error) {
     if (error instanceof ProfileInteractionForbiddenError) return res.status(403).json(createResponse("Profile showcases are unavailable", null, {}, [error.message]));
     if (error instanceof ProfileInteractionRequestError) return res.status(404).json(createResponse("Profile not found", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Profile showcases could not be loaded", null, {}, ["Internal server error"]));
   }
 });
@@ -81,7 +82,7 @@ router.post("/users/:userId/showcases", authenticate, validateParams(userIdParam
     return res.status(201).json(createResponse("Profile showcase created", await service.createShowcase(userId, req.body)));
   } catch (error) {
     if (error instanceof MediaLifecycleError) return res.status(error.status).json(createResponse(error.message, null, {}, [error.code]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Profile showcase could not be created", null, {}, ["Internal server error"]));
   }
 });
@@ -93,7 +94,7 @@ router.delete("/users/:userId/showcases/:showcaseId", authenticate, validatePara
     return res.status(200).json(createResponse("Profile showcase deleted", await service.deleteShowcase(userId, paramId(req.params.showcaseId))));
   } catch (error) {
     if (error instanceof ProfileInteractionRequestError) return res.status(404).json(createResponse("Profile showcase not found", null, {}, [error.message]));
-    console.error(error);
+    logger.error({ err: error }, "Route operation failed");
     return res.status(500).json(createResponse("Profile showcase could not be deleted", null, {}, ["Internal server error"]));
   }
 });

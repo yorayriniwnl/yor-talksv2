@@ -1,12 +1,12 @@
+import { useAppReducedMotion } from '@/components/accessibility/AccessibilityProvider';
 import { useEffect, useRef } from 'react';
-import { useReducedMotion } from 'framer-motion';
 
 export function CursorGlow() {
   const glowRef = useRef<HTMLDivElement>(null);
   const mouse = useRef({ x: -500, y: -500 });
   const pos = useRef({ x: -500, y: -500 });
   const raf = useRef<number | null>(null);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useAppReducedMotion();
 
   useEffect(() => {
     const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -50,8 +50,11 @@ export function CursorGlow() {
       window.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (raf.current !== null) cancelAnimationFrame(raf.current);
+      raf.current = null;
     };
   }, [reduceMotion]);
+
+  if (reduceMotion) return null;
 
   return (
     <div
