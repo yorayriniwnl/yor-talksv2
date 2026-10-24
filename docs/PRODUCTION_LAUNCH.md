@@ -71,6 +71,36 @@ The frontend provider switches are build-time `VITE_*` values wired from the cor
 
 Keep `AUTH_COOKIE_SAME_SITE=lax` when the frontend and API are same-site (including sibling subdomains on the same HTTPS domain). Set it to `none` only when the frontend is genuinely cross-site; production then requires HTTPS. The API trusts one reverse-proxy hop and enforces `Origin` against `CORS_ORIGINS` and `CLIENT_ORIGIN` on refresh. Use exact HTTPS origins with no wildcard or path. Production Compose publishes the API only at `127.0.0.1:${API_HOST_PORT}` so a host TLS proxy can reach it without exposing the port publicly. The [Caddy example](../ops/Caddyfile.example) sends `/api` and `/socket.io` directly to the API and sends frontend assets to Nginx, keeping both public routes at one trusted proxy hop. Do not forward public API traffic through both Caddy and Nginx with the current one-hop API setting: that would attribute rate limits to the proxy instead of each client.
 
+### Vercel: pre-launch site and HTTP API
+
+The Vercel project serves the web app and `api/index.ts`, an HTTP-only function that
+loads the API bundle on first request. Socket.IO and the notification/media workers
+do not run there; deploy them as long-running processes sharing `DATABASE_URL` and
+`REDIS_URL`. When the bundle cannot start, every `/api/*` route returns
+`503 {"message":"API runtime is unavailable"}` and the function log records
+`[Vercel Handler Error]: API runtime initialization unavailable: <reason>`, where the
+reason names the setting at fault (never its value). Read that line first.
+
+Probing the production bundle (24 October 2026, one setting removed at a time) shows
+that the API function starts only when all of these are set to deployed values:
+
+| Group | Settings |
+| --- | --- |
+| Data stores, reachable from Vercel (not `localhost`) | `DATABASE_URL`, `REDIS_URL` |
+| Independent random secrets, 32+ characters each | `JWT_SECRET`, `JWT_REFRESH_SECRET` (distinct), `CONTACT_SHIELD_SECRET`, `TOTP_ENCRYPTION_KEY` |
+| Canonical HTTPS origins, no wildcard or path | `CLIENT_ORIGIN`, `CORS_ORIGINS` |
+| Email and media providers | `RESEND_API_KEY`, `EMAIL_FROM`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
+| Content safety | `OPENAI_API_KEY` or `GEMINI_API_KEY` |
+| Terms | `TERMS_VERSION` (no placeholder text) |
+
+With `PUBLIC_BETA=true` the function additionally requires `GOOGLE_CLIENT_ID`,
+`LEGAL_CONTENT_REVIEWED=true`, and non-placeholder `LEGAL_OPERATOR_NAME`,
+`LEGAL_OPERATOR_ADDRESS`, `LEGAL_EFFECTIVE_DATE` (YYYY-MM-DD), `LEGAL_GOVERNING_LAW`,
+`GRIEVANCE_OFFICER_NAME` and valid `PRIVACY_CONTACT_EMAIL`, `SUPPORT_EMAIL` and
+`GRIEVANCE_CONTACT_EMAIL`. Set `LEGAL_CONTENT_REVIEWED=true` only after the approval
+described above. The web build reads separate build-time `VITE_*` copies of the public
+beta, terms and legal values; set both sides to the same values and redeploy.
+
 ## 2. Configure the external launch dependencies
 
 New uploaded media uses the implemented [server-owned lifecycle](MEDIA_LIFECYCLE_IMPLEMENTATION.md). Before enabling this core launch path, apply its additive migration, configure three signed/authenticated Cloudinary presets and Gemini media moderation, and verify FFmpeg/FFprobe in the API container. Presign uses a bounded server upload unless authenticated provider account ceilings prove direct-upload limits for every resource endpoint. Playback and posters use expiring API delivery grants with approval/hash checks; set `MEDIA_DELIVERY_ORIGIN=https://<api-host>` for the separate API domain. An OpenAI-only text provider and green core `/readyz` are insufficient: check `details.media.ready` and complete real-provider acceptance. No production upload or provider configuration was performed by the implementation session. Keep the optional payment/live/push/RTC flags disabled.

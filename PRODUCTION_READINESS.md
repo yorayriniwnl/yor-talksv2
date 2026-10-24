@@ -46,6 +46,15 @@ not carried over; main covers those boundaries with its own suites.
 Not run here: Docker image build/run (registry access unavailable in the verification
 environment). The external launch gates below are unchanged.
 
+Live check (24 October, production `yor-talks.vercel.app`): the web app serves, but
+every `/api/*` route returns `503 API runtime is unavailable`, so the pre-launch signup
+form cannot save signups. The bundle starts locally with complete settings, so the
+cause is the Vercel project's configuration; the function log now names the setting
+at fault. Required settings: [Vercel: pre-launch site and HTTP API](docs/PRODUCTION_LAUNCH.md#vercel-pre-launch-site-and-http-api).
+Comparing bundles, the 24 October merge added one startup requirement: with
+`PUBLIC_BETA=true`, `LEGAL_CONTENT_REVIEWED=true` (and non-placeholder legal values) is
+now mandatory. The deployed web build has `VITE_PUBLIC_BETA` unset and empty legal values.
+
 > **Current evidence:** The 14–16 October 2026 review records the latest API suite, dependency checks, production image builds, hardened Compose smoke, edge security-header checks, browser rerun results and remaining release gates in [the current readiness review](docs/PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](docs/PRODUCTION_LAUNCH.md). This file's checklists and verification limitations below are historical snapshots; for example, Docker image execution has since been verified locally. They are not the current release checklist.
 
 ## Executive summary
