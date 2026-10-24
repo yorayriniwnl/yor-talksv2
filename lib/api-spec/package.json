@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts && tsc -b ../api-client-react ../api-zod"
+    "codegen": "orval --config ./orval.config.ts && tsc -b ../api-client-react ../api-zod",
+    "codegen:check": "orval --config ./orval.config.ts && tsc -b ../api-client-react ../api-zod && git diff --exit-code -- ../api-client-react/src/generated ../api-zod/src/generated"
   },
   "devDependencies": {
     "orval": "8.22.0"

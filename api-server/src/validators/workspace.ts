@@ -12,7 +12,7 @@ export const workspaceKindSchema = z.enum([
 export const workspaceItemSchema = z.object({
   kind: workspaceKindSchema,
   itemKey: z.string().trim().min(1).max(120),
-  payload: z.record(z.unknown()).default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
 });
 
 export const workspaceQuerySchema = z.object({

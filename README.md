@@ -83,7 +83,7 @@ The launch path supports a global deployment or a closed beta:
 
 ## Quick start with Docker (local development only)
 
-Use Node.js 24 LTS, pnpm 9.15.4, and a working Docker Engine. From the repository root:
+Use Node.js 24 LTS, pnpm 11.28.5 (pinned in `packageManager`), and a working Docker Engine. From the repository root:
 
 ```bash
 cp .env.example .env

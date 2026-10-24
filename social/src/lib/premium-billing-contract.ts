@@ -12,11 +12,11 @@ export const premiumOrderSchema = z.object({
   plan, keyId: z.string(),
 });
 export const premiumBillingSchema = z.object({
-  catalog: z.object({ available: z.boolean(), plan: plan.nullable(), operationalFeatures: z.record(z.boolean()),
+  catalog: z.object({ available: z.boolean(), plan: plan.nullable(), operationalFeatures: z.record(z.string(), z.boolean()),
     automaticRenewal: z.literal(false), billingModel: z.literal('prepaid_fixed_term'), testMode: z.boolean(), supportEmail: z.union([z.literal(''), z.string().email()]) }),
   subscription: z.object({ order_id: z.string().uuid(), starts_at: z.string().datetime({ offset: true }), ends_at: z.string().datetime({ offset: true }),
     cancel_at_period_end: z.boolean(), status: z.enum(['active','cancelled','expired','refunded','disputed','chargeback','revoked']) }).nullable(),
-  orders: z.array(premiumOrderSchema).max(50), enabledFeatures: z.record(z.boolean()),
+  orders: z.array(premiumOrderSchema).max(50), enabledFeatures: z.record(z.string(), z.boolean()),
 });
 const premiumCatalogSchema = premiumBillingSchema.shape.catalog;
 export function parsePremiumCatalog(value: unknown): PremiumCatalog {

@@ -16,8 +16,8 @@ const requiredCategories = [
 const openAIModerationSchema = z.object({
   results: z.array(z.object({
     flagged: z.boolean(),
-    categories: z.record(z.boolean()).refine((values) => requiredCategories.every((key) => key in values)),
-    category_scores: z.record(z.number().finite().min(0).max(1))
+    categories: z.record(z.string(), z.boolean()).refine((values) => requiredCategories.every((key) => key in values)),
+    category_scores: z.record(z.string(), z.number().finite().min(0).max(1))
       .refine((values) => requiredCategories.every((key) => key in values)),
   })).min(1),
 });

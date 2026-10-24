@@ -1,6 +1,40 @@
 # Production Readiness Report
 
-Status: repository hardening is partial; public production launch is blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
+Status: repository checks are green as of 24 October 2026; public production launch is still blocked pending provider acceptance and operational verification. No numeric readiness score is claimed.
+
+## Repository verification — 24 October 2026
+
+Run against a clean `pnpm install --frozen-lockfile` with Node 24.22.1, pnpm 11.28.5,
+PostgreSQL 16 and Redis 7, following `.github/workflows/ci.yml`:
+
+| Check | Result |
+| --- | --- |
+| `pnpm audit --audit-level high` | No known vulnerabilities (was 10: 4 high, 3 moderate, 3 low) |
+| `pnpm contract:check` / `pnpm contract:clients:check` | 252 operations verified; generated clients match the spec |
+| `pnpm design:check`, `pnpm test:unit` | Pass (63/63) |
+| `@workspace/db` build + `migrate:beta` | Pass |
+| API and web typecheck | Pass |
+| API tests (serial, real Postgres/Redis, `CI=true`) | 401/401 pass, including the disposable-database gated suites |
+| `pnpm test:e2e` (Chromium) | 66/66 pass |
+| `node ./build.mjs`, `pnpm production-config:check` | Pass |
+
+Changes made to reach this state:
+
+- Dependencies: Multer 2.5.0, body-parser 2.4.0 (override), and patched overrides for
+  markdown-it 14.3.3, fast-uri 3.1.9 and ip-address 10.7.4.
+- Zod 3.25 → 4.6.7 across the API, web, DB and generated `@workspace/api-zod` client
+  (orval `zod.version: 4`) to clear GHSA-mrhx-c7xc-m3w5, which has no 3.x fix.
+  `z.record()` now names its key schema and `errorMap` literals use `error`.
+- Messages: the thread no longer jumps to the bottom when existing messages change
+  (edits, reactions, read receipts, media-grant renewals, older-page loads). It
+  scrolls on opening a conversation, on the reader's own sends, and on incoming
+  messages only while the reader is already near the bottom.
+- Tests and tooling: the non-UTC migration test uses `Asia/Kolkata` (the
+  `Asia/Calcutta` alias is missing from some tz databases); `codegen:check` now exists
+  and runs in CI.
+
+Not run here: Docker image build/run (registry access unavailable in the verification
+environment). The external launch gates below are unchanged.
 
 ## Executive summary
 

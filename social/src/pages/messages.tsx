@@ -504,6 +504,10 @@ export default function Messages() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const threadFlowRef = useRef<HTMLDivElement>(null);
+  // Tracks what the thread last auto-scrolled for, so edits, reactions, read
+  // receipts, media-grant renewals and older-page loads never move the reader.
+  const autoScrollRef = useRef<{ conversationId: string | null; lastMessageId: string | null }>({ conversationId: null, lastMessageId: null });
+  const nearBottomRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingStopTimeoutRef = useRef<number | null>(null);
   const typingConversationIdRef = useRef<string | null>(null);
@@ -678,9 +682,28 @@ export default function Messages() {
   }, [id, messagesByConversation]);
 
   useEffect(() => {
-    if (loadingMessages || messageLoadError || activeMessages.length === 0) return;
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeMessages, id, loadingMessages, messageLoadError]);
+    if (messageLoadError || activeMessages.length === 0) {
+      autoScrollRef.current = { conversationId: null, lastMessageId: null };
+      return;
+    }
+    if (loadingMessages) return;
+    const last = activeMessages[activeMessages.length - 1];
+    const previous = autoScrollRef.current;
+    const opened = previous.conversationId !== (id ?? null);
+    const appended = !opened && previous.lastMessageId !== last.id;
+    autoScrollRef.current = { conversationId: id ?? null, lastMessageId: last.id };
+    if (!opened && !appended) return;
+    // A newly arrived message only follows the reader who is already at the
+    // bottom; their own sends always follow.
+    if (appended && last.senderId !== currentUser?.id && !nearBottomRef.current) return;
+    const flow = threadFlowRef.current;
+    if (flow) {
+      flow.scrollTo({ top: flow.scrollHeight, behavior: opened ? 'auto' : 'smooth' });
+      nearBottomRef.current = true;
+    } else {
+      scrollRef.current?.scrollIntoView({ behavior: opened ? 'auto' : 'smooth', block: 'end' });
+    }
+  }, [activeMessages, id, loadingMessages, messageLoadError, currentUser?.id]);
 
   const vanishMode = Boolean(activeConv?.conv.vanishMode);
 
@@ -954,7 +977,15 @@ export default function Messages() {
                 </div>
               </header>
 
-              <div ref={threadFlowRef} className="operator-thread__flow" data-vanish={vanishMode || undefined}>
+              <div
+                ref={threadFlowRef}
+                className="operator-thread__flow"
+                data-vanish={vanishMode || undefined}
+                onScroll={(event) => {
+                  const flow = event.currentTarget;
+                  nearBottomRef.current = flow.scrollHeight - flow.scrollTop - flow.clientHeight < 160;
+                }}
+              >
                 {loadingMessages && activeMessages.length === 0 ? (
                   <div className="operator-thread__loading" role="status" aria-live="polite">
                     <span className="operator-thread__loading-mark"><LoaderCircle aria-hidden="true" /></span>

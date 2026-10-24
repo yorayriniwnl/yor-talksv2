@@ -68,6 +68,9 @@ jobs:
       - name: Verify API contract is synchronized
         run: pnpm contract:check
 
+      - name: Verify generated API clients match the contract
+        run: pnpm contract:clients:check
+
       - name: Verify YOR visual framework tokens
         run: pnpm design:check
 

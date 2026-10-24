@@ -111,7 +111,7 @@ test('v1 follow-up repairs only pre-deployment UTC message timestamps and remain
   // deployment cutoff, before installing the one-time follow-up marker.
   await client.query('DELETE FROM release_schema_versions WHERE version=$1', [MEDIA_LEGACY_REPAIR_VERSION]);
   await client.query("UPDATE release_schema_versions SET applied_at='2026-10-04T12:00:00Z' WHERE version=$1", [MEDIA_SCHEMA_VERSION]);
-  await client.query("SET TIME ZONE 'Asia/Calcutta'");
+  await client.query("SET TIME ZONE 'Asia/Kolkata'");
   const old = await insertMessages(client, historical, '2026-10-04T11:00:00Z');
   await client.query("UPDATE messages SET edited_at='2026-10-04T11:30:00Z'::timestamp WHERE id=$1", [old[0]]);
   const newer = await insertMessages(client, historical, '2026-10-04T13:00:00Z');

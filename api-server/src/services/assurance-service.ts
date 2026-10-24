@@ -13,7 +13,7 @@ import { EligibilityService } from './eligibility-service.js';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const text = (max = 128) => z.string().trim().min(1).max(max);
-const versions = z.record(text()).refine(value => Object.keys(value).length<=32 && Object.keys(value).every(key => key.length>0 && key.length<=128));
+const versions = z.record(z.string(), text()).refine(value => Object.keys(value).length<=32 && Object.keys(value).every(key => key.length>0 && key.length<=128));
 const purposes = z.array(z.enum(['account_collection','account_activation','social_contact'])).min(1).max(3)
   .refine(value => new Set(value).size === value.length);
 const base = { userId: z.string().uuid().optional(), enrollmentId: z.string().uuid().optional(), issuer: text(),audience: text(),

@@ -3,7 +3,7 @@ import type { ApprovedTerritoryPolicy } from './types.js';
 
 const threshold = z.union([z.literal(13),z.literal(14),z.literal(15),z.literal(16),z.literal(17),z.literal(18)]);
 const purpose = z.enum(['account_collection','account_activation','social_contact']);
-const versionMap = z.record(z.string().min(1).max(128));
+const versionMap = z.record(z.string(), z.string().min(1).max(128));
 const instant = z.string().datetime({ offset: true });
 const policySchema = z.object({
   id: z.string().min(1).max(128), scope: z.enum(['operator','recipient']), territory: z.string().regex(/^[A-Z]{2}$/),

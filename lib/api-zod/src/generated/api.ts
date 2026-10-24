@@ -88,7 +88,7 @@ export const GetArticlesResponse = zod.object({
  * @summary Post /articles
  */
 export const PostArticlesBody = zod.object({
-  "coverMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "coverMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostArticlesResponse = zod.object({
@@ -414,10 +414,10 @@ export const postAuthRegisterBodyFullNameMin = 2;
 
 
 export const PostAuthRegisterBody = zod.object({
-  "enrollmentId": zod.string().uuid(),
+  "enrollmentId": zod.uuid(),
   "registrationNonce": zod.string().min(postAuthRegisterBodyRegistrationNonceMin).max(postAuthRegisterBodyRegistrationNonceMax).describe('Short-lived opaque one-time registration credential. Never place it in a URL or log.'),
   "username": zod.string().regex(postAuthRegisterBodyUsernameRegExp),
-  "email": zod.string().email(),
+  "email": zod.email(),
   "password": zod.string().min(postAuthRegisterBodyPasswordMin),
   "fullName": zod.string().min(postAuthRegisterBodyFullNameMin),
   "acceptedTerms": zod.unknown()
@@ -568,7 +568,7 @@ export const GetBroadcastChannelsResponse = zod.object({
  * @summary Post /broadcast-channels
  */
 export const PostBroadcastChannelsBody = zod.object({
-  "coverMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "coverMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostBroadcastChannelsResponse = zod.object({
@@ -701,7 +701,7 @@ export const GetBusinessResponse = zod.object({
  * @summary Post /business
  */
 export const PostBusinessBody = zod.object({
-  "logoMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "logoMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostBusinessResponse = zod.object({
@@ -729,7 +729,7 @@ export const GetCommunitiesResponse = zod.object({
  * @summary Post /communities
  */
 export const PostCommunitiesBody = zod.object({
-  "coverMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "coverMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostCommunitiesResponse = zod.object({
@@ -861,9 +861,9 @@ export const GetContactsRequestsResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "initiatorId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "initiatorId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -877,7 +877,7 @@ export const GetContactsRequestsResponse = zod.object({
  * @summary Post /contacts/requests
  */
 export const PostContactsRequestsBody = zod.object({
-  "recipientId": zod.string().uuid()
+  "recipientId": zod.uuid()
 })
 
 export const PostContactsRequestsResponse = zod.object({
@@ -888,9 +888,9 @@ export const PostContactsRequestsResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "id": zod.string().uuid(),
-  "initiatorId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "initiatorId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -935,9 +935,9 @@ export const PostContactsRequestsByRequestIdAcceptResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "id": zod.string().uuid(),
-  "initiatorId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "initiatorId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -964,9 +964,9 @@ export const PostContactsRequestsByRequestIdGuardianApprovalResponse = zod.objec
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "id": zod.string().uuid(),
-  "initiatorId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "initiatorId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -993,9 +993,9 @@ export const PostContactsRequestsByRequestIdRejectResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "id": zod.string().uuid(),
-  "initiatorId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "initiatorId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -1029,7 +1029,7 @@ export const postConversationsByConversationIdInvitationsBodyInviteeIdsMax = 99;
 
 
 export const PostConversationsByConversationIdInvitationsBody = zod.object({
-  "inviteeIds": zod.array(zod.string().uuid()).min(1).max(postConversationsByConversationIdInvitationsBodyInviteeIdsMax)
+  "inviteeIds": zod.array(zod.uuid()).min(1).max(postConversationsByConversationIdInvitationsBodyInviteeIdsMax)
 })
 
 export const postConversationsByConversationIdInvitationsResponseTwoDataItemMemberIdsMax = 100;
@@ -1046,12 +1046,12 @@ export const PostConversationsByConversationIdInvitationsResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "conversationId": zod.string().uuid(),
-  "inviterId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "conversationId": zod.uuid(),
+  "inviterId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
-  "memberIds": zod.array(zod.string().uuid()).max(postConversationsByConversationIdInvitationsResponseTwoDataItemMemberIdsMax),
+  "memberIds": zod.array(zod.uuid()).max(postConversationsByConversationIdInvitationsResponseTwoDataItemMemberIdsMax),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "requiresYourAcceptance": zod.boolean(),
@@ -1284,9 +1284,9 @@ export const PostEligibilityEnrollmentsByEnrollmentIdChallengesResponse = zod.ob
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "challengeId": zod.string().uuid(),
+  "challengeId": zod.uuid(),
   "nextStep": zod.unknown(),
-  "redirectUrl": zod.string().url(),
+  "redirectUrl": zod.url(),
   "expiresAt": zod.coerce.date()
 })
 }))
@@ -1319,7 +1319,7 @@ export const PostEligibilityEnrollmentsByEnrollmentIdStatusResponse = zod.object
   "status": zod.enum(['unavailable', 'verification_required', 'authorized']),
   "nextStep": zod.union([zod.literal(null),zod.literal('guardian_authorization'),zod.literal('age_assessment'),zod.literal('complete_registration')]).nullable(),
   "enrollment": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "expiresAt": zod.coerce.date()
 }).optional()
 })
@@ -1353,7 +1353,7 @@ export const PostEligibilityEnrollmentsPrescreenResponse = zod.object({
   "status": zod.enum(['unavailable', 'verification_required', 'authorized']),
   "nextStep": zod.union([zod.literal(null),zod.literal('guardian_authorization'),zod.literal('age_assessment'),zod.literal('complete_registration')]).nullable(),
   "enrollment": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "registrationNonce": zod.string().min(postEligibilityEnrollmentsPrescreenResponseTwoDataEnrollmentRegistrationNonceMin).max(postEligibilityEnrollmentsPrescreenResponseTwoDataEnrollmentRegistrationNonceMax),
   "expiresAt": zod.coerce.date()
 }).optional()
@@ -1377,7 +1377,7 @@ export const GetEventsResponse = zod.object({
  * @summary Post /events
  */
 export const PostEventsBody = zod.object({
-  "coverMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "coverMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostEventsResponse = zod.object({
@@ -1480,12 +1480,12 @@ export const GetGroupInvitationsResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "conversationId": zod.string().uuid(),
-  "inviterId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "conversationId": zod.uuid(),
+  "inviterId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
-  "memberIds": zod.array(zod.string().uuid()).max(getGroupInvitationsResponseTwoDataItemMemberIdsMax),
+  "memberIds": zod.array(zod.uuid()).max(getGroupInvitationsResponseTwoDataItemMemberIdsMax),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "requiresYourAcceptance": zod.boolean(),
@@ -1540,24 +1540,24 @@ export const PostGroupInvitationsByInvitationIdAcceptResponse = zod.object({
 }).and(zod.object({
   "data": zod.object({
   "invitation": zod.object({
-  "id": zod.string().uuid(),
-  "conversationId": zod.string().uuid(),
-  "inviterId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "conversationId": zod.uuid(),
+  "inviterId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
-  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataInvitationMemberIdsMax),
+  "memberIds": zod.array(zod.uuid()).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataInvitationMemberIdsMax),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "requiresYourAcceptance": zod.boolean(),
   "guardianApprovalRequired": zod.boolean()
 }),
   "refreshedInvitations": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "conversationId": zod.string().uuid(),
-  "inviterId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "conversationId": zod.uuid(),
+  "inviterId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
-  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataRefreshedInvitationsItemMemberIdsMax),
+  "memberIds": zod.array(zod.uuid()).max(postGroupInvitationsByInvitationIdAcceptResponseTwoDataRefreshedInvitationsItemMemberIdsMax),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "requiresYourAcceptance": zod.boolean(),
@@ -1595,24 +1595,24 @@ export const PostGroupInvitationsByInvitationIdGuardianApprovalResponse = zod.ob
 }).and(zod.object({
   "data": zod.object({
   "invitation": zod.object({
-  "id": zod.string().uuid(),
-  "conversationId": zod.string().uuid(),
-  "inviterId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "conversationId": zod.uuid(),
+  "inviterId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
-  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataInvitationMemberIdsMax),
+  "memberIds": zod.array(zod.uuid()).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataInvitationMemberIdsMax),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "requiresYourAcceptance": zod.boolean(),
   "guardianApprovalRequired": zod.boolean()
 }),
   "refreshedInvitations": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "conversationId": zod.string().uuid(),
-  "inviterId": zod.string().uuid(),
-  "recipientId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "conversationId": zod.uuid(),
+  "inviterId": zod.uuid(),
+  "recipientId": zod.uuid(),
   "status": zod.enum(['pending', 'accepted', 'rejected', 'revoked']),
-  "memberIds": zod.array(zod.string().uuid()).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataRefreshedInvitationsItemMemberIdsMax),
+  "memberIds": zod.array(zod.uuid()).max(postGroupInvitationsByInvitationIdGuardianApprovalResponseTwoDataRefreshedInvitationsItemMemberIdsMax),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "requiresYourAcceptance": zod.boolean(),
@@ -1670,7 +1670,7 @@ export const GetHighlightsResponse = zod.object({
  * @summary Post /highlights
  */
 export const PostHighlightsBody = zod.object({
-  "coverMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "coverMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostHighlightsResponse = zod.object({
@@ -1767,8 +1767,8 @@ export const PostMediaByIdFinalizeResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.unknown().and(zod.object({
-  "id": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
-  "mediaId": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
+  "id": zod.uuid().describe('Server-generated lifecycle record ID.'),
+  "mediaId": zod.uuid().describe('Server-generated lifecycle record ID.'),
   "status": zod.enum(['pending', 'uploaded', 'verifying', 'approved', 'rejected', 'failed', 'deleted']),
   "purpose": zod.enum(['avatar', 'post', 'comment', 'video_comment', 'message', 'story', 'video', 'product', 'article', 'event', 'live_stream', 'broadcast_channel', 'highlight', 'showcase', 'business', 'community']).optional(),
   "url": zod.string().optional().describe('Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval.'),
@@ -1817,8 +1817,8 @@ export const PostMediaByIdUploadResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.unknown().and(zod.object({
-  "id": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
-  "mediaId": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
+  "id": zod.uuid().describe('Server-generated lifecycle record ID.'),
+  "mediaId": zod.uuid().describe('Server-generated lifecycle record ID.'),
   "status": zod.enum(['pending', 'uploaded', 'verifying', 'approved', 'rejected', 'failed', 'deleted']),
   "purpose": zod.enum(['avatar', 'post', 'comment', 'video_comment', 'message', 'story', 'video', 'product', 'article', 'event', 'live_stream', 'broadcast_channel', 'highlight', 'showcase', 'business', 'community']).optional(),
   "url": zod.string().optional().describe('Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval.'),
@@ -1856,8 +1856,8 @@ export const PostMediaPresignResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.unknown().and(zod.object({
-  "id": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
-  "mediaId": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
+  "id": zod.uuid().describe('Server-generated lifecycle record ID.'),
+  "mediaId": zod.uuid().describe('Server-generated lifecycle record ID.'),
   "status": zod.unknown(),
   "purpose": zod.enum(['avatar', 'post', 'comment', 'video_comment', 'message', 'story', 'video', 'product', 'article', 'event', 'live_stream', 'broadcast_channel', 'highlight', 'showcase', 'business', 'community']),
   "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg']),
@@ -1885,8 +1885,8 @@ export const PostMediaUploadResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.unknown().and(zod.object({
-  "id": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
-  "mediaId": zod.string().uuid().describe('Server-generated lifecycle record ID.'),
+  "id": zod.uuid().describe('Server-generated lifecycle record ID.'),
+  "mediaId": zod.uuid().describe('Server-generated lifecycle record ID.'),
   "status": zod.enum(['pending', 'uploaded', 'verifying', 'approved', 'rejected', 'failed', 'deleted']),
   "purpose": zod.enum(['avatar', 'post', 'comment', 'video_comment', 'message', 'story', 'video', 'product', 'article', 'event', 'live_stream', 'broadcast_channel', 'highlight', 'showcase', 'business', 'community']).optional(),
   "url": zod.string().optional().describe('Signed delivery URL, available only to the owner after approval; expires and must never be submitted as proof of approval.'),
@@ -1904,7 +1904,7 @@ export const PostMediaUploadResponse = zod.object({
  * @summary Post /messages
  */
 export const PostMessagesBody = zod.object({
-  "mediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "mediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostMessagesResponse = zod.object({
@@ -2228,7 +2228,7 @@ export const postPostsBodyMediaIdsMax = 10;
 
 
 export const PostPostsBody = zod.object({
-  "mediaIds": zod.array(zod.string().uuid().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')).max(postPostsBodyMediaIdsMax).optional()
+  "mediaIds": zod.array(zod.uuid().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')).max(postPostsBodyMediaIdsMax).optional()
 })
 
 export const PostPostsResponse = zod.object({
@@ -2332,7 +2332,7 @@ export const PostPostsByPostIdCommentsParams = zod.object({
 })
 
 export const PostPostsByPostIdCommentsBody = zod.object({
-  "mediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "mediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostPostsByPostIdCommentsResponse = zod.object({
@@ -2690,7 +2690,7 @@ export const postProductsBodyMediaIdsMax = 10;
 
 
 export const PostProductsBody = zod.object({
-  "mediaIds": zod.array(zod.string().uuid().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')).max(postProductsBodyMediaIdsMax).optional()
+  "mediaIds": zod.array(zod.uuid().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')).max(postProductsBodyMediaIdsMax).optional()
 })
 
 export const PostProductsResponse = zod.object({
@@ -3068,7 +3068,7 @@ export const GetStoriesResponse = zod.object({
  * @summary Post /stories
  */
 export const PostStoriesBody = zod.object({
-  "mediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "mediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostStoriesResponse = zod.object({
@@ -3200,7 +3200,7 @@ export const GetStreamsResponse = zod.object({
  * @summary Post /streams
  */
 export const PostStreamsBody = zod.object({
-  "coverMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "coverMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostStreamsResponse = zod.object({
@@ -3625,7 +3625,7 @@ export const PostUsersByUserIdShowcasesParams = zod.object({
 })
 
 export const PostUsersByUserIdShowcasesBody = zod.object({
-  "customImageMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "customImageMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostUsersByUserIdShowcasesResponse = zod.object({
@@ -3740,7 +3740,7 @@ export const GetUsersMeResponse = zod.object({
  * @summary Put /users/me
  */
 export const PutUsersMeBody = zod.object({
-  "avatarMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "avatarMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PutUsersMeResponse = zod.object({
@@ -3912,9 +3912,9 @@ export const PostUsersMeEligibilityChallengesResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "challengeId": zod.string().uuid(),
+  "challengeId": zod.uuid(),
   "nextStep": zod.unknown(),
-  "redirectUrl": zod.string().url(),
+  "redirectUrl": zod.url(),
   "expiresAt": zod.coerce.date()
 })
 }))
@@ -3935,7 +3935,7 @@ export const GetUsersMeEligibilityChallengesByChallengeIdResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "challengeId": zod.string().uuid(),
+  "challengeId": zod.uuid(),
   "purpose": zod.enum(['age_assessment', 'guardian_authorization']),
   "status": zod.enum(['pending', 'consumed', 'revoked', 'expired']),
   "expiresAt": zod.coerce.date()
@@ -4032,7 +4032,7 @@ export const GetUsersMeGuardianAuthorizationsResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "purposes": zod.array(zod.enum(['account_collection', 'account_activation', 'social_contact'])).min(1).max(getUsersMeGuardianAuthorizationsResponseTwoDataItemPurposesMax),
   "status": zod.enum(['granted', 'withdrawn', 'revoked']),
   "expiresAt": zod.coerce.date()
@@ -4061,9 +4061,9 @@ export const PostUsersMeGuardianAuthorizationsResponse = zod.object({
   "meta": zod.record(zod.string(), zod.unknown()).optional()
 }).and(zod.object({
   "data": zod.object({
-  "challengeId": zod.string().uuid(),
+  "challengeId": zod.uuid(),
   "nextStep": zod.unknown(),
-  "redirectUrl": zod.string().url(),
+  "redirectUrl": zod.url(),
   "expiresAt": zod.coerce.date()
 })
 }))
@@ -4171,9 +4171,9 @@ export const GetVideosResponse = zod.object({
  * @summary Post /videos
  */
 export const PostVideosBody = zod.object({
-  "mediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.'),
-  "thumbnailMediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.'),
-  "externalVideoUrl": zod.string().url().optional().describe('Separate allowlisted external embed; requires an approved video-purpose image thumbnail.')
+  "mediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.'),
+  "thumbnailMediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.'),
+  "externalVideoUrl": zod.url().optional().describe('Separate allowlisted external embed; requires an approved video-purpose image thumbnail.')
 })
 
 export const PostVideosResponse = zod.object({
@@ -4259,7 +4259,7 @@ export const PostVideosByIdCommentsParams = zod.object({
 })
 
 export const PostVideosByIdCommentsBody = zod.object({
-  "mediaId": zod.string().uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
+  "mediaId": zod.uuid().optional().describe('An approved server-owned asset belonging to the authenticated owner and matching this consumer\'s purpose.')
 })
 
 export const PostVideosByIdCommentsResponse = zod.object({

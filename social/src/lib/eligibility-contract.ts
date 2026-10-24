@@ -58,8 +58,8 @@ export const guardianAuthorizationSchema = z.object({
 export const contactRulesSchema = z.object({
   decision: eligibilityDecisionSchema,
   guardianContactsRequired: z.boolean(),
-  guardianPolicyVersions: z.record(z.string().min(1).max(128)),
-  guardianNoticeVersions: z.record(z.string().min(1).max(128)),
+  guardianPolicyVersions: z.record(z.string(), z.string().min(1).max(128)),
+  guardianNoticeVersions: z.record(z.string(), z.string().min(1).max(128)),
 }).strict();
 
 export const contactRequestSchema = z.object({
