@@ -50,6 +50,31 @@ function errorName(error: unknown): string {
   return error instanceof Error ? error.name : "unknown";
 }
 
+/**
+ * Describe why the API bundle failed to start, for the function log only.
+ * Production configuration errors name the settings at fault but never their
+ * values, so they are safe to log and make a misconfigured deployment
+ * diagnosable. Environment schema failures are reduced to setting paths and
+ * issue codes. Anything else is logged by type (and Node error code) only.
+ */
+export function describeStartupFailure(error: unknown): string {
+  const issues = (error as { issues?: unknown } | null)?.issues;
+  if (Array.isArray(issues)) {
+    const fields = issues.slice(0, 20).map((issue) => {
+      const { path, code } = (issue ?? {}) as { path?: unknown; code?: unknown };
+      const setting = Array.isArray(path) ? path.map(String).join(".") : "unknown";
+      return `${setting} (${typeof code === "string" ? code : "invalid"})`;
+    });
+    return `invalid environment settings: ${fields.join(", ")}`;
+  }
+  if (error instanceof Error) {
+    if (error.message.startsWith("[Config Error]")) return error.message.slice(0, 500);
+    const code = (error as { code?: unknown }).code;
+    return typeof code === "string" ? `${error.name} (${code})` : error.name;
+  }
+  return "unknown";
+}
+
 export const config = {
   api: {
     bodyParser: false,
@@ -69,7 +94,7 @@ export function createVercelHandler(loadApp: AppLoader = loadExpressApp) {
       // A rejected import must not remain cached for the lifetime of a warm
       // serverless instance. A later invocation may have usable configuration.
       appPromise = undefined;
-      console.error("[Vercel Handler Error]: API runtime initialization unavailable", errorName(err));
+      console.error("[Vercel Handler Error]: API runtime initialization unavailable:", describeStartupFailure(err));
       return sendFailure(res, 503, "API runtime is unavailable", "Service unavailable");
     }
 

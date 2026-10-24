@@ -58,7 +58,36 @@ test('the emitted Vercel entry loads lazily, returns 503 on runtime init failure
       assert.equal(failedResponse.statusCode, 500);
       assert.deepEqual(failedResponse.body.errors, ['Internal server error']);
       assert.doesNotMatch(JSON.stringify(failedResponse.body), /sensitive request detail/);
-      assert.throws(() => resolveExpressHandler({default: {}}), TypeError);`;
+      assert.throws(() => resolveExpressHandler({default: {}}), TypeError);
+
+      // Startup failures are diagnosable from the function log by setting
+      // name, while values and arbitrary error text never reach the log.
+      const logged = [];
+      const originalError = console.error;
+      console.error = (...parts) => { logged.push(parts.join(' ')); };
+      try {
+        const failWith = async (error) => {
+          const failing = createVercelHandler(async () => { throw error; });
+          const failingResponse = makeResponse();
+          await failing({}, failingResponse);
+          assert.equal(failingResponse.statusCode, 503);
+          assert.deepEqual(failingResponse.body.errors, ['Service unavailable']);
+          return logged.at(-1);
+        };
+        const configLine = await failWith(new Error('[Config Error] Production requires deployed values for: DATABASE_URL, REDIS_URL'));
+        assert.match(configLine, /Production requires deployed values for: DATABASE_URL, REDIS_URL/);
+        const opaqueLine = await failWith(new Error('postgres://admin:hunter2@db.internal/yor'));
+        assert.doesNotMatch(opaqueLine, /hunter2|postgres:/);
+        assert.match(opaqueLine, /: Error$/);
+        const missingBundle = Object.assign(new Error('Cannot find module /var/task/api-server/dist/app.cjs'), { code: 'ERR_MODULE_NOT_FOUND' });
+        assert.match(await failWith(missingBundle), /Error \\(ERR_MODULE_NOT_FOUND\\)$/);
+        const schemaFailure = Object.assign(new Error('[{"input":"sk_live_secret"}]'), { issues: [{ code: 'too_small', path: ['JWT_SECRET'], input: 'sk_live_secret' }] });
+        const schemaLine = await failWith(schemaFailure);
+        assert.match(schemaLine, /invalid environment settings: JWT_SECRET \\(too_small\\)/);
+        assert.doesNotMatch(schemaLine, /sk_live_secret/);
+      } finally {
+        console.error = originalError;
+      }`;
     execFileSync(process.execPath, ['--input-type=module', '-e', verification], { cwd: directory, timeout: 10000, stdio: 'pipe' });
   } finally {
     assert.equal(path.dirname(path.resolve(directory)), path.resolve(tmpdir()));
