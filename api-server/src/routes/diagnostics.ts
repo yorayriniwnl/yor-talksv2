@@ -19,14 +19,14 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
     timestamp: string;
     queue?: { redis: "up" | "down"; version?: string; reason?: string };
     workers: { status: "initialized" | "unavailable" | "unhealthy"; lifecycle: "up" | "down" };
-    lifecycleCleanup: { overdueJobs: number; deadJobs: number };
+    lifecycleCleanup: { overdueJobs: number; deadJobs: number; failingJobs: number };
     uptime: number;
   } = {
     status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     workers: { status: "unavailable", lifecycle: "down" },
-    lifecycleCleanup: { overdueJobs: 0, deadJobs: 0 },
+    lifecycleCleanup: { overdueJobs: 0, deadJobs: 0, failingJobs: 0 },
   };
 
   try {
@@ -44,9 +44,11 @@ const diagnosticsHandler = async (_req: Request, res: Response) => {
     diagnostics.lifecycleCleanup = {
       overdueJobs: lifecycle.overdueCleanupJobs,
       deadJobs: lifecycle.deadCleanupJobs,
+      failingJobs: lifecycle.failingCleanupJobs,
     };
 
-    if (!queueRedis.compatible || diagnostics.workers.status !== "initialized" || !lifecycle.workerUp || lifecycle.overdueCleanupJobs > 0 || lifecycle.deadCleanupJobs > 0) {
+    if (!queueRedis.compatible || diagnostics.workers.status !== "initialized" || !lifecycle.workerUp || lifecycle.overdueCleanupJobs > 0
+      || lifecycle.deadCleanupJobs > 0 || lifecycle.failingCleanupJobs > 0) {
       diagnostics.status = "degraded";
     }
 

@@ -5,34 +5,25 @@ import { RedisRepository } from '../repositories/redis-repository.js';
 import { logger } from '../lib/logger.js';
 import { MediaService } from '../services/media-service.js';
 import { purgeHiddenMessageContent } from '../services/message-retention-service.js';
+import type { PermanentSweepKind } from '../lib/lifecycle-jobs.js';
 
 export type LifecycleHandler = (job: BackgroundJob) => Promise<void | { retryAfterSeconds: number }>;
 
-/** Unlike a finite account cleanup request, this job represents a permanent
- * sweep. Recover its terminal state without disturbing a live worker lease. */
-export async function ensureMediaCleanupLoop(): Promise<void> {
+/** Unlike a finite account cleanup request, a sweep is permanent. Recover its
+ * terminal state without disturbing a live worker lease. The last error is
+ * kept across revival so a sweep that fails on every run stays visible
+ * (`yor_lifecycle_cleanup_jobs_failing`) until a run succeeds and clears it. */
+async function ensurePermanentSweep(kind: PermanentSweepKind, dedupKey: string): Promise<void> {
   await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
-    VALUES($1,'media_cleanup','media:cleanup:loop','{}',now())
+    VALUES($1,$2,$3,'{}',now())
     ON CONFLICT(dedup_key) DO UPDATE SET status='pending',attempts=0,
-      lease_token=NULL,lease_until=NULL,last_error=NULL,available_at=now(),updated_at=now()
-    WHERE background_jobs.kind='media_cleanup' AND background_jobs.status IN ('complete','dead')`, [randomUUID()]);
+      lease_token=NULL,lease_until=NULL,available_at=now(),updated_at=now()
+    WHERE background_jobs.kind=$2 AND background_jobs.status IN ('complete','dead')`, [randomUUID(), kind, dedupKey]);
 }
 
-export async function ensurePrivacyCleanupLoop(): Promise<void> {
-  await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
-    VALUES($1,'privacy_cleanup','privacy:cleanup:loop','{}',now())
-    ON CONFLICT(dedup_key) DO UPDATE SET status='pending',attempts=0,
-      lease_token=NULL,lease_until=NULL,last_error=NULL,available_at=now(),updated_at=now()
-    WHERE background_jobs.kind='privacy_cleanup' AND background_jobs.status IN ('complete','dead')`,[randomUUID()]);
-}
-
-export async function ensureMessageCleanupLoop(): Promise<void> {
-  await pool.query(`INSERT INTO background_jobs(id,kind,dedup_key,payload,available_at)
-    VALUES($1,'message_cleanup','message:cleanup:loop','{}',now())
-    ON CONFLICT(dedup_key) DO UPDATE SET status='pending',attempts=0,
-      lease_token=NULL,lease_until=NULL,last_error=NULL,available_at=now(),updated_at=now()
-    WHERE background_jobs.kind='message_cleanup' AND background_jobs.status IN ('complete','dead')`,[randomUUID()]);
-}
+export const ensureMediaCleanupLoop = (): Promise<void> => ensurePermanentSweep('media_cleanup', 'media:cleanup:loop');
+export const ensurePrivacyCleanupLoop = (): Promise<void> => ensurePermanentSweep('privacy_cleanup', 'privacy:cleanup:loop');
+export const ensureMessageCleanupLoop = (): Promise<void> => ensurePermanentSweep('message_cleanup', 'message:cleanup:loop');
 
 /** Remove expired verification authority in bounded, concurrent-safe batches.
  * Completed rights evidence, consent history and erasure journals are retained. */
@@ -97,9 +88,18 @@ export async function startLifecycleWorker(additionalHandlers: Record<string, Li
       healthy = true;
       if (!job) return;
       const activeJobStartedAt = new Date().toISOString();
+      let leaseLost = false;
       const lease = setInterval(() => void Promise.all([jobs.extend(job), jobs.heartbeat(workerId, {
         activeJob: job.id, activeJobStartedAt, handlers: Object.keys(handlers),
       })])
+        .then(([extended]) => {
+          // Another worker may now own the job. Its writes stay fenced by the
+          // lease token; handlers are idempotent, so this is at-least-once.
+          if (!extended && !leaseLost) {
+            leaseLost = true;
+            logger.warn({ jobId: job.id, kind: job.kind, attempt: job.attempts }, 'Lifecycle job lease lost; another worker may retry it');
+          }
+        })
         .catch(() => { healthy = false; }), 10_000);
       lease.unref();
       try {

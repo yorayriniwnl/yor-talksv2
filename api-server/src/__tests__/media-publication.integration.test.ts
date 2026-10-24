@@ -265,8 +265,17 @@ test("concurrent message retries attach exactly the winning image/audio asset; s
   assert.deepEqual(await references(idempotencyKey), [{ media_id: messages[0].mediaId, entity_type: "messages", slot: "mediaUrl" }]);
   await service.deleteMessage(idempotencyKey, sender.id);
   assert.deepEqual(await references(idempotencyKey), []);
-  await service.sendMessageToConversation(sender.id, conversation.id, "", { idempotencyKey, mediaId: audio.id });
-  assert.deepEqual(await references(idempotencyKey), []);
+  // Retry with each asset. The winner was released by the deletion, so a retry
+  // treated as a new send would fail media approval; it must return the tombstone.
+  const winner = messages[0].mediaId!;
+  for (const mediaId of [winner, [image, audio].find(asset => asset.id !== winner)!.id]) {
+    const replay = await service.sendMessageToConversation(sender.id, conversation.id, "", { idempotencyKey, mediaId });
+    assert.equal(replay.id, idempotencyKey);
+    assert.ok(replay.deletedAt, "a retry of a deleted message returns its tombstone");
+    assert.equal(replay.content, "");
+    assert.equal(replay.mediaId, null);
+    assert.deepEqual(await references(idempotencyKey), []);
+  }
   const text = await service.sendMessageToConversation(sender.id, conversation.id, "📷 https://example.test/unapproved.png");
   assert.equal(text.mediaLegacy, false);
   assert.equal(text.mediaId, null);

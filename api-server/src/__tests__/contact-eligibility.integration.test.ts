@@ -140,6 +140,7 @@ test('contact withdrawal while a message is staged prevents the database write',
   const staged=new Promise<void>(resolve=>{beginWrite=resolve;}),wait=new Promise<void>(resolve=>{continueWrite=resolve;});
   const delayedRepository={
     findById:(id:string)=>storedMessages.findById(id),
+    findStoredMetadataById:(id:string)=>storedMessages.findStoredMetadataById(id),
     createWithResult:async(message:Parameters<MessageRepository['createWithResult']>[0],authorize?:()=>Promise<void>)=>{
       beginWrite();await wait;return storedMessages.createWithResult(message,authorize);
     },

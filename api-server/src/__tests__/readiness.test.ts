@@ -12,7 +12,7 @@ const healthyDependencies = (media: () => MediaReadiness) => ({
   database: async () => {},
   redis: async () => ({ compatible: true, version: '7.0.0' }),
   notificationWorker: async () => true,
-  lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+  lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
   recoveryReplay: async () => {},
 });
 
@@ -49,7 +49,7 @@ test('mandatory dependency failures still fail readiness while media is pending'
     ['database', { database: async () => { throw new Error('Database unavailable'); } }],
     ['redis', { redis: async () => ({ compatible: false }) }],
     ['worker', { notificationWorker: async () => false }],
-    ['lifecycleWorker', { lifecycle: async () => ({ workerUp: false, overdueCleanupJobs: 0, deadCleanupJobs: 0 }) }],
+    ['lifecycleWorker', { lifecycle: async () => ({ workerUp: false, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }) }],
   ] as const) {
     const response = await runReadiness({ ...healthyDependencies(monitor.snapshot), ...overrides });
     assert.equal(response.status, 503, service);

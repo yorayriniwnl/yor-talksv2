@@ -5,7 +5,7 @@ import { db, runInDatabaseTransaction } from "@workspace/db";
 import { lockActiveUser } from "../utils/active-user-lock.js";
 import type { ConversationRecord, MessageRecord } from "../types/index.js";
 import { randomUUID } from "crypto";
-import { visibleMessagePredicate, toMessageTombstone } from "../utils/message-visibility.js";
+import { visibleMessagePredicate, toMessageTombstone, type MessageTombstoneSource } from "../utils/message-visibility.js";
 
 const currentVisibility = () => visibleMessagePredicate(sql`clock_timestamp()`);
 const membershipPredicate = (userId: string) => sql`EXISTS (
@@ -108,6 +108,18 @@ export class MessageRepository {
     const [message] = await db.select().from(messagesTable)
       .where(and(eq(messagesTable.id, messageId), currentVisibility())).limit(1);
     return message as MessageRecord | undefined;
+  }
+
+  /** Identity and timing of a stored message whatever its visibility, for
+   * idempotent retries. Never selects content or attachments. */
+  async findStoredMetadataById(messageId: string): Promise<MessageTombstoneSource | undefined> {
+    const [message] = await db.select({
+      id: messagesTable.id, conversationId: messagesTable.conversationId,
+      senderId: messagesTable.senderId, recipientId: messagesTable.recipientId,
+      createdAt: messagesTable.createdAt, seenAt: messagesTable.seenAt,
+      deletedAt: messagesTable.deletedAt, expiresAt: messagesTable.expiresAt,
+    }).from(messagesTable).where(eq(messagesTable.id, messageId)).limit(1);
+    return message as MessageTombstoneSource | undefined;
   }
 
   async findVisibleById(messageId: string): Promise<MessageRecord | undefined> {

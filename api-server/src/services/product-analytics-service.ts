@@ -73,7 +73,10 @@ export class ProductAnalyticsService {
       schemaVersion: event.schemaVersion,
       eventName: event.eventName,
       actorId,
-      occurredAt: event.occurredAt,
+      // The column stores UTC wall time, and PostgreSQL silently drops an
+      // offset such as +05:30 on input; normalise so rollups and the 90-day
+      // prune see the real instant.
+      occurredAt: new Date(event.occurredAt).toISOString(),
       properties: event.properties,
     }));
     // Keep the decision adjacent to persistence so stale route middleware or

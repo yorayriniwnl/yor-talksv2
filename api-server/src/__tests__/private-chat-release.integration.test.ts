@@ -40,7 +40,7 @@ async function fixture(t: TestContext, migrate = true) {
       media: () => ({ storage: false, presets: false, direct: false, decoder: false, moderation: false, ready: false, errorCodes: [] }),
       redis: async () => ({ compatible: true, version: '7.0.0' }),
       notificationWorker: async () => true,
-      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
       recoveryReplay: async () => {},
     })({} as Request, {
       status(code: number) { status = code; return this; },

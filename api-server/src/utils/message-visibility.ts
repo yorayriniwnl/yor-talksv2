@@ -28,7 +28,11 @@ export function visibleMessagePredicate(now: Date | SQL): SQL {
         AND (me.expires_at IS NULL OR me.expires_at>clock_timestamp()))`)!;
 }
 
-export function toMessageTombstone(message: MessageRecord): MessageRecord {
+/** The metadata a tombstone keeps; content and attachments are never needed. */
+export type MessageTombstoneSource = Pick<MessageRecord,
+  "id" | "conversationId" | "senderId" | "recipientId" | "createdAt" | "seenAt" | "deletedAt" | "expiresAt">;
+
+export function toMessageTombstone(message: MessageTombstoneSource): MessageRecord {
   return {
     id: message.id, conversationId: message.conversationId,
     senderId: message.senderId, recipientId: message.recipientId,

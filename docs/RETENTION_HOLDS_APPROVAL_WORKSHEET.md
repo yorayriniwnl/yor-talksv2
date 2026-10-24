@@ -46,6 +46,8 @@ each outstanding item. Deployment approval belongs with the actual operator;
 this worksheet does not supply signatures or infer approval from a test result.
 
 Related implementation and evidence:
+[retention and worker recovery audit, 24 October](RETENTION_AND_WORKER_RECOVERY_AUDIT_2026-10-24.md)
+(verifies the controls above and lists suggested defaults for the open decisions),
 [data-flow inventory](PRIVACY_DATA_FLOW_INVENTORY.md),
 [backend work ledger](BACKEND_COMPLETION_2026-10-21.md),
 [backup and privacy replay procedure](../ops/backup/README.md).

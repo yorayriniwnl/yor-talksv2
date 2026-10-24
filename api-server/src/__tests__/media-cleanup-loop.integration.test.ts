@@ -28,7 +28,7 @@ test('permanent media sweep recovers terminal states while finite dead jobs and 
     assert.equal(recovered.attempts, 0);
     assert.equal(recovered.lease_token, null);
     assert.equal(recovered.lease_until, null);
-    assert.equal(recovered.last_error, null);
+    assert.equal(recovered.last_error, 'lease_expired', 'revival keeps the failure evidence until a run succeeds');
     assert.ok(new Date(recovered.available_at).getTime() >= before - 1000);
     assert.ok(new Date(recovered.available_at).getTime() <= Date.now() + 1000);
     const finite = (await pool.query('SELECT status,attempts,last_error FROM background_jobs WHERE id=$1', [accountJob])).rows[0];

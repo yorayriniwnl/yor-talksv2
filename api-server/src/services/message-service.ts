@@ -262,7 +262,11 @@ export class MessageService {
     // client key returns that exact row without invoking moderation or writing
     // a second message.
     if (options?.idempotencyKey) {
-      const existing = await this.messageRepository.findById(options.idempotencyKey);
+      // Look the key up whatever its visibility: a retry of a message since
+      // deleted, expired or moderated returns its tombstone instead of being
+      // treated as a new send, which would re-run moderation and fail media
+      // approval once the deletion released the original attachment.
+      const existing = await this.messageRepository.findStoredMetadataById(options.idempotencyKey);
       if (existing) {
         if (existing.senderId !== senderId || existing.conversationId !== conversationId) {
           throw new UnauthorizedError("This message key is already in use");
@@ -501,8 +505,9 @@ export class MessageService {
     const conversation = await this.conversationRepository.findById(candidate.conversationId);
     if (conversation?.vanishMode && candidate.senderId !== userId) {
       // Vanish mode is an expiry of visible content, not merely a read receipt.
-      // Mark the row deleted atomically after reauthorizing its contacts; keep
-      // the stored bytes for controlled retention, but never return them.
+      // Mark the row deleted atomically after reauthorizing its contacts and
+      // never return it again; the lifecycle message sweep then clears the
+      // stored body, attachments, reactions and receipts.
       try {
         const vanished = await this.messageRepository.updateVisible(
           messageId, { deletedAt: new Date().toISOString() },

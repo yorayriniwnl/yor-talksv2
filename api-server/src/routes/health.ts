@@ -64,6 +64,7 @@ export function createReadinessHandler(dependencies = readinessDependencies) {
       details.lifecycleCleanup = {
         overdueJobs: lifecycle.overdueCleanupJobs,
         deadJobs: lifecycle.deadCleanupJobs,
+        failingJobs: lifecycle.failingCleanupJobs,
       };
       if (!lifecycle.workerUp) throw new Error("Required lifecycle worker is not ready");
       services.lifecycleWorker = "up";

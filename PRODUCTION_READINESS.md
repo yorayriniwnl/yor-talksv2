@@ -55,6 +55,14 @@ Comparing bundles, the 24 October merge added one startup requirement: with
 `PUBLIC_BETA=true`, `LEGAL_CONTENT_REVIEWED=true` (and non-placeholder legal values) is
 now mandatory. The deployed web build has `VITE_PUBLIC_BETA` unset and empty legal values.
 
+Retention and worker recovery (24 October): every implemented expiry and cleanup
+control was verified against a real database, three defects were fixed (a cleanup
+sweep failing on every run raised no alert; retrying a deleted message's send
+could fail with 409 instead of returning its tombstone; offset analytics times
+were stored hours off), and the stores still lacking a retention rule are listed
+for decision.
+See the [retention and worker recovery audit](docs/RETENTION_AND_WORKER_RECOVERY_AUDIT_2026-10-24.md).
+
 > **Current evidence:** The 14–16 October 2026 review records the latest API suite, dependency checks, production image builds, hardened Compose smoke, edge security-header checks, browser rerun results and remaining release gates in [the current readiness review](docs/PRODUCTION_READINESS_REVIEW_2026-10-07.md) and [launch runbook](docs/PRODUCTION_LAUNCH.md). This file's checklists and verification limitations below are historical snapshots; for example, Docker image execution has since been verified locally. They are not the current release checklist.
 
 ## Executive summary

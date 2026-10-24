@@ -55,6 +55,15 @@ groups:
           summary: Yor Talks cleanup jobs entered the dead-letter state
           description: Review the cleanup job failure code, restore the handler or dependency, and use the approved recovery procedure.
 
+      - alert: YorLifecycleCleanupSweepFailing
+        expr: yor_lifecycle_metrics_up == 1 and yor_lifecycle_cleanup_jobs_failing > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: A Yor Talks cleanup sweep keeps failing
+          description: A permanent media, privacy or message cleanup sweep has failed on every run for 15 minutes, so expired or deleted content may not be purged. The sweep is revived after it dead-letters, so the dead-letter alert alone does not cover it. Check the job's last_error and the lifecycle worker log.
+
       - alert: YorLifecycleMetricsUnavailable
         expr: yor_lifecycle_metrics_up == 0
         for: 2m

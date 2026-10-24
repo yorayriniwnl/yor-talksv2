@@ -117,6 +117,7 @@ test('OPERATIONAL MONITORING 2: Comprehensive metrics exposition across API, DB,
   assert.match(rendered, /yor_lifecycle_worker_up (0|1)/);
   assert.match(rendered, /yor_lifecycle_cleanup_jobs_overdue \d+/);
   assert.match(rendered, /yor_lifecycle_cleanup_jobs_dead \d+/);
+  assert.match(rendered, /yor_lifecycle_cleanup_jobs_failing \d+/);
 
   // Analytics rollup metrics
   assert.match(rendered, /yor_analytics_rollup_last_success_timestamp_seconds \d+/);
@@ -134,6 +135,7 @@ test('OPERATIONAL MONITORING 3: Prometheus alert rule inventory and evaluation c
     { name: 'YorLifecycleWorkerUnavailable', severity: 'critical' },
     { name: 'YorLifecycleCleanupJobsOverdue', severity: 'warning' },
     { name: 'YorLifecycleCleanupJobsDead', severity: 'critical' },
+    { name: 'YorLifecycleCleanupSweepFailing', severity: 'critical' },
     { name: 'YorLifecycleMetricsUnavailable', severity: 'critical' },
     { name: 'YorAnalyticsRollupFailed', severity: 'warning' },
     { name: 'YorAnalyticsRollupStale', severity: 'warning' },
@@ -282,7 +284,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
       database: async () => { throw new Error('Database connection refused (simulated outage)'); },
       redis: async () => ({ compatible: true, version: '7.2.4' }),
       notificationWorker: async () => true,
-      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
       recoveryReplay: async () => {},
     });
 
@@ -318,7 +320,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
       database: async () => {},
       redis: async () => ({ compatible: false, reason: 'connection_refused' }),
       notificationWorker: async () => true,
-      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
       recoveryReplay: async () => {},
     });
 
@@ -342,7 +344,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
       database: async () => {},
       redis: async () => ({ compatible: true, version: '7.2.4' }),
       notificationWorker: async () => false, // Worker heartbeat missing
-      lifecycle: async () => ({ workerUp: false, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+      lifecycle: async () => ({ workerUp: false, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
       recoveryReplay: async () => {},
     });
 
@@ -366,7 +368,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
       database: async () => {},
       redis: async () => ({ compatible: true, version: '7.2.4' }),
       notificationWorker: async () => true,
-      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 5, deadCleanupJobs: 2 }),
+      lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 5, deadCleanupJobs: 2, failingCleanupJobs: 1 }),
       recoveryReplay: async () => {},
     });
 
@@ -380,6 +382,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
     await deadQueueHandler({}, fakeRes);
     assert.equal(resBody.details.lifecycleCleanup.overdueJobs, 5);
     assert.equal(resBody.details.lifecycleCleanup.deadJobs, 2);
+    assert.equal(resBody.details.lifecycleCleanup.failingJobs, 1);
   }
 
   // Rehearsal E: Recovery Replay Gate - Unreplayed Restored Target Blocks Traffic
@@ -392,7 +395,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
         database: async () => {},
         redis: async () => ({ compatible: true, version: '7.2.4' }),
         notificationWorker: async () => true,
-        lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+        lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
         recoveryReplay: async () => {
           throw new Error('Disaster recovery erasure replay not completed');
         },
@@ -416,7 +419,7 @@ test('OPERATIONAL INCIDENT 2: Isolated database, Redis, worker death, and queue 
         database: async () => {},
         redis: async () => ({ compatible: true, version: '7.2.4' }),
         notificationWorker: async () => true,
-        lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0 }),
+        lifecycle: async () => ({ workerUp: true, overdueCleanupJobs: 0, deadCleanupJobs: 0, failingCleanupJobs: 0 }),
         recoveryReplay: async () => { /* success */ },
       });
 

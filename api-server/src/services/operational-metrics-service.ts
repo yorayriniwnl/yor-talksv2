@@ -213,6 +213,9 @@ export class OperationalMetricsService {
         "# HELP yor_lifecycle_cleanup_jobs_dead Number of dead-lettered account or media cleanup jobs.",
         "# TYPE yor_lifecycle_cleanup_jobs_dead gauge",
         `yor_lifecycle_cleanup_jobs_dead ${lifecycle.deadCleanupJobs}`,
+        "# HELP yor_lifecycle_cleanup_jobs_failing Number of permanent media, privacy or message cleanup sweeps whose most recent run failed.",
+        "# TYPE yor_lifecycle_cleanup_jobs_failing gauge",
+        `yor_lifecycle_cleanup_jobs_failing ${lifecycle.failingCleanupJobs}`,
       );
     } catch {
       lines.push(
@@ -228,6 +231,9 @@ export class OperationalMetricsService {
         "# HELP yor_lifecycle_cleanup_jobs_dead Number of dead-lettered account or media cleanup jobs.",
         "# TYPE yor_lifecycle_cleanup_jobs_dead gauge",
         "yor_lifecycle_cleanup_jobs_dead 0",
+        "# HELP yor_lifecycle_cleanup_jobs_failing Number of permanent media, privacy or message cleanup sweeps whose most recent run failed.",
+        "# TYPE yor_lifecycle_cleanup_jobs_failing gauge",
+        "yor_lifecycle_cleanup_jobs_failing 0",
       );
     }
 
