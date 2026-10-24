@@ -41,7 +41,7 @@ async function fixture(t: TestContext, storage: 'timestamp' | 'timestamptz', zon
 }
 
 for (const storage of ['timestamp', 'timestamptz'] as const) {
-  for (const zone of ['Asia/Calcutta', 'America/New_York']) {
+  for (const zone of ['Asia/Kolkata', 'America/New_York']) {
     test(`analytics UTC boundaries and rollup retries preserve ${storage} data in ${zone}`, async t => {
       const f = await fixture(t, storage, zone);
       try {

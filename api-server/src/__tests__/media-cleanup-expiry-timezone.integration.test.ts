@@ -9,7 +9,7 @@ import { createTestApprovedMedia } from './media-fixtures.js';
 after(() => pool.end());
 
 for (const storage of ['timestamp', 'timestamptz'] as const) {
-  for (const zone of ['UTC', 'Asia/Calcutta', 'America/New_York']) {
+  for (const zone of ['UTC', 'Asia/Kolkata', 'America/New_York']) {
     test(`the actual cleanup sweep preserves live media with ${storage} in ${zone}`, async (t) => {
       assert.equal(process.env.NODE_ENV, 'test');
       assert.ok(process.env.DATABASE_URL, 'An explicit disposable DATABASE_URL is required');

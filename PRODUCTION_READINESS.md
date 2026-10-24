@@ -10,13 +10,14 @@ PostgreSQL 16 and Redis 7, following `.github/workflows/ci.yml`:
 | Check | Result |
 | --- | --- |
 | `pnpm audit --audit-level high` | No known vulnerabilities (was 10: 4 high, 3 moderate, 3 low) |
-| `pnpm contract:check` / `pnpm contract:clients:check` | 252 operations verified; generated clients match the spec |
-| `pnpm design:check`, `pnpm test:unit` | Pass (63/63) |
+| `pnpm contract:check` / `pnpm contract:clients:check` | Pass; generated clients match the spec |
+| `pnpm design:check`, `pnpm test:unit` | Pass (180/180) |
 | `@workspace/db` build + `migrate:beta` | Pass |
 | API and web typecheck | Pass |
-| API tests (serial, real Postgres/Redis, `CI=true`) | 401/401 pass, including the disposable-database gated suites |
-| `pnpm test:e2e` (Chromium) | 66/66 pass |
+| API tests (serial, real Postgres/Redis, `CI=true`) | 676/676 pass, including the disposable-database gated suites |
+| `pnpm test:e2e` (Chromium) | 224 pass, 3 skipped by design (payments/push builds) |
 | `node ./build.mjs`, `pnpm production-config:check` | Pass |
+| `ops/backup/backup-script.test.sh`, `ops/check-database-runtime-role.mjs` | Pass |
 
 Changes made to reach this state:
 
@@ -32,6 +33,15 @@ Changes made to reach this state:
 - Tests and tooling: the non-UTC migration test uses `Asia/Kolkata` (the
   `Asia/Calcutta` alias is missing from some tz databases); `codegen:check` now exists
   and runs in CI.
+
+Branch consolidation (24 October): `cleanup/unified-main` (the reconciled
+compliance-audit, frontend-audit and production-readiness work) is merged into
+main. Every other branch was checked commit by commit; their work is already on
+main, superseded by later reworks, or carried over here (Capacitor 8.5.2
+references, export-visibility test, staging configuration and validator,
+restricted-session profile minimisation, lazy Vercel API initialisation). Test
+suites written against an earlier, abandoned auth/routing implementation were
+not carried over; main covers those boundaries with its own suites.
 
 Not run here: Docker image build/run (registry access unavailable in the verification
 environment). The external launch gates below are unchanged.

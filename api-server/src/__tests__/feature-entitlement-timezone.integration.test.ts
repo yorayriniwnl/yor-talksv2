@@ -40,7 +40,7 @@ async function fixture(t: TestContext, storage: "timestamp" | "timestamptz", zon
 }
 
 for (const storage of ["timestamp", "timestamptz"] as const) {
-  for (const zone of ["UTC", "Asia/Calcutta", "America/New_York"]) {
+  for (const zone of ["UTC", "Asia/Kolkata", "America/New_York"]) {
     test(`active feature denial overrides paid access with ${storage} in ${zone}`, async t => {
       const f = await fixture(t, storage, zone);
       const future = new Date(Date.now() + 3_600_000).toISOString();

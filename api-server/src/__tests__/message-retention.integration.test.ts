@@ -8,7 +8,7 @@ import { ensureMessageCleanupLoop } from '../workers/lifecycle-worker.js';
 after(() => pool.end());
 
 for (const storage of ['timestamp', 'timestamptz'] as const) {
-  for (const zone of ['Asia/Calcutta', 'America/New_York']) {
+  for (const zone of ['Asia/Kolkata', 'America/New_York']) {
     test(`hidden message bodies are purged in bounded batches with ${storage} in ${zone}`, async () => {
       assert.equal(process.env.NODE_ENV, 'test');
       assert.ok(process.env.DATABASE_URL);

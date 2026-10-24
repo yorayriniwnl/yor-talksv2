@@ -6,7 +6,7 @@ import { pool } from '@workspace/db';
 after(() => pool.end());
 
 for (const storage of ['timestamp', 'timestamptz'] as const) {
-  for (const zone of ['UTC', 'Asia/Calcutta', 'America/New_York']) {
+  for (const zone of ['UTC', 'Asia/Kolkata', 'America/New_York']) {
     test(`the migrated media expiry trigger compares UTC instants with ${storage} in ${zone}`, async () => {
       assert.equal(process.env.NODE_ENV, 'test', 'This regression requires disposable test infrastructure');
       assert.ok(process.env.DATABASE_URL, 'An explicit disposable DATABASE_URL is required');
